@@ -27,12 +27,19 @@ import {
 import CheckStock from "../OrderBooking/CheckStock";
 
 const menuItems = [
+  // {
+  //   id: "dashboard",
+  //   icon: LayoutDashboard,
+  //   label: "Dashboard",
+  //   // active: true,
+  //   badge: "New",
+  // },
   {
-    id: "dashboard",
+    id: "homepage",
     icon: LayoutDashboard,
-    label: "Dashboard",
+    label: "Homepage",
     // active: true,
-    badge: "New",
+    // badge: "New",
   },
   // {
   //   id: "analytics",
@@ -116,7 +123,7 @@ const menuItems = [
       { id: "editOrderSaleDcode", label: "Edit Order Sale in DCode" },
     ],
   },
-    {
+  {
     id: "san",
     icon: WarehouseIcon,
     label: "SAN",
@@ -146,7 +153,7 @@ const menuItems = [
     label: "Deposit Slip",
     submenu: [
       { id: "checkDepositSlip", label: "Check Deposit Slip" },
-      { id: "editDepositSlip", label: "Edit Deposit Slip" }
+      { id: "editDepositSlip", label: "Edit Deposit Slip" },
     ],
   },
   {
@@ -169,7 +176,7 @@ const menuItems = [
     icon: RouteIcon,
     label: "Route Settlement",
   },
-    {
+  {
     id: "price",
     icon: BadgeDollarSignIcon,
     label: "Price",

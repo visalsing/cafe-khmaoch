@@ -121,7 +121,7 @@ function Header({ sideBarCollapsed, onToggleSidebar, currentPage }) {
           </button>
 
           {/* User Profile */}
-          <div className="flex items-center space-x-3 pl-3 border-l border-slate-200 dark:border-slate-700">
+          {/* <div className="flex items-center space-x-3 pl-3 border-l border-slate-200 dark:border-slate-700">
             <img
               src="https://play-lh.googleusercontent.com/7Ac5TgaL15Ra4bvFVHJKCdJp4qvnL4djZj5bKc6RN-MZjzrvkeHbJytek0NPTSdZcp8"
               alt="User"
@@ -136,7 +136,7 @@ function Header({ sideBarCollapsed, onToggleSidebar, currentPage }) {
               </p>
             </div>
             <ChevronDown className="w-4 h-4 text-slate-400" />
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
