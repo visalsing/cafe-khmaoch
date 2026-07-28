@@ -18,10 +18,18 @@ import {
 // Order Editing Data Array
 // ----------------------------------------------------------------------
 import PriceOutletImg1 from "../../assets/price/priceoutlet/img1.jpg";
+import PriceOutletImg2 from "../../assets/price/priceoutlet/img1.jpg";
 
 const PriceOutletImages = [
   {
     src: PriceOutletImg1,
+    title: "Open Stock Module",
+    caption: "Stock photo 1",
+    description:
+      "Navigate to the main inventory dashboard and open the stock lookup tool.",
+  },
+    {
+    src: PriceOutletImg2,
     title: "Open Stock Module",
     caption: "Stock photo 1",
     description:
