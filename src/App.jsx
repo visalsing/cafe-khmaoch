@@ -62,29 +62,34 @@ function App() {
               {currentPage === "dashboard" && <Dashboard />}
               {currentPage === "homepage" && <HomePage />}
               {currentPage === "settings" && <Settings />}
+
               {/* {currentPage === "orderbooking" && <OrderBooking />} */}
               {currentPage === "takeorderimports" && <TakeOrderImports />}
               {currentPage === "checkstock" && <CheckStock />}
               {currentPage === "orderediting" && <OrderEditing />}
               {currentPage === "ordercancel" && <OrderCancel />}
-              {currentPage === "manualSaleOrderCreation" && (
-                <ManualSaleOrderCreation />
-              )}
-              {currentPage === "takeOrderFromSalesman" && (
-                <TakeOrderFromSalesman />
-              )}
-              {currentPage === "editOrderSaleDcode" && <EditOrderSaleDcode />}\
+              {currentPage === "manualSaleOrderCreation" && (<ManualSaleOrderCreation />)}
+              {currentPage === "takeOrderFromSalesman" && (<TakeOrderFromSalesman />)}
+              {currentPage === "editOrderSaleDcode" && <EditOrderSaleDcode />}
+              
               {currentPage === "changeProductType" && <ChangeProductType />}
               {currentPage === "moveWarehouse" && <MoveWarehouse />}
+
               {currentPage === "goodIssueNote" && <GoodIssueNote />}
               {/* {currentPage === "goodReturnNote" && <GoodReturnNote />} */}
+
               {currentPage === "stockInquiry" && <StockInquiry />}
+
               {currentPage === "checkDepositSlip" && <CheckDepositSlip />}
               {currentPage === "editDepositSlip" && <EditDepositSlip />}
+
               {currentPage === "changeDeliveryDate" && <ChangeDeliveryDate />}
+
               {currentPage === "printInvoice" && <PrintInvoice />}
               {currentPage === "printPicklist" && <PrintPicklist />}
+
               {currentPage === "routeSettlement" && <RouteSettlement />}
+
               {currentPage === "priceOutlet" && <CheckSKUPriceSaleOutlet />}
               {currentPage === "priceUnilever" && <CheckSKUPriceUnilever />}
             </div>

@@ -19,7 +19,7 @@ export default function HomePage() {
             <span>Documentation Hub</span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
-            Welcome to DTT/DCode Docs
+            Welcome to DTT/DCode Docs!
           </h1>
           <p className="mt-4 text-base sm:text-lg text-slate-200 leading-relaxed">
             Your central knowledge base for system guides, stock lookups, order management, and operational workflows.

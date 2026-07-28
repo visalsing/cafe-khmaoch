@@ -142,5 +142,4 @@ function Header({ sideBarCollapsed, onToggleSidebar, currentPage }) {
     </div>
   );
 }
-
 export default Header;
