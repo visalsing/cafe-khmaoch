@@ -1,3 +1,5 @@
+// Sidebar.jsx
+
 import React, { useState } from "react";
 
 import {
@@ -23,6 +25,7 @@ import {
   CreditCardIcon,
   BadgeDollarSignIcon,
   WarehouseIcon,
+  X,
 } from "lucide-react";
 import CheckStock from "../OrderBooking/CheckStock";
 
@@ -202,112 +205,77 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
     setExpandedItems(newExpanded);
   };
 
-  return (
-    // Added 'w-64' for width and 'h-screen' for full height
-    <div
-      className={`${collapsed ? "w-20" : "w-72"} h-screen transition-all duration-300 ease-in-out bg-white/80 dark:bg-slate-900/80
-    backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-700/50 flex flex-col
-    relative z-10`}
-    >
-      {/* Logo Section */}
-      <div className="p-6 border-b border-slate-200/50 dark:border-slate-700/50">
-        <div className="flex items-center space-x-3">
-          {/* Fixed "blue" typo and "className" */}
-          <div
-            className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl
-                flex items-center justify-center shadow-lg"
-          >
-            <Zap className="w-6 h-6 text-white" />
-          </div>
-          {/* <span className="font-bold text-slate-800 dark:text-white">Dashboard</span> */}
-
-          {/* Conditional Rendering */}
-          {!collapsed && (
-            <div>
-              <h1 className="text-xl font-bold text-slate-800 dark:text-white">
-                Nexus
-              </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Admin Panel
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Navigation that will display Dynamic Menus */}
-      {/* <nav className="flex-1 p-4 space-y-2 overflow-y-auto"> */}
-      <nav
-        className="flex-1 p-4 space-y-2 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 
+  const renderNavContent = (isMobile = false) => (
+    <nav
+      className="flex-1 p-4 space-y-2 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 
       [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 
       dark:[&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full 
       hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-slate-600"
-      >
-        {menuItems.map((item) => {
-          // Check whether the current page matches this item's own id,
-          // OR matches one of its submenu children's ids.
-          const isSubmenuActive = item.submenu?.some(
-            (sub) => sub.id === currentPage,
-          );
-          const isParentActive =
-            currentPage === item.id || item.active || isSubmenuActive;
+    >
+      {menuItems.map((item) => {
+        const isSubmenuActive = item.submenu?.some(
+          (sub) => sub.id === currentPage
+        );
+        const isParentActive =
+          currentPage === item.id || item.active || isSubmenuActive;
 
-          return (
-            <div key={item.id}>
-              {/* EDIT HERE: Remove "{` `}" and add "text-slate-700 dark:text-slate-200" */}
-              <button
-                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 
+        return (
+          <div key={item.id}>
+            <button
+              className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 
               text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 
               ${
                 isParentActive
                   ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25"
                   : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
               }`}
-                onClick={() => {
-                  if (item.submenu) {
-                    toggleExpanded(item.id);
-                  } else {
-                    onPageChange(item.id);
-                  }
-                }}
-              >
-                <div className="flex items-center space-x-3">
-                  {/* {** CHANGE 1 **} Removed "{` `}" wrapper so Tailwind can see the classes */}
-                  <item.icon className="w-5 h-5" />
+              onClick={() => {
+                if (item.submenu) {
+                  toggleExpanded(item.id);
+                } else {
+                  onPageChange(item.id);
+                  if (isMobile) onToggle(); // Close mobile overlay when navigating
+                }
+              }}
+            >
+              <div className="flex items-center space-x-3">
+                <item.icon className="w-5 h-5" />
 
-                  {/* Conditional Rendering */}
-                  {!collapsed && (
-                    <>
-                      <span className="font-medium ml-2">{item.label}</span>
+                {(!collapsed || isMobile) && (
+                  <>
+                    <span className="font-medium ml-2">{item.label}</span>
 
-                      {item.badge && (
-                        <span className="px-2 py-1 text-xs bg-red-500 text-white rounded-full">
-                          {item.badge}
-                        </span>
-                      )}
+                    {item.badge && (
+                      <span className="px-2 py-1 text-xs bg-red-500 text-white rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
 
-                      {item.count && (
-                        <span
-                          className="px-2 py-1 text-xs bg-slate-200 dark:bg-slate-700
+                    {item.count && (
+                      <span
+                        className="px-2 py-1 text-xs bg-slate-200 dark:bg-slate-700
                         text-slate-600 dark:text-slate-300 rounded-full"
-                        >
-                          {item.count}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                {!collapsed && item.submenu && (
-                  // <ChevronDown className={`w-4 h-4 transition-transform`} />
-                  <ChevronDown
-                    className={`w-4 h-4 transition-transform ${expandedItems.has(item.id) ? "rotate-180" : ""}`}
-                  />
+                      >
+                        {item.count}
+                      </span>
+                    )}
+                  </>
                 )}
-              </button>
+              </div>
 
-              {/* Submenus */}
-              {!collapsed && item.submenu && expandedItems.has(item.id) && (
+              {(!collapsed || isMobile) && item.submenu && (
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform ${
+                    expandedItems.has(item.id) ? "rotate-180" : ""
+                  }`}
+                />
+              )}
+            </button>
+
+            {/* Submenus */}
+            {(!collapsed || isMobile) &&
+              item.submenu &&
+              expandedItems.has(item.id) && (
                 <div className="ml-8 mt-2 space-y-1">
                   {item.submenu.map((subitem) => {
                     const isSubActive = currentPage === subitem.id;
@@ -315,7 +283,10 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
                     return (
                       <button
                         key={subitem.id}
-                        onClick={() => onPageChange(subitem.id)}
+                        onClick={() => {
+                          onPageChange(subitem.id);
+                          if (isMobile) onToggle(); // Close mobile overlay when navigating
+                        }}
                         className={`block w-full text-left p-2 text-sm rounded-lg transition-all
                         ${
                           isSubActive
@@ -329,21 +300,111 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
                   })}
                 </div>
               )}
-            </div>
-          );
-        })}
-      </nav>
+          </div>
+        );
+      })}
+    </nav>
+  );
 
-      {/* User Profile */}
+  return (
+    <>
+      {/* ------------------- DESKTOP SIDEBAR ------------------- */}
+      <div
+        className={`hidden md:flex ${
+          collapsed ? "w-20" : "w-72"
+        } h-screen transition-all duration-300 ease-in-out bg-white/80 dark:bg-slate-900/80
+        backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-700/50 flex-col
+        relative z-10`}
+      >
+        {/* Logo Section */}
+        <div className="p-6 border-b border-slate-200/50 dark:border-slate-700/50">
+          <div className="flex items-center space-x-3">
+            <div
+              className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl
+                flex items-center justify-center shadow-lg"
+            >
+              <Zap className="w-6 h-6 text-white" />
+            </div>
+
+            {!collapsed && (
+              <div>
+                <h1 className="text-xl font-bold text-slate-800 dark:text-white">
+                  Nexus
+                </h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Admin Panel
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Desktop Navigation */}
+        {renderNavContent(false)}
+
+        {/* User Profile */}
+        {!collapsed && (
+          <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50">
+            <div className="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+              <img
+                src="https://play-lh.googleusercontent.com/7Ac5TgaL15Ra4bvFVHJKCdJp4qvnL4djZj5bKc6RN-MZjzrvkeHbJytek0NPTSdZcp8"
+                alt="user"
+                className="w-10 h-10 rounded-full ring-2 ring-blue-500"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
+                  Visalsing
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                  Administrator
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ------------------- MOBILE FULL-SCREEN OVERLAY ------------------- */}
+      {/* Triggered on mobile screens when `collapsed` is set to `false` */}
       {!collapsed && (
-        <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50">
-          <div className="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-            <img
-              src="https://play-lh.googleusercontent.com/7Ac5TgaL15Ra4bvFVHJKCdJp4qvnL4djZj5bKc6RN-MZjzrvkeHbJytek0NPTSdZcp8"
-              alt="user"
-              className="w-10 h-10 rounded-full ring-2 ring-blue-500"
-            />
-            <div className="flex-1 min-2-0">
+        <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900 md:hidden 
+               transition-all duration-300 ease-in-out transform animate-in slide-in-from-top fade-in">
+          {/* Header section with Close Button */}
+          <div className="flex items-center justify-between p-6 border-b border-slate-200/50 dark:border-slate-700/50">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Zap className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-slate-800 dark:text-white">
+                  Nexus
+                </h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Admin Panel
+                </p>
+              </div>
+            </div>
+
+            {/* Close Button */}
+            <button
+              onClick={onToggle}
+              className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Full Screen Scrollable Menu */}
+          {renderNavContent(true)}
+
+          {/* User Profile Section at bottom */}
+          <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50">
+            <div className="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+              <img
+                src="https://play-lh.googleusercontent.com/7Ac5TgaL15Ra4bvFVHJKCdJp4qvnL4djZj5bKc6RN-MZjzrvkeHbJytek0NPTSdZcp8"
+                alt="user"
+                className="w-10 h-10 rounded-full ring-2 ring-blue-500"
+              />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
                   Visalsing
@@ -356,7 +417,8 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
           </div>
         </div>
       )}
-    </div>
+      
+    </>
   );
 }
 
