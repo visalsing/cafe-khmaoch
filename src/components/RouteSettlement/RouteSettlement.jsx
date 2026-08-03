@@ -19,6 +19,7 @@ import RouteSettlementImg2 from "../../assets/routesettlement/routesettlement/im
 import RouteSettlementImg3 from "../../assets/routesettlement/routesettlement/img3.jpg";
 import RouteSettlementImg4 from "../../assets/routesettlement/routesettlement/img4.jpg";
 import RouteSettlementImg5 from "../../assets/routesettlement/routesettlement/img5.jpg";
+import RouteSettlementImg6 from "../../assets/routesettlement/routesettlement/img6.jpg";
 
 // ----------------------------------------------------------------------
 // Order Editing Data Array
@@ -45,15 +46,22 @@ const RouteSettlementImages = [
     description:
       "Type or scan the specific SKU/barcode into the filter box to fetch current levels.",
   },
-    {
+  {
     src: RouteSettlementImg4,
     title: "Search Product Code",
     caption: "Stock photo 2",
     description:
       "Type or scan the specific SKU/barcode into the filter box to fetch current levels.",
   },
-    {
+  {
     src: RouteSettlementImg5,
+    title: "Search Product Code",
+    caption: "Stock photo 2",
+    description:
+      "Type or scan the specific SKU/barcode into the filter box to fetch current levels.",
+  },
+  {
+    src: RouteSettlementImg6,
     title: "Search Product Code",
     caption: "Stock photo 2",
     description:

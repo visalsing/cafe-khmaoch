@@ -1,21 +1,10 @@
 // Sidebar.jsx
 
-import React, { useState } from "react";
-
+import React, { useState, useEffect } from "react";
 import {
   LayoutDashboard,
-  BarChart3,
-  Users,
-  ShoppingBag,
-  Zap,
-  CreditCard,
-  Package,
-  MessageSquare,
-  Calendar,
-  FileText,
   Settings,
   ChevronDown,
-  BookSearchIcon,
   ListOrderedIcon,
   PackageCheckIcon,
   SendToBackIcon,
@@ -25,93 +14,13 @@ import {
   CreditCardIcon,
   BadgeDollarSignIcon,
   WarehouseIcon,
+  Zap,
   X,
 } from "lucide-react";
-import CheckStock from "../OrderBooking/CheckStock";
 
 const menuItems = [
-  // {
-  //   id: "dashboard",
-  //   icon: LayoutDashboard,
-  //   label: "Dashboard",
-  //   // active: true,
-  //   badge: "New",
-  // },
-  {
-    id: "homepage",
-    icon: LayoutDashboard,
-    label: "Homepage",
-    // active: true,
-    // badge: "New",
-  },
-  // {
-  //   id: "analytics",
-  //   icon: BarChart3,
-  //   label: "Analytics",
-  //   submenu: [
-  //     { id: "overview", label: "Overview" },
-  //     { id: "reports", label: "Reports" },
-  //     { id: "insights", label: "Insights" },
-  //   ],
-  // },
-  // {
-  //   id: "users",
-  //   icon: Users,
-  //   label: "Users",
-  //   count: "2.4k",
-  //   submenu: [
-  //     { id: "all-users", label: "All Users" },
-  //     { id: "roles", label: "Roles & Permissions" },
-  //     { id: "activity", label: "User Activity" },
-  //   ],
-  // },
-  // {
-  //   id: "ecommerce",
-  //   icon: ShoppingBag,
-  //   label: "E-commerce",
-  //   submenu: [
-  //     { id: "products", label: "Products" },
-  //     { id: "orders", label: "Orders" },
-  //     { id: "customers", label: "Customers" },
-  //   ],
-  // },
-  // {
-  //   id: "inventory",
-  //   icon: Package,
-  //   label: "Inventory",
-  //   count: "847",
-  // },
-  // {
-  //   id: "transactions",
-  //   icon: CreditCard,
-  //   label: "Transactions",
-  // },
-  // {
-  //   id: "messages",
-  //   icon: MessageSquare,
-  //   label: "Messages",
-  //   badge: "12",
-  // },
-  // {
-  //   id: "calendar",
-  //   icon: Calendar,
-  //   label: "Calendar",
-  // },
-  // {
-  //   id: "reports",
-  //   icon: FileText,
-  //   label: "Reports",
-  // },
-  {
-    id: "settings",
-    icon: Settings,
-    label: "Settings",
-  },
-  //   {
-  //   id: "orderbooking",
-  //   icon: ListOrderedIcon,
-  //   label: "Order Booking",
-  // },
+  { id: "homepage", icon: LayoutDashboard, label: "Homepage" },
+  { id: "settings", icon: Settings, label: "Settings" },
   {
     id: "orderbooking",
     icon: ListOrderedIcon,
@@ -140,15 +49,15 @@ const menuItems = [
     icon: PackageCheckIcon,
     label: "GIN/GRN",
     submenu: [
-      { id: "goodIssueNote", label: "Good Issue Note" },
+      { id: "good-issue-note", label: "Good Issue Note" },
       { id: "goodReturnNote", label: "Good Return Note" },
     ],
   },
   {
-    id: "stock-inquiry",
+    id: "Stock-inquiry",
     icon: SendToBackIcon,
     label: "Stock Inquiry",
-    submenu: [{ id: "stockInquiry", label: "Stock Inquiry" }],
+    submenu: [{ id: "stock-inquiry", label: "Stock Inquiry" }],
   },
   {
     id: "depositslip",
@@ -174,11 +83,7 @@ const menuItems = [
       { id: "printPicklist", label: "Print Picklist" },
     ],
   },
-  {
-    id: "routeSettlement",
-    icon: RouteIcon,
-    label: "Route Settlement",
-  },
+  { id: "routeSettlement", icon: RouteIcon, label: "Route Settlement" },
   {
     id: "price",
     icon: BadgeDollarSignIcon,
@@ -191,27 +96,36 @@ const menuItems = [
 ];
 
 function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
-  const [expandedItems, setExpandedItems] = useState(new Set(["analytics"]));
+  const [expandedItems, setExpandedItems] = useState(new Set());
 
-  const toggleExpanded = (itemid) => {
-    const newExpanded = new Set(expandedItems);
+  // Auto expand parent dropdown if a child page is selected
+  useEffect(() => {
+    menuItems.forEach((item) => {
+      if (item.submenu?.some((sub) => sub.id === currentPage)) {
+        setExpandedItems((prev) => new Set([...prev, item.id]));
+      }
+    });
+  }, [currentPage]);
 
-    if (newExpanded.has(itemid)) {
-      newExpanded.delete(itemid);
-    } else {
-      newExpanded.add(itemid);
-    }
+  const toggleExpanded = (itemId) => {
+    setExpandedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
+    });
+  };
 
-    setExpandedItems(newExpanded);
+  const handleLinkClick = (id, isMobile = false) => {
+    onPageChange(id);
+    if (isMobile) onToggle();
   };
 
   const renderNavContent = (isMobile = false) => (
-    <nav
-      className="flex-1 p-4 space-y-2 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 
-      [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 
-      dark:[&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full 
-      hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-slate-600"
-    >
+    <nav className="flex-1 p-4 space-y-2 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-slate-600">
       {menuItems.map((item) => {
         const isSubmenuActive = item.submenu?.some(
           (sub) => sub.id === currentPage
@@ -221,56 +135,49 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
 
         return (
           <div key={item.id}>
-            <button
-              className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 
-              text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 
-              ${
-                isParentActive
-                  ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25"
-                  : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
-              }`}
-              onClick={() => {
-                if (item.submenu) {
-                  toggleExpanded(item.id);
-                } else {
-                  onPageChange(item.id);
-                  if (isMobile) onToggle(); // Close mobile overlay when navigating
-                }
-              }}
-            >
-              <div className="flex items-center space-x-3">
-                <item.icon className="w-5 h-5" />
-
-                {(!collapsed || isMobile) && (
-                  <>
+            {item.submenu ? (
+              /* Dropdown toggle button */
+              <button
+                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
+                  isParentActive
+                    ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25"
+                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
+                }`}
+                onClick={() => toggleExpanded(item.id)}
+              >
+                <div className="flex items-center space-x-3">
+                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                  {(!collapsed || isMobile) && (
                     <span className="font-medium ml-2">{item.label}</span>
-
-                    {item.badge && (
-                      <span className="px-2 py-1 text-xs bg-red-500 text-white rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
-
-                    {item.count && (
-                      <span
-                        className="px-2 py-1 text-xs bg-slate-200 dark:bg-slate-700
-                        text-slate-600 dark:text-slate-300 rounded-full"
-                      >
-                        {item.count}
-                      </span>
-                    )}
-                  </>
+                  )}
+                </div>
+                {(!collapsed || isMobile) && (
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${
+                      expandedItems.has(item.id) ? "rotate-180" : ""
+                    }`}
+                  />
                 )}
-              </div>
-
-              {(!collapsed || isMobile) && item.submenu && (
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform ${
-                    expandedItems.has(item.id) ? "rotate-180" : ""
-                  }`}
-                />
-              )}
-            </button>
+              </button>
+            ) : (
+              /* Direct page link with href="#" */
+              <a
+                href={`#${item.id}`}
+                onClick={() => handleLinkClick(item.id, isMobile)}
+                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
+                  isParentActive
+                    ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25"
+                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                  {(!collapsed || isMobile) && (
+                    <span className="font-medium ml-2">{item.label}</span>
+                  )}
+                </div>
+              </a>
+            )}
 
             {/* Submenus */}
             {(!collapsed || isMobile) &&
@@ -281,21 +188,18 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
                     const isSubActive = currentPage === subitem.id;
 
                     return (
-                      <button
+                      <a
                         key={subitem.id}
-                        onClick={() => {
-                          onPageChange(subitem.id);
-                          if (isMobile) onToggle(); // Close mobile overlay when navigating
-                        }}
-                        className={`block w-full text-left p-2 text-sm rounded-lg transition-all
-                        ${
+                        href={`#${subitem.id}`}
+                        onClick={() => handleLinkClick(subitem.id, isMobile)}
+                        className={`block w-full text-left p-2 text-sm rounded-lg transition-all ${
                           isSubActive
                             ? "bg-blue-100 text-blue-700 font-medium dark:bg-blue-500/15 dark:text-blue-300"
                             : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50"
                         }`}
                       >
                         {subitem.label}
-                      </button>
+                      </a>
                     );
                   })}
                 </div>
@@ -308,49 +212,39 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
 
   return (
     <>
-      {/* ------------------- DESKTOP SIDEBAR ------------------- */}
+      {/* DESKTOP SIDEBAR */}
       <div
         className={`hidden md:flex ${
           collapsed ? "w-20" : "w-72"
-        } h-screen transition-all duration-300 ease-in-out bg-white/80 dark:bg-slate-900/80
-        backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-700/50 flex-col
-        relative z-10`}
+        } h-screen transition-all duration-300 ease-in-out bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-700/50 flex-col relative z-10`}
       >
-        {/* Logo Section */}
         <div className="p-6 border-b border-slate-200/50 dark:border-slate-700/50">
           <div className="flex items-center space-x-3">
-            <div
-              className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl
-                flex items-center justify-center shadow-lg"
-            >
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
               <Zap className="w-6 h-6 text-white" />
             </div>
-
             {!collapsed && (
               <div>
-                <h1 className="text-xl font-bold text-slate-800 dark:text-white">
-                  {/* Nexus */}
+                <h1 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">
                   DDT & DCODE Docs
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Unilever
+                  Digitized, Distributor, Transform
                 </p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Desktop Navigation */}
         {renderNavContent(false)}
 
-        {/* User Profile */}
         {!collapsed && (
           <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50">
             <div className="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
               <img
                 src="https://play-lh.googleusercontent.com/7Ac5TgaL15Ra4bvFVHJKCdJp4qvnL4djZj5bKc6RN-MZjzrvkeHbJytek0NPTSdZcp8"
-                alt="user"
-                className="w-10 h-10 rounded-full ring-2 ring-blue-500"
+                alt="user avatar"
+                className="w-10 h-10 rounded-full ring-2 ring-blue-500 flex-shrink-0"
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
@@ -365,28 +259,23 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
         )}
       </div>
 
-      {/* ------------------- MOBILE FULL-SCREEN OVERLAY ------------------- */}
-      {/* Triggered on mobile screens when `collapsed` is set to `false` */}
+      {/* MOBILE OVERLAY */}
       {!collapsed && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900 md:hidden 
-               transition-all duration-300 ease-in-out transform animate-in slide-in-from-top fade-in">
-          {/* Header section with Close Button */}
+        <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900 md:hidden transition-all duration-300 ease-in-out transform animate-in slide-in-from-top fade-in">
           <div className="flex items-center justify-between p-6 border-b border-slate-200/50 dark:border-slate-700/50">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
                 <Zap className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-800 dark:text-white">
-                  Nexus
+                <h1 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">
+                  DDT & DCODE Docs
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Admin Panel
+                  Unilever
                 </p>
               </div>
             </div>
-
-            {/* Close Button */}
             <button
               onClick={onToggle}
               className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -395,16 +284,14 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
             </button>
           </div>
 
-          {/* Full Screen Scrollable Menu */}
           {renderNavContent(true)}
 
-          {/* User Profile Section at bottom */}
           <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50">
             <div className="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
               <img
                 src="https://play-lh.googleusercontent.com/7Ac5TgaL15Ra4bvFVHJKCdJp4qvnL4djZj5bKc6RN-MZjzrvkeHbJytek0NPTSdZcp8"
-                alt="user"
-                className="w-10 h-10 rounded-full ring-2 ring-blue-500"
+                alt="user avatar"
+                className="w-10 h-10 rounded-full ring-2 ring-blue-500 flex-shrink-0"
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
@@ -418,7 +305,6 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
           </div>
         </div>
       )}
-      
     </>
   );
 }

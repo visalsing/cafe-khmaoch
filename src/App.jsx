@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "./components/Layout/Sidebar.jsx";
 import Header from "./components/Layout/Header.jsx";
 import Dashboard from "./components/Dashboard/Dashboard.jsx";
@@ -31,8 +31,31 @@ import HomePage from "./components/Homepage/Homepage.jsx";
 
 function App() {
   const [sideBarCollapsed, setSideBarCollapsed] = useState(false);
-  // const [currentPage, setCurrentPage] = useState("dashboard");
-  const [currentPage, setCurrentPage] = useState("homepage");
+
+  // 1. Initialize state directly from the URL hash on initial page load
+  const [currentPage, setCurrentPage] = useState(() => {
+    const hash = window.location.hash.replace("#", "");
+    return hash || "homepage"; // Falls back to 'homepage' if no hash exists in URL
+  });
+
+  // 2. Listen for URL changes (e.g. back/forward buttons or hash edits)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (hash) {
+        setCurrentPage(hash);
+      }
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  // 3. Helper function to update both state and the URL hash
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.location.hash = page;
+  };
 
   return (
     <div
@@ -44,17 +67,13 @@ function App() {
           collapsed={sideBarCollapsed}
           onToggle={() => setSideBarCollapsed(!sideBarCollapsed)}
           currentPage={currentPage}
-          onPageChange={setCurrentPage}
+          onPageChange={handlePageChange}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* <Header 
-          sideBarCollapsed={sideBarCollapsed} 
-          onToggleSidebar={() => setSideBarCollapsed(!sideBarCollapsed)}
-          /> */}
           <Header
             sideBarCollapsed={sideBarCollapsed}
             onToggleSidebar={() => setSideBarCollapsed(!sideBarCollapsed)}
-            currentPage={currentPage} // <--- Add this line
+            currentPage={currentPage}
           />
 
           <main className="flex-1 overflow-y-auto bg-transparent">
@@ -63,33 +82,45 @@ function App() {
               {currentPage === "homepage" && <HomePage />}
               {currentPage === "settings" && <Settings />}
 
-              {/* {currentPage === "orderbooking" && <OrderBooking />} */}
+              {/* Order Booking */}
               {currentPage === "takeorderimports" && <TakeOrderImports />}
               {currentPage === "checkstock" && <CheckStock />}
               {currentPage === "orderediting" && <OrderEditing />}
               {currentPage === "ordercancel" && <OrderCancel />}
-              {currentPage === "manualSaleOrderCreation" && (<ManualSaleOrderCreation />)}
-              {currentPage === "takeOrderFromSalesman" && (<TakeOrderFromSalesman />)}
+              {currentPage === "manualSaleOrderCreation" && (
+                <ManualSaleOrderCreation />
+              )}
+              {currentPage === "takeOrderFromSalesman" && (
+                <TakeOrderFromSalesman />
+              )}
               {currentPage === "editOrderSaleDcode" && <EditOrderSaleDcode />}
-              
+
+              {/* SAN */}
               {currentPage === "changeProductType" && <ChangeProductType />}
               {currentPage === "moveWarehouse" && <MoveWarehouse />}
 
-              {currentPage === "goodIssueNote" && <GoodIssueNote />}
+              {/* GIN / GRN */}
+              {currentPage === "good-issue-note" && <GoodIssueNote />}
               {/* {currentPage === "goodReturnNote" && <GoodReturnNote />} */}
 
-              {currentPage === "stockInquiry" && <StockInquiry />}
+              {/* Stock Inquiry */}
+              {currentPage === "stock-inquiry" && <StockInquiry />}
 
+              {/* Deposit Slip */}
               {currentPage === "checkDepositSlip" && <CheckDepositSlip />}
               {currentPage === "editDepositSlip" && <EditDepositSlip />}
 
+              {/* Delivery */}
               {currentPage === "changeDeliveryDate" && <ChangeDeliveryDate />}
 
+              {/* Print */}
               {currentPage === "printInvoice" && <PrintInvoice />}
               {currentPage === "printPicklist" && <PrintPicklist />}
 
+              {/* Route Settlement */}
               {currentPage === "routeSettlement" && <RouteSettlement />}
 
+              {/* Price */}
               {currentPage === "priceOutlet" && <CheckSKUPriceSaleOutlet />}
               {currentPage === "priceUnilever" && <CheckSKUPriceUnilever />}
             </div>

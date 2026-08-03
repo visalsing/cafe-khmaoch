@@ -12,6 +12,7 @@ import {
   Info,
   Download,
   SlidersHorizontal,
+  LayoutGrid, // Grid icon
 } from "lucide-react";
 
 // ----------------------------------------------------------------------
@@ -112,6 +113,7 @@ function Lightbox({
   onClose,
   isPlaying,
   onTogglePlay,
+  onOpenGallery, // Callback to trigger grid modal
 }) {
   const image = images[imageIndex];
   const [zoom, setZoom] = useState(1);
@@ -243,7 +245,7 @@ function Lightbox({
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm"
       onClick={onClose}
     >
-      {/* ---------- Desktop Toolbar (Visible on sm screens and above) ---------- */}
+      {/* ---------- Desktop Toolbar ---------- */}
       <div
         className="hidden sm:flex absolute top-4 right-4 items-center space-x-2 z-20"
         onClick={(e) => e.stopPropagation()}
@@ -262,6 +264,19 @@ function Lightbox({
           ) : (
             <Play className="w-5 h-5" />
           )}
+        </button>
+
+        {/* Gallery button in Desktop Toolbar */}
+        <button
+          onClick={() => {
+            onClose();
+            onOpenGallery();
+          }}
+          className="p-2.5 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors"
+          aria-label="Open gallery grid"
+          title="View Gallery"
+        >
+          <LayoutGrid className="w-5 h-5" />
         </button>
 
         <button
@@ -316,12 +331,11 @@ function Lightbox({
         </button>
       </div>
 
-      {/* ---------- Mobile Toolbar (Visible on screens smaller than sm) ---------- */}
+      {/* ---------- Mobile Toolbar ---------- */}
       <div
         className="flex sm:hidden absolute top-4 right-4 items-center space-x-2 z-20"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Single "Tools" button */}
         <button
           onClick={() => setToolsModalOpen(true)}
           className="flex items-center space-x-1 px-3 py-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors text-xs font-medium"
@@ -331,7 +345,6 @@ function Lightbox({
           <span>Tools</span>
         </button>
 
-        {/* Essential Close button */}
         <button
           onClick={onClose}
           className="p-2 rounded-xl bg-white/10 text-white hover:bg-red-500/80 transition-colors"
@@ -461,6 +474,19 @@ function Lightbox({
                 )}
               </button>
 
+              {/* Gallery button in Mobile Action Sheet */}
+              <button
+                onClick={() => {
+                  setToolsModalOpen(false);
+                  onClose();
+                  onOpenGallery();
+                }}
+                className="flex flex-col items-center justify-center p-3 rounded-xl bg-white/5 hover:bg-white/10 text-xs gap-1.5"
+              >
+                <LayoutGrid className="w-5 h-5 text-indigo-400" />
+                Gallery
+              </button>
+
               <button
                 onClick={() => {
                   setToolsModalOpen(false);
@@ -523,6 +549,7 @@ function SlideViewer({ images }) {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [gridModalOpen, setGridModalOpen] = useState(false);
   const intervalRef = useRef(null);
   const thumbRefs = useRef([]);
 
@@ -535,15 +562,14 @@ function SlideViewer({ images }) {
     [images.length]
   );
 
-  // Autoplay (pauses while lightbox is open, since the lightbox drives its own autoplay)
+  // Autoplay (pauses while lightbox or grid modal is open)
   useEffect(() => {
-    if (!playing || lightboxOpen) return;
+    if (!playing || lightboxOpen || gridModalOpen) return;
     intervalRef.current = setInterval(goNext, 2800);
     return () => clearInterval(intervalRef.current);
-  }, [playing, lightboxOpen, goNext]);
+  }, [playing, lightboxOpen, gridModalOpen, goNext]);
 
-  // Auto-scroll the thumbnail strip so the active thumbnail is always visible,
-  // whether index changed via the arrows, autoplay, or the lightbox.
+  // Auto-scroll the thumbnail strip so the active thumbnail is always visible
   useEffect(() => {
     const activeThumb = thumbRefs.current[index];
     if (activeThumb) {
@@ -579,6 +605,19 @@ function SlideViewer({ images }) {
 
         {/* Top controls */}
         <div className="absolute top-3 right-3 flex items-center space-x-2">
+          {/* Button to open Grid Modal */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setGridModalOpen(true);
+            }}
+            className="p-2 rounded-lg bg-slate-900/70 text-white hover:bg-slate-900/90 transition-colors flex items-center gap-1.5 text-xs font-medium"
+            aria-label="View gallery grid"
+          >
+            <LayoutGrid className="w-4 h-4" />
+            <span className="hidden sm:inline">Gallery</span>
+          </button>
+
           <span className="px-2.5 py-1 rounded-lg bg-slate-900/70 text-white text-xs font-medium">
             {index + 1} / {images.length}
           </span>
@@ -619,7 +658,7 @@ function SlideViewer({ images }) {
           <ChevronRight className="w-5 h-5" />
         </button>
 
-        {/* Progress bar (only meaningful while autoplaying) */}
+        {/* Progress bar */}
         {playing && (
           <div className="h-0.5 bg-slate-300 dark:bg-white/10">
             <div
@@ -631,7 +670,7 @@ function SlideViewer({ images }) {
         )}
       </div>
 
-      {/* Thumbnail strip — right below the main image/pagination controls */}
+      {/* Thumbnail strip */}
       <div className="thumb-scroll flex gap-2 mt-4 overflow-x-auto pb-2">
         {images.map((img, i) => (
           <button
@@ -639,7 +678,11 @@ function SlideViewer({ images }) {
             ref={(el) => (thumbRefs.current[i] = el)}
             onClick={() => setIndex(i)}
             className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all
-              ${i === index ? "border-blue-500" : "border-transparent opacity-60 hover:opacity-100"}`}
+              ${
+                i === index
+                  ? "border-blue-500"
+                  : "border-transparent opacity-60 hover:opacity-100"
+              }`}
             aria-label={`Go to ${img.title}`}
           >
             <img
@@ -651,8 +694,7 @@ function SlideViewer({ images }) {
         ))}
       </div>
 
-      {/* Caption / title / description — shown below the pagination/thumbnail strip,
-          only for the currently selected slide, until the user opens the lightbox */}
+      {/* Caption / title / description */}
       <div className="mt-3 px-1">
         <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider">
           {current.caption}
@@ -665,6 +707,7 @@ function SlideViewer({ images }) {
         </p>
       </div>
 
+      {/* Lightbox Modal */}
       {lightboxOpen && (
         <Lightbox
           images={images}
@@ -673,7 +716,76 @@ function SlideViewer({ images }) {
           onClose={() => setLightboxOpen(false)}
           isPlaying={playing}
           onTogglePlay={() => setPlaying((p) => !p)}
+          onOpenGallery={() => setGridModalOpen(true)}
         />
+      )}
+
+      {/* ---------- Thumbnail Grid Pagination Modal ---------- */}
+      {gridModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 sm:p-6"
+          onClick={() => setGridModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-800">
+              <div className="flex items-center gap-2 text-white">
+                <LayoutGrid className="w-5 h-5 text-blue-400" />
+                <h3 className="font-semibold text-base">Select an Image</h3>
+                <span className="text-xs text-slate-400 ml-2">
+                  ({images.length} items)
+                </span>
+              </div>
+              <button
+                onClick={() => setGridModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                aria-label="Close gallery modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Grid Content */}
+            <div className="p-4 sm:p-6 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {images.map((img, i) => (
+                <button
+                  key={img.src}
+                  onClick={() => {
+                    setIndex(i);
+                    setGridModalOpen(false);
+                  }}
+                  className={`group relative flex flex-col rounded-xl overflow-hidden border-2 text-left transition-all ${
+                    i === index
+                      ? "border-blue-500 ring-2 ring-blue-500/40"
+                      : "border-slate-800 hover:border-slate-600 bg-slate-950/50"
+                  }`}
+                >
+                  <div className="aspect-video w-full bg-slate-950 overflow-hidden relative">
+                    <img
+                      src={img.src}
+                      alt={img.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                    <span className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded bg-slate-950/80 text-white text-[10px] font-mono">
+                      #{i + 1}
+                    </span>
+                  </div>
+                  {/* <div className="p-2.5 bg-slate-900 flex-1">
+                    <p className="text-xs font-semibold text-white line-clamp-1">
+                      {img.title}
+                    </p>
+                    <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">
+                      {img.caption}
+                    </p>
+                  </div> */}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       <style>{`
@@ -684,8 +796,8 @@ function SlideViewer({ images }) {
 
         /* Custom scrollbar for the thumbnail strip */
         .thumb-scroll {
-          scrollbar-width: thin; /* Firefox */
-          scrollbar-color: rgb(148 163 184) transparent; /* Firefox: thumb, track */
+          scrollbar-width: thin;
+          scrollbar-color: rgb(148 163 184) transparent;
         }
         .thumb-scroll::-webkit-scrollbar {
           height: 6px;
@@ -694,20 +806,20 @@ function SlideViewer({ images }) {
           background: transparent;
         }
         .thumb-scroll::-webkit-scrollbar-thumb {
-          background-color: rgb(148 163 184 / 0.6); /* slate-400 */
+          background-color: rgb(148 163 184 / 0.6);
           border-radius: 9999px;
         }
         .thumb-scroll::-webkit-scrollbar-thumb:hover {
-          background-color: rgb(59 130 246 / 0.8); /* blue-500 on hover */
+          background-color: rgb(59 130 246 / 0.8);
         }
         .dark .thumb-scroll {
-          scrollbar-color: rgb(71 85 105) transparent; /* slate-600 for dark mode */
+          scrollbar-color: rgb(71 85 105) transparent;
         }
         .dark .thumb-scroll::-webkit-scrollbar-thumb {
-          background-color: rgb(71 85 105 / 0.7); /* slate-600 */
+          background-color: rgb(71 85 105 / 0.7);
         }
         .dark .thumb-scroll::-webkit-scrollbar-thumb:hover {
-          background-color: rgb(96 165 250 / 0.8); /* blue-400 on hover */
+          background-color: rgb(96 165 250 / 0.8);
         }
       `}</style>
     </div>
@@ -717,52 +829,15 @@ function SlideViewer({ images }) {
 export default function TakeOrderImports() {
   return (
     <>
-      {/* Section 1: How to take order in DCode */}
       <div className="p-4 sm:p-8 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700">
-        {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold dark:text-white text-slate-800">
               Order Booking
             </h2>
-            {/* <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-              Order #OB-2026-00417 &middot; Created Jul 24, 2026
-            </p> */}
           </div>
-          {/* <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
-            Pending Confirmation
-          </span> */}
         </div>
 
-        {/* Details grid */}
-        {/* <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60">
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-              Customer
-            </p>
-            <p className="text-sm font-medium dark:text-white text-slate-800">
-              Lorem Ipsum Trading Co.
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60">
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-              Origin &rarr; Destination
-            </p>
-            <p className="text-sm font-medium dark:text-white text-slate-800">
-              Rotterdam &rarr; Hamburg
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60">
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-              Container Type
-            </p>
-            <p className="text-sm font-medium dark:text-white text-slate-800">
-              40ft High Cube
-            </p>
-          </div>
-        </div> */}
-
-        {/* Booking Notes */}
         <div className="mb-8">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
             How to take order from DCode
@@ -774,7 +849,6 @@ export default function TakeOrderImports() {
           </p>
         </div>
 
-        {/* Slideshow */}
         <div>
           <div className="flex items-center space-x-2 mb-3">
             <ImageIcon className="w-4 h-4 text-slate-400" />
@@ -785,8 +859,6 @@ export default function TakeOrderImports() {
           <SlideViewer images={takeOrderImages} />
         </div>
       </div>
-
-      
     </>
   );
 }
