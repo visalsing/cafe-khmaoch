@@ -27,7 +27,7 @@ const menuItems = [
     label: "Order Booking",
     submenu: [
       { id: "takeorderimports", label: "Take Order Imports" },
-      { id: "checkstock", label: "Check Stock" },
+      { id: "stock-allocation", label: "Stock Allocation" },
       { id: "orderediting", label: "Order Editing" },
       { id: "ordercancel", label: "Order Cancel" },
       { id: "manualSaleOrderCreation", label: "Manual Sale Order Creation" },
@@ -128,7 +128,7 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
     <nav className="flex-1 p-4 space-y-2 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-slate-600">
       {menuItems.map((item) => {
         const isSubmenuActive = item.submenu?.some(
-          (sub) => sub.id === currentPage
+          (sub) => sub.id === currentPage,
         );
         const isParentActive =
           currentPage === item.id || item.active || isSubmenuActive;
@@ -220,8 +220,16 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
       >
         <div className="p-6 border-b border-slate-200/50 dark:border-slate-700/50">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+            {/* <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
               <Zap className="w-6 h-6 text-white" />
+              https://cl2.dcode.unilever.com/ngui/asset/images/dcode-logo.svg
+            </div> */}
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+              <img
+                src="https://cl2.dcode.unilever.com/ngui/asset/images/dcode-logo.svg"
+                alt="DCode Logo"
+                className="w-6 h-6 object-contain"
+              />
             </div>
             {!collapsed && (
               <div>

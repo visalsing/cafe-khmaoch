@@ -24,6 +24,25 @@ const km = {
   systemDescription: "ផ្គូផ្គងជាមួយការកំណត់រូបរាងឧបករណ៍របស់អ្នក។",
   language: "ភាសា",
   languageDescription: "ជ្រើសរើសភាសាដែលប្រើនៅទូទាំងផ្ទាំងគ្រប់គ្រង។",
+
+  // ---- Stock Allocation ----
+  sa_title_1: 'ស្វែងរក "Stock Allocation"',
+  sa_title_2: "Unallocated Tab",
+  sa_title_3: "Allocated Tab",
+  sa_title_4: "យល់ព្រម Order Reserve",
+  sa_cap_1: "Stock Allocation | រូបភាពទី១",
+  sa_cap_2: "Stock Allocation | រូបភាពទី២",
+  sa_cap_3: "Stock Allocation | រូបភាពទី៣",
+  sa_cap_4: "Stock Allocation | រូបភាពទី៤",
+  click_on_icon: "ចុចលើ icon",
+  sa_des_1:
+    'បន្ទាប់មកចុចនៅលើ search bar និងវាយថា "Stock Allocation" ដើម្បីស្វែងរក។​ នៅពេលម៉ឺនុយត្រូវបានបង្ហាញ ពួកយើងចុចលើវា។',
+  tab_allocate_text: "បង្ហាញអំពី sale orders ដែលមានស្ដុកគ្រប់ចំនួន។",
+
+  // stockAllocation: {
+  //   clickOnIcon: "ចុចលើរូបតំណាង",
+  //   afterIconText: '! បន្ទាប់មក ចុចលើរបារស្វែងរក ហើយវាយ "Stock Allocation"...',
+  // },
 };
 
 export default km;

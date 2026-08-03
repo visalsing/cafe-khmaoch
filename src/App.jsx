@@ -6,7 +6,7 @@ import Settings from "./components/Settings/Settings.jsx";
 
 // import OrderBooking from "./components/OrderBooking/OrderBooking.jsx";
 import TakeOrderImports from "./components/OrderBooking/TakeOrderImports.jsx";
-import CheckStock from "./components/OrderBooking/CheckStock.jsx";
+import StockAllocation from "./components/OrderBooking/StockAllocation.jsx";
 import OrderEditing from "./components/OrderBooking/OrderEditing.jsx";
 import OrderCancel from "./components/OrderBooking/OrderCancel.jsx";
 import ManualSaleOrderCreation from "./components/OrderBooking/ManualSaleOrderCreation.jsx";
@@ -84,7 +84,7 @@ function App() {
 
               {/* Order Booking */}
               {currentPage === "takeorderimports" && <TakeOrderImports />}
-              {currentPage === "checkstock" && <CheckStock />}
+              {currentPage === "stock-allocation" && <StockAllocation />}
               {currentPage === "orderediting" && <OrderEditing />}
               {currentPage === "ordercancel" && <OrderCancel />}
               {currentPage === "manualSaleOrderCreation" && (

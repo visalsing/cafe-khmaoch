@@ -40,6 +40,7 @@ git remote -v
 * **Update connected repository URL (if linked to wrong repo):**
 ```powershell
 git remote set-url origin <REPOSITORY_URL>
+git remote set-url origin https://github.com/visalsing/ddt-dcode-web-docs.git
 
 ```
 

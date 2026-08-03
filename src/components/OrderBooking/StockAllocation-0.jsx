@@ -14,38 +14,38 @@ import {
 // ----------------------------------------------------------------------
 // 2. Check Stock Order Imports (Renamed variables to prevent duplicate errors)
 // ----------------------------------------------------------------------
-import stockImg1 from "../../assets/orderbooking/check-stock-order/img1.jpg";
-import stockImg2 from "../../assets/orderbooking/check-stock-order/img2.jpg";
-import stockImg3 from "../../assets/orderbooking/check-stock-order/img3.jpg";
-import stockImg4 from "../../assets/orderbooking/check-stock-order/img4.jpg";
+import stockAllocationImg1 from "../../assets/orderbooking/stock-allocation/img1.jpg";
+import stockAllocationImg2 from "../../assets/orderbooking/stock-allocation/img2.jpg";
+import stockAllocationImg3 from "../../assets/orderbooking/stock-allocation/img3.jpg";
+import stockAllocationImg4 from "../../assets/orderbooking/stock-allocation/img4.jpg";
 
 // ----------------------------------------------------------------------
 // Check Stock Data Array
 // ----------------------------------------------------------------------
-const checkStockImages = [
+const stockAllocationImages = [
   {
-    src: stockImg1,
+    src: stockAllocationImg1,
     title: "Open Stock Module",
     caption: "Stock photo 1",
     description:
       "Navigate to the main inventory dashboard and open the stock lookup tool.",
   },
   {
-    src: stockImg2,
+    src: stockAllocationImg2,
     title: "Search Product Code",
     caption: "Stock photo 2",
     description:
       "Type or scan the specific SKU/barcode into the filter box to fetch current levels.",
   },
   {
-    src: stockImg3,
+    src: stockAllocationImg3,
     title: "Review Available Quantity",
     caption: "Stock photo 3",
     description:
       "Verify reserved, on-hand, and available stock figures across all warehouse zones.",
   },
   {
-    src: stockImg4,
+    src: stockAllocationImg4,
     title: "Confirm Order Reserve",
     caption: "Stock photo 4",
     description:
@@ -420,7 +420,7 @@ function SlideViewer({ images }) {
   );
 }
 
-export default function CheckStock() {
+export default function stockAllocation() {
   return (
     <>
       {/* Section 2: Check stock of order */}
@@ -434,7 +434,7 @@ export default function CheckStock() {
           </h3>
           <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
             Placeholder walkthrough — replace the images and captions in{" "}
-            <code>checkStockImages</code> with your real stock-check
+            <code>stockAllocationImages</code> with your real stock-check
             screenshots.
           </p>
         </div>
@@ -446,7 +446,7 @@ export default function CheckStock() {
               Attached Photos
             </h3>
           </div>
-          <SlideViewer images={checkStockImages} />
+          <SlideViewer images={stockAllocationImages} />
         </div>
       </div>
     </>
