@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+// import { Link } from "react-router-dom";
 import {
   ZoomIn,
   ZoomOut,
@@ -945,15 +946,22 @@ export default function StockAllocation() {
       {/* Action Buttons Section */}
       <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-end gap-3">
         {/* View as Slide Button */}
-        <a
-          href="https://stock-allocation.my.canva.site/"
+        {/* <a
+          href=""
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors shadow-sm"
         >
           <span>{t("view_as_slide") || "View as Slide"}</span>
           <ExternalLink className="w-4 h-4" />
-        </a>
+        </a> */}
+        {/* <Link
+          to="/stock-allocation-slides"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors shadow-sm"
+        >
+          <span>{t("view_as_slide") || "View as Slide"}</span>
+          <ExternalLink className="w-4 h-4" />
+        </Link> */}
 
         {/* Export as PowerPoint Button */}
         <a

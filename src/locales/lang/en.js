@@ -80,6 +80,21 @@ const en = {
   view_as_slide: "View as Slide",
   export_as_powerpoint: "Export as PowerPoint",
   export_as_pdf: "Export as PDF",
+
+  // Order Editing
+  oe_title_1: 'Search "Order Editing"',
+  oe_cap_1: "Order Editing | Image 1",
+  oe_des_1:
+    'Then, click on the search bar and type "Order Editing" to search. When the menu is displayed, we click on it.',
+
+  oe_cap_2: "Order Editing | Image 2",
+  oe_cap_3: "Order Editing | Image 3",
+  oe_cap_4: "Order Editing | Image 4",
+  oe_cap_5: "Order Editing | Image 5",
+  oe_cap_6: "Order Editing | Image 6",
+
+  order_editing: "Order Editing",
+  order_editing_overview: "Order Editing Overview",
 };
 
 export default en;

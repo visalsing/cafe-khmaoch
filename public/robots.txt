@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# Sitemap: https://ddt-dcode-web-docs.vercel.app/sitemap.xml
+
+Sitemap: http://localhost:5173/sitemap.xml

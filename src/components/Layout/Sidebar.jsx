@@ -1,6 +1,5 @@
-// Sidebar.jsx
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Settings,
@@ -11,28 +10,30 @@ import {
   TruckIcon,
   RouteIcon,
   PrinterIcon,
-  CreditCardIcon,
   BadgeDollarSignIcon,
   WarehouseIcon,
+  CreditCardIcon,
   Zap,
   X,
+  Search,
+  SearchX,
 } from "lucide-react";
 
 const menuItems = [
-  { id: "homepage", icon: LayoutDashboard, label: "Homepage" },
-  { id: "settings", icon: Settings, label: "Settings" },
+  { id: "homepage", path: "/homepage", icon: LayoutDashboard, label: "Homepage" },
+  { id: "settings", path: "/settings", icon: Settings, label: "Settings" },
   {
     id: "orderbooking",
     icon: ListOrderedIcon,
     label: "Order Booking",
     submenu: [
-      { id: "takeorderimports", label: "Take Order Imports" },
-      { id: "stock-allocation", label: "Stock Allocation" },
-      { id: "orderediting", label: "Order Editing" },
-      { id: "ordercancel", label: "Order Cancel" },
-      { id: "manualSaleOrderCreation", label: "Manual Sale Order Creation" },
-      { id: "takeOrderFromSalesman", label: "Take Order From Salesman" },
-      { id: "editOrderSaleDcode", label: "Edit Order Sale in DCode" },
+      { id: "takeorderimports", path: "/takeorderimports", label: "Take Order Imports" },
+      { id: "stock-allocation", path: "/stock-allocation", label: "Stock Allocation" },
+      { id: "orderediting", path: "/orderediting", label: "Order Editing" },
+      { id: "ordercancel", path: "/ordercancel", label: "Order Cancel" },
+      { id: "manualSaleOrderCreation", path: "/manualSaleOrderCreation", label: "Manual Sale Order Creation" },
+      { id: "takeOrderFromSalesman", path: "/takeOrderFromSalesman", label: "Take Order From Salesman" },
+      { id: "editOrderSaleDcode", path: "/editOrderSaleDcode", label: "Edit Order Sale in DCode" },
     ],
   },
   {
@@ -40,8 +41,8 @@ const menuItems = [
     icon: WarehouseIcon,
     label: "SAN",
     submenu: [
-      { id: "changeProductType", label: "Change Product Type" },
-      { id: "moveWarehouse", label: "Move Warehouse" },
+      { id: "changeProductType", path: "/changeProductType", label: "Change Product Type" },
+      { id: "moveWarehouse", path: "/moveWarehouse", label: "Move Warehouse" },
     ],
   },
   {
@@ -49,63 +50,107 @@ const menuItems = [
     icon: PackageCheckIcon,
     label: "GIN/GRN",
     submenu: [
-      { id: "good-issue-note", label: "Good Issue Note" },
-      { id: "goodReturnNote", label: "Good Return Note" },
+      { id: "good-issue-note", path: "/good-issue-note", label: "Good Issue Note" },
+      { id: "goodReturnNote", path: "/goodReturnNote", label: "Good Return Note" },
     ],
   },
   {
     id: "Stock-inquiry",
     icon: SendToBackIcon,
     label: "Stock Inquiry",
-    submenu: [{ id: "stock-inquiry", label: "Stock Inquiry" }],
+    submenu: [{ id: "stock-inquiry", path: "/stock-inquiry", label: "Stock Inquiry" }],
   },
   {
     id: "depositslip",
     icon: CreditCardIcon,
     label: "Deposit Slip",
     submenu: [
-      { id: "checkDepositSlip", label: "Check Deposit Slip" },
-      { id: "editDepositSlip", label: "Edit Deposit Slip" },
+      { id: "checkDepositSlip", path: "/checkDepositSlip", label: "Check Deposit Slip" },
+      { id: "editDepositSlip", path: "/editDepositSlip", label: "Edit Deposit Slip" },
     ],
   },
   {
     id: "delivery",
     icon: TruckIcon,
     label: "Delivery",
-    submenu: [{ id: "changeDeliveryDate", label: "Change Delivery Date" }],
+    submenu: [{ id: "changeDeliveryDate", path: "/changeDeliveryDate", label: "Change Delivery Date" }],
   },
   {
     id: "print",
     icon: PrinterIcon,
     label: "Print",
     submenu: [
-      { id: "printInvoice", label: "Print Invoice" },
-      { id: "printPicklist", label: "Print Picklist" },
+      { id: "printInvoice", path: "/printInvoice", label: "Print Invoice" },
+      { id: "printPicklist", path: "/printPicklist", label: "Print Picklist" },
     ],
   },
-  { id: "routeSettlement", icon: RouteIcon, label: "Route Settlement" },
+  { id: "routeSettlement", path: "/routeSettlement", icon: RouteIcon, label: "Route Settlement" },
   {
     id: "price",
     icon: BadgeDollarSignIcon,
     label: "Price",
     submenu: [
-      { id: "priceOutlet", label: "Check SKU Price Sale to Outlet" },
-      { id: "priceUnilever", label: "Check SKU Price from Unilever" },
+      { id: "priceOutlet", path: "/priceOutlet", label: "Check SKU Price Sale to Outlet" },
+      { id: "priceUnilever", path: "/priceUnilever", label: "Check SKU Price from Unilever" },
     ],
   },
 ];
 
-function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
+function Sidebar({ collapsed, onToggle }) {
+  const location = useLocation();
   const [expandedItems, setExpandedItems] = useState(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Auto expand parent dropdown if a child page is selected
+  const isSearching = searchQuery.trim().length > 0;
+
+  // Filter menu items (and submenu items) by the search query.
+  // - If a top-level item's own label matches, keep ALL of its submenu items.
+  // - If only some submenu items match, keep just those.
+  const filteredMenuItems = useMemo(() => {
+    if (!isSearching) return menuItems;
+
+    const query = searchQuery.trim().toLowerCase();
+
+    return menuItems.reduce((acc, item) => {
+      const labelMatches = item.label.toLowerCase().includes(query);
+
+      if (item.submenu) {
+        const matchingSubmenu = item.submenu.filter((sub) =>
+          sub.label.toLowerCase().includes(query)
+        );
+
+        if (labelMatches || matchingSubmenu.length > 0) {
+          acc.push({
+            ...item,
+            submenu: labelMatches ? item.submenu : matchingSubmenu,
+          });
+        }
+      } else if (labelMatches) {
+        acc.push(item);
+      }
+
+      return acc;
+    }, []);
+  }, [searchQuery, isSearching]);
+
+  // Auto expand parent dropdown if a child page route is active
   useEffect(() => {
+    if (isSearching) return; // search-driven expansion is handled below
     menuItems.forEach((item) => {
-      if (item.submenu?.some((sub) => sub.id === currentPage)) {
+      if (item.submenu?.some((sub) => sub.path === location.pathname)) {
         setExpandedItems((prev) => new Set([...prev, item.id]));
       }
     });
-  }, [currentPage]);
+  }, [location.pathname, isSearching]);
+
+  // While actively searching, auto-expand every group that has visible results
+  useEffect(() => {
+    if (!isSearching) return;
+    const matchedIds = filteredMenuItems
+      .filter((item) => item.submenu)
+      .map((item) => item.id);
+    setExpandedItems(new Set(matchedIds));
+  }, [isSearching, filteredMenuItems]);
 
   const toggleExpanded = (itemId) => {
     setExpandedItems((prev) => {
@@ -119,94 +164,131 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
     });
   };
 
-  const handleLinkClick = (id, isMobile = false) => {
-    onPageChange(id);
-    if (isMobile) onToggle();
+  const handleLinkClick = (isMobile = false) => {
+    if (isMobile && onToggle) {
+      onToggle();
+    }
   };
+
+  const clearSearch = () => setSearchQuery("");
+
+  const renderSearchBar = () => (
+    <div className="px-4 pt-4">
+      <div className="relative">
+        <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search menu..."
+          className="w-full pl-9 pr-9 py-2.5 bg-slate-100
+            dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl
+            text-sm text-slate-800 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2
+            focus:ring-blue-500 focus:border-transparent transition-all"
+        />
+        {isSearching && (
+          <button
+            onClick={clearSearch}
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-md text-slate-400
+              hover:text-slate-600 dark:hover:text-slate-300"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   const renderNavContent = (isMobile = false) => (
     <nav className="flex-1 p-4 space-y-2 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-slate-600">
-      {menuItems.map((item) => {
-        const isSubmenuActive = item.submenu?.some(
-          (sub) => sub.id === currentPage,
-        );
-        const isParentActive =
-          currentPage === item.id || item.active || isSubmenuActive;
+      {filteredMenuItems.length === 0 ? (
+        <div className="flex flex-col items-center justify-center text-center py-10 px-4 text-slate-400 dark:text-slate-500">
+          <SearchX className="w-8 h-8 mb-2" />
+          <p className="text-sm">No menu items match "{searchQuery}"</p>
+        </div>
+      ) : (
+        filteredMenuItems.map((item) => {
+          const isSubmenuActive = item.submenu?.some(
+            (sub) => sub.path === location.pathname
+          );
+          const isParentActive =
+            location.pathname === item.path || isSubmenuActive;
 
-        return (
-          <div key={item.id}>
-            {item.submenu ? (
-              /* Dropdown toggle button */
-              <button
-                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
-                  isParentActive
-                    ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25"
-                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
-                }`}
-                onClick={() => toggleExpanded(item.id)}
-              >
-                <div className="flex items-center space-x-3">
-                  <item.icon className="w-5 h-5 flex-shrink-0" />
+          return (
+            <div key={item.id}>
+              {item.submenu ? (
+                /* Dropdown toggle button */
+                <button
+                  className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
+                    isParentActive
+                      ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25"
+                      : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
+                  }`}
+                  onClick={() => toggleExpanded(item.id)}
+                >
+                  <div className="flex items-center space-x-3">
+                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    {(!collapsed || isMobile) && (
+                      <span className="font-medium ml-2">{item.label}</span>
+                    )}
+                  </div>
                   {(!collapsed || isMobile) && (
-                    <span className="font-medium ml-2">{item.label}</span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        expandedItems.has(item.id) ? "rotate-180" : ""
+                      }`}
+                    />
                   )}
-                </div>
-                {(!collapsed || isMobile) && (
-                  <ChevronDown
-                    className={`w-4 h-4 transition-transform duration-200 ${
-                      expandedItems.has(item.id) ? "rotate-180" : ""
-                    }`}
-                  />
-                )}
-              </button>
-            ) : (
-              /* Direct page link with href="#" */
-              <a
-                href={`#${item.id}`}
-                onClick={() => handleLinkClick(item.id, isMobile)}
-                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
-                  isParentActive
-                    ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25"
-                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <item.icon className="w-5 h-5 flex-shrink-0" />
-                  {(!collapsed || isMobile) && (
-                    <span className="font-medium ml-2">{item.label}</span>
-                  )}
-                </div>
-              </a>
-            )}
+                </button>
+              ) : (
+                /* Actual React Router NavLink */
+                <NavLink
+                  to={item.path}
+                  onClick={() => handleLinkClick(isMobile)}
+                  className={({ isActive }) =>
+                    `w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
+                      isActive
+                        ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25"
+                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
+                    }`
+                  }
+                >
+                  <div className="flex items-center space-x-3">
+                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    {(!collapsed || isMobile) && (
+                      <span className="font-medium ml-2">{item.label}</span>
+                    )}
+                  </div>
+                </NavLink>
+              )}
 
-            {/* Submenus */}
-            {(!collapsed || isMobile) &&
-              item.submenu &&
-              expandedItems.has(item.id) && (
-                <div className="ml-8 mt-2 space-y-1">
-                  {item.submenu.map((subitem) => {
-                    const isSubActive = currentPage === subitem.id;
-
-                    return (
-                      <a
+              {/* Submenus */}
+              {(!collapsed || isMobile) &&
+                item.submenu &&
+                expandedItems.has(item.id) && (
+                  <div className="ml-8 mt-2 space-y-1">
+                    {item.submenu.map((subitem) => (
+                      <NavLink
                         key={subitem.id}
-                        href={`#${subitem.id}`}
-                        onClick={() => handleLinkClick(subitem.id, isMobile)}
-                        className={`block w-full text-left p-2 text-sm rounded-lg transition-all ${
-                          isSubActive
-                            ? "bg-blue-100 text-blue-700 font-medium dark:bg-blue-500/15 dark:text-blue-300"
-                            : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50"
-                        }`}
+                        to={subitem.path}
+                        onClick={() => handleLinkClick(isMobile)}
+                        className={({ isActive }) =>
+                          `block w-full text-left p-2 text-sm rounded-lg transition-all ${
+                            isActive
+                              ? "bg-blue-100 text-blue-700 font-medium dark:bg-blue-500/15 dark:text-blue-300"
+                              : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50"
+                          }`
+                        }
                       >
                         {subitem.label}
-                      </a>
-                    );
-                  })}
-                </div>
-              )}
-          </div>
-        );
-      })}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+            </div>
+          );
+        })
+      )}
     </nav>
   );
 
@@ -220,10 +302,6 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
       >
         <div className="p-6 border-b border-slate-200/50 dark:border-slate-700/50">
           <div className="flex items-center space-x-3">
-            {/* <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
-              <Zap className="w-6 h-6 text-white" />
-              https://cl2.dcode.unilever.com/ngui/asset/images/dcode-logo.svg
-            </div> */}
             <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
               <img
                 src="https://cl2.dcode.unilever.com/ngui/asset/images/dcode-logo.svg"
@@ -243,6 +321,10 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
             )}
           </div>
         </div>
+
+        {/* Search bar only makes sense when the sidebar is expanded (there's no
+            room to show a text input in the collapsed 80px rail) */}
+        {!collapsed && renderSearchBar()}
 
         {renderNavContent(false)}
 
@@ -291,6 +373,8 @@ function Sidebar({ collapsed, onToggle, currentPage, onPageChange }) {
               <X className="w-6 h-6" />
             </button>
           </div>
+
+          {renderSearchBar()}
 
           {renderNavContent(true)}
 
