@@ -68,7 +68,7 @@ const en = {
 
   editing_sale_order: "Editing Sale Order",
   editing_sale_order_txt1: "To edit a sales order, it must be set to",
-  unallocated: "unallocated",
+  unallocated: " unallocated ",
   first: " first.",
   editing_sale_order_txt2: "Afterwards, the sales order will appear under ",
   option_order_editing: "Option Order Editing.",
@@ -77,6 +77,7 @@ const en = {
   change_the_sales_order_status: "Change the sales order status from ",
   unallocated_capital: "Unallocated",
   allocated_capital: "Allocated",
+  once_completed_proceed_to: "Once completed, proceed to ",
   view_as_slide: "View as Slide",
   export_as_powerpoint: "Export as PowerPoint",
   export_as_pdf: "Export as PDF",
@@ -87,14 +88,44 @@ const en = {
   oe_des_1:
     'Then, click on the search bar and type "Order Editing" to search. When the menu is displayed, we click on it.',
 
+  oe_title_2: "Order Editing Header",
   oe_cap_2: "Order Editing | Image 2",
+  oe_des2_txt1:
+    "Order Editing Header is a place where there are filters for us to fill for which sale order we want to edit.",
+  oe_des2_txt2:
+    "Its elements has PJP, Selling Category, Section, Outlet Name, Date From, Date To and SKU.",
+  oe_des2_txt3:
+    'There is table showing data below the Order Editing Header. Its elements has Document No, Document Date, Delivery Date, Outlet, Gross Amount, Discount, Tax, Net Amount, Received Amount, Balance Amout and Demand Channel. There is a "Show filter" below the table which used for searching data by each column.',
+  oe_des2_txt4:
+    "On the table, click on a row, and it will be highlighted blue.",
+
+  oe_title_3: "Edit Order",
   oe_cap_3: "Order Editing | Image 3",
+  oe_des3_txt1: "There is an interterface we are going to edit order.",
+  oe_des3_txt2:
+    'We have to fill or select on elements of "Order Editing" such asDocument No, Outlet, Document Date, Delivery Date, PJP, Section and Selling Category.',
+  oe_des3_txt3: `On the table, we see Product Code, Batch, Current Stock, Price Value, Demand (CS, DZ, PC), Order (CS, DZ, PC), Gross Amount and Reason Type. If there is data existing, we see data in a row with "Edit". Click on "Edit"!`,
+
+  oe_title_4: "Edit Order",
   oe_cap_4: "Order Editing | Image 4",
+  oe_des4_txt1: `We edit numbers in Order (CS, DZ, PC) and select one reason in Reason Type. If we want to save what we have edited, click on "Save". If we don't, click on "Cancel".`,
+
   oe_cap_5: "Order Editing | Image 5",
+  oe_title_5: "Validate Edit Order",
+  oe_des5_txt1: 'Click on "Validation" button to complete edit order.',
+
   oe_cap_6: "Order Editing | Image 6",
+  oe_title_6: "Save Edit Order",
+  oe_des6_txt1: 'Click on "Save" button to save and complete edit order.',
 
   order_editing: "Order Editing",
   order_editing_overview: "Order Editing Overview",
+  order_editing_txt: "Order Editing is a place where we edit the sale order.",
+
+  // Fresh Sales Order (Below 24h)
+  fresh_sales_return_below24h: "Fresh Sales Return (Below 24h)",
+  fresh_sales_return_below24h_overview:
+    "Fresh Sales Return (Below 24h) Overview",
 };
 
 export default en;

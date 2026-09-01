@@ -926,7 +926,7 @@ export default function StockAllocation() {
               <strong>{t("unallocated_capital")}</strong>.
             </li>
             <li>
-              Once completed, proceed to <strong>Order Editing</strong>.
+              {t("once_completed_proceed_to")} <strong>{t("order_editing")}</strong>.
             </li>
           </ol>
         </div>

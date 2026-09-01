@@ -20,20 +20,45 @@ import {
 } from "lucide-react";
 
 const menuItems = [
-  { id: "homepage", path: "/homepage", icon: LayoutDashboard, label: "Homepage" },
+  {
+    id: "homepage",
+    path: "/homepage",
+    icon: LayoutDashboard,
+    label: "Homepage",
+  },
   { id: "settings", path: "/settings", icon: Settings, label: "Settings" },
   {
     id: "orderbooking",
     icon: ListOrderedIcon,
     label: "Order Booking",
     submenu: [
-      { id: "takeorderimports", path: "/takeorderimports", label: "Take Order Imports" },
-      { id: "stock-allocation", path: "/stock-allocation", label: "Stock Allocation" },
+      {
+        id: "takeorderimports",
+        path: "/takeorderimports",
+        label: "Take Order Imports",
+      },
+      {
+        id: "stock-allocation",
+        path: "/stock-allocation",
+        label: "Stock Allocation",
+      },
       { id: "orderediting", path: "/orderediting", label: "Order Editing" },
       { id: "ordercancel", path: "/ordercancel", label: "Order Cancel" },
-      { id: "manualSaleOrderCreation", path: "/manualSaleOrderCreation", label: "Manual Sale Order Creation" },
-      { id: "takeOrderFromSalesman", path: "/takeOrderFromSalesman", label: "Take Order From Salesman" },
-      { id: "editOrderSaleDcode", path: "/editOrderSaleDcode", label: "Edit Order Sale in DCode" },
+      {
+        id: "manualSaleOrderCreation",
+        path: "/manualSaleOrderCreation",
+        label: "Manual Sale Order Creation",
+      },
+      {
+        id: "takeOrderFromSalesman",
+        path: "/takeOrderFromSalesman",
+        label: "Take Order From Salesman",
+      },
+      {
+        id: "editOrderSaleDcode",
+        path: "/editOrderSaleDcode",
+        label: "Edit Order Sale in DCode",
+      },
     ],
   },
   {
@@ -41,7 +66,11 @@ const menuItems = [
     icon: WarehouseIcon,
     label: "SAN",
     submenu: [
-      { id: "changeProductType", path: "/changeProductType", label: "Change Product Type" },
+      {
+        id: "changeProductType",
+        path: "/changeProductType",
+        label: "Change Product Type",
+      },
       { id: "moveWarehouse", path: "/moveWarehouse", label: "Move Warehouse" },
     ],
   },
@@ -50,30 +79,88 @@ const menuItems = [
     icon: PackageCheckIcon,
     label: "GIN/GRN",
     submenu: [
-      { id: "good-issue-note", path: "/good-issue-note", label: "Good Issue Note" },
-      { id: "goodReturnNote", path: "/goodReturnNote", label: "Good Return Note" },
+      {
+        id: "good-issue-note",
+        path: "/good-issue-note",
+        label: "Good Issue Note",
+      },
+      {
+        id: "goodReturnNote",
+        path: "/goodReturnNote",
+        label: "Good Return Note",
+      },
     ],
   },
   {
-    id: "Stock-inquiry",
+    id: "sales-return",
+    icon: PackageCheckIcon,
+    label: "Sales Return",
+    submenu: [
+      {
+        id: "sales-return",
+        path: "/sales-return",
+        label: "Sales Return",
+      },
+      {
+        id: "fresh-sales-return",
+        path: "/fresh-sales-return",
+        label: "Fresh Sales Return",
+      },
+      {
+        id: "fresh-sales-return-below24h",
+        path: "/fresh-sales-return-below24h",
+        label: "Fresh Sales Return Below 24h",
+      },
+    ],
+  },
+  {
+    id: "Stock-Inquiry",
     icon: SendToBackIcon,
     label: "Stock Inquiry",
-    submenu: [{ id: "stock-inquiry", path: "/stock-inquiry", label: "Stock Inquiry" }],
+    submenu: [
+      { id: "stock-inquiry", path: "/stock-inquiry", label: "Stock Inquiry" },
+    ],
+  },
+  {
+    id: "Dispatch-Advice-II",
+    icon: SendToBackIcon,
+    label: "Dispatch Advice II",
+    submenu: [
+      {
+        id: "dispatch-advice-ii",
+        path: "/dispatch-advice-ii",
+        label: "Dispatch Advice II",
+      },
+    ],
   },
   {
     id: "depositslip",
     icon: CreditCardIcon,
     label: "Deposit Slip",
     submenu: [
-      { id: "checkDepositSlip", path: "/checkDepositSlip", label: "Check Deposit Slip" },
-      { id: "editDepositSlip", path: "/editDepositSlip", label: "Edit Deposit Slip" },
+      {
+        id: "checkDepositSlip",
+        path: "/checkDepositSlip",
+        label: "Check Deposit Slip",
+      },
+      {
+        id: "editDepositSlip",
+        path: "/editDepositSlip",
+        label: "Edit Deposit Slip",
+      },
     ],
   },
   {
     id: "delivery",
     icon: TruckIcon,
     label: "Delivery",
-    submenu: [{ id: "changeDeliveryDate", path: "/changeDeliveryDate", label: "Change Delivery Date" }],
+    submenu: [
+      {
+        id: "changeDeliveryDate",
+        path: "/changeDeliveryDate",
+        label: "Change Delivery Date",
+      },
+    ],
   },
   {
     id: "print",
@@ -84,14 +171,27 @@ const menuItems = [
       { id: "printPicklist", path: "/printPicklist", label: "Print Picklist" },
     ],
   },
-  { id: "routeSettlement", path: "/routeSettlement", icon: RouteIcon, label: "Route Settlement" },
+  {
+    id: "routeSettlement",
+    path: "/routeSettlement",
+    icon: RouteIcon,
+    label: "Route Settlement",
+  },
   {
     id: "price",
     icon: BadgeDollarSignIcon,
     label: "Price",
     submenu: [
-      { id: "priceOutlet", path: "/priceOutlet", label: "Check SKU Price Sale to Outlet" },
-      { id: "priceUnilever", path: "/priceUnilever", label: "Check SKU Price from Unilever" },
+      {
+        id: "priceOutlet",
+        path: "/priceOutlet",
+        label: "Check SKU Price Sale to Outlet",
+      },
+      {
+        id: "priceUnilever",
+        path: "/priceUnilever",
+        label: "Check SKU Price from Unilever",
+      },
     ],
   },
 ];
@@ -116,7 +216,7 @@ function Sidebar({ collapsed, onToggle }) {
 
       if (item.submenu) {
         const matchingSubmenu = item.submenu.filter((sub) =>
-          sub.label.toLowerCase().includes(query)
+          sub.label.toLowerCase().includes(query),
         );
 
         if (labelMatches || matchingSubmenu.length > 0) {
@@ -209,7 +309,7 @@ function Sidebar({ collapsed, onToggle }) {
       ) : (
         filteredMenuItems.map((item) => {
           const isSubmenuActive = item.submenu?.some(
-            (sub) => sub.path === location.pathname
+            (sub) => sub.path === location.pathname,
           );
           const isParentActive =
             location.pathname === item.path || isSubmenuActive;

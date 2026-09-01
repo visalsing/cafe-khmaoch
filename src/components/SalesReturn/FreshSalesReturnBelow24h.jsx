@@ -21,14 +21,25 @@ import {
 } from "lucide-react";
 
 // ----------------------------------------------------------------------
-// 3. Order Editing
+// Fresh Sales Return Below 24H
 // ----------------------------------------------------------------------
-import orderEditingImg1 from "../../assets/orderbooking/order-editing/img1.jpg";
-import orderEditingImg2 from "../../assets/orderbooking/order-editing/img2.jpg";
-import orderEditingImg3 from "../../assets/orderbooking/order-editing/img3.jpg";
-import orderEditingImg4 from "../../assets/orderbooking/order-editing/img4.jpg";
-import orderEditingImg5 from "../../assets/orderbooking/order-editing/img5.jpg";
-import orderEditingImg6 from "../../assets/orderbooking/order-editing/img6.jpg";
+import freshSalesReturnBelow24hImg1 from "../../assets/salesreturn/fresh-sales-return-below24h/img1.png";
+import freshSalesReturnBelow24hImg2 from "../../assets/salesreturn/fresh-sales-return-below24h/img2.png";
+import freshSalesReturnBelow24hImg3 from "../../assets/salesreturn/fresh-sales-return-below24h/img3.png";
+import freshSalesReturnBelow24hImg4 from "../../assets/salesreturn/fresh-sales-return-below24h/img4.png";
+import freshSalesReturnBelow24hImg5 from "../../assets/salesreturn/fresh-sales-return-below24h/img5.png";
+import freshSalesReturnBelow24hImg6 from "../../assets/salesreturn/fresh-sales-return-below24h/img6.png";
+import freshSalesReturnBelow24hImg7 from "../../assets/salesreturn/fresh-sales-return-below24h/img7.png";
+import freshSalesReturnBelow24hImg8 from "../../assets/salesreturn/fresh-sales-return-below24h/img8.png";
+import freshSalesReturnBelow24hImg9 from "../../assets/salesreturn/fresh-sales-return-below24h/img9.png";
+import freshSalesReturnBelow24hImg10 from "../../assets/salesreturn/fresh-sales-return-below24h/img10.png";
+import freshSalesReturnBelow24hImg11 from "../../assets/salesreturn/fresh-sales-return-below24h/img11.png";
+import freshSalesReturnBelow24hImg12 from "../../assets/salesreturn/fresh-sales-return-below24h/img12.png";
+import freshSalesReturnBelow24hImg13 from "../../assets/salesreturn/fresh-sales-return-below24h/img13.png";
+import freshSalesReturnBelow24hImg14 from "../../assets/salesreturn/fresh-sales-return-below24h/img14.png";
+import freshSalesReturnBelow24hImg15 from "../../assets/salesreturn/fresh-sales-return-below24h/img15.png";
+import freshSalesReturnBelow24hImg16 from "../../assets/salesreturn/fresh-sales-return-below24h/img16.png";
+import freshSalesReturnBelow24hImg17 from "../../assets/salesreturn/fresh-sales-return-below24h/img17.png";
 
 // ---------- Fullscreen zoom lightbox ----------
 function Lightbox({
@@ -96,7 +107,7 @@ function Lightbox({
       const response = await fetch(image.src);
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
-      const ext = image.src.split(".").pop().split("?")[0] || "jpg";
+      const ext = image.src.split(".").pop().split("?")[0] || "png";
       const filename = `${image.title.replace(/[^a-z0-9]+/gi, "_")}.${ext}`;
       const a = document.createElement("a");
       a.href = blobUrl;
@@ -737,15 +748,15 @@ function SlideViewer({ images }) {
   );
 }
 
-export default function OrderEditings() {
+export default function FreshSalesOrderBelow24h() {
   const { language, t } = useLanguage();
 
   // ----------------------------------------------------------------------
   // Order Editing Data Array
   // ----------------------------------------------------------------------
-  const orderEditingImages = [
+  const freshSalesReturnBelow24hImages = [
     {
-      src: orderEditingImg1,
+      src: freshSalesReturnBelow24hImg1,
       title: t("oe_title_1"),
       caption: t("oe_cap_1"),
       description: (
@@ -757,59 +768,113 @@ export default function OrderEditings() {
       ),
     },
     {
-      src: orderEditingImg2,
+      src: freshSalesReturnBelow24hImg2,
       title: t("oe_title_2"),
       caption: t("oe_cap_2"),
       description: (
         <div className="space-y-1.5">
-          <p className="">
-            {t("oe_des2_txt1")}
-          </p>
-          <p>
-            {t("oe_des2_txt2")}
-          </p>
-          <p>
-            {t("oe_des2_txt3")}
-          </p>
+          <p className="">{t("oe_des2_txt1")}</p>
+          <p>{t("oe_des2_txt2")}</p>
+          <p>{t("oe_des2_txt3")}</p>
           <p>{t("oe_des2_txt4")}</p>
         </div>
       ),
     },
     {
-      src: orderEditingImg3,
+      src: freshSalesReturnBelow24hImg3,
       title: t("oe_title_3"),
       caption: t("oe_cap_3"),
       description: (
         <div className="space-y-1.5">
           <p>{t("oe_des3_txt1")}</p>
-          <p>
-            {t("oe_des3_txt2")}
-          </p>
-          <p>
-            {t("oe_des3_txt3")}
-          </p>
+          <p>{t("oe_des3_txt2")}</p>
+          <p>{t("oe_des3_txt3")}</p>
         </div>
       ),
     },
     {
-      src: orderEditingImg4,
+      src: freshSalesReturnBelow24hImg4,
       title: t("oe_title_4"),
       caption: t("oe_cap_4"),
       description: t("oe_des4_txt1"),
     },
     {
-      src: orderEditingImg5,
+      src: freshSalesReturnBelow24hImg5,
       title: t("oe_title_5"),
       caption: t("oe_cap_5"),
-      description:
-        t("oe_des5_txt1"),
+      description: t("oe_des5_txt1"),
     },
     {
-      src: orderEditingImg6,
+      src: freshSalesReturnBelow24hImg6,
       title: t("oe_title_6"),
       caption: t("oe_cap_6"),
-      description:
-        t("oe_des6_txt1"),
+      description: t("oe_des6_txt1"),
+    },
+    {
+      src: freshSalesReturnBelow24hImg7,
+      title: t("oe_title_7"),
+      caption: t("oe_cap_7"),
+      description: t("oe_des7_txt1"),
+    },
+    {
+      src: freshSalesReturnBelow24hImg8,
+      title: t("oe_title_8"),
+      caption: t("oe_cap_8"),
+      description: t("oe_des8_txt1"),
+    },
+    {
+      src: freshSalesReturnBelow24hImg9,
+      title: t("oe_title_9"),
+      caption: t("oe_cap_9"),
+      description: t("oe_des9_txt1"),
+    },
+    {
+      src: freshSalesReturnBelow24hImg10,
+      title: t("oe_title_10"),
+      caption: t("oe_cap_10"),
+      description: t("oe_des10_txt1"),
+    },
+    {
+      src: freshSalesReturnBelow24hImg11,
+      title: t("oe_title_11"),
+      caption: t("oe_cap_11"),
+      description: t("oe_des11_txt1"),
+    },
+    {
+      src: freshSalesReturnBelow24hImg12,
+      title: t("oe_title_12"),
+      caption: t("oe_cap_12"),
+      description: t("oe_des12_txt1"),
+    },
+    {
+      src: freshSalesReturnBelow24hImg13,
+      title: t("oe_title_13"),
+      caption: t("oe_cap_13"),
+      description: t("oe_des13_txt1"),
+    },
+    {
+      src: freshSalesReturnBelow24hImg14,
+      title: t("oe_title_14"),
+      caption: t("oe_cap_14"),
+      description: t("oe_des14_txt1"),
+    },
+    {
+      src: freshSalesReturnBelow24hImg15,
+      title: t("oe_title_15"),
+      caption: t("oe_cap_15"),
+      description: t("oe_des15_txt1"),
+    },
+    {
+      src: freshSalesReturnBelow24hImg16,
+      title: t("oe_title_16"),
+      caption: t("oe_cap_16"),
+      description: t("oe_des16_txt1"),
+    },
+    {
+      src: freshSalesReturnBelow24hImg17,
+      title: t("oe_title_17"),
+      caption: t("oe_cap_17"),
+      description: t("oe_des17_txt1"),
     },
   ];
 
@@ -819,7 +884,7 @@ export default function OrderEditings() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold dark:text-white text-slate-800">
-            {t("order_editing")}
+            {t("fresh_sales_return_below24h")}
           </h2>
         </div>
       </div>
@@ -829,12 +894,26 @@ export default function OrderEditings() {
         {/* Section 1: Overview */}
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
-            {t("order_editing_overview")}
+            {t("fresh_sales_return_below24h_overview")}
           </h3>
-          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
+          {/* <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
             {t("order_editing_txt")}
-            {/* Order Editing is a place where we edit the sale order.  */}
-          </p>
+          </p> */}
+          <ul className="list-disc list-inside space-y-1.5 text-sm text-slate-600 dark:text-slate-300 ml-1">
+            <li>
+              {t("navigate_to")}
+              <strong>{t("stock_allocation")}</strong>.
+            </li>
+            <li>
+              {t("change_the_sales_order_status")}
+              <strong>{t("allocated_capital")}</strong> →{" "}
+              <strong>{t("unallocated_capital")}</strong>.
+            </li>
+            <li>
+              {t("once_completed_proceed_to")}{" "}
+              <strong>{t("order_editing")}</strong>.
+            </li>
+          </ul>
         </div>
 
         {/* Section 2: Editing Sale Order */}
@@ -850,7 +929,7 @@ export default function OrderEditings() {
           </p>
 
           <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
-            {t("steps_edit_sale_order")}
+            {/* {t("steps_edit_sale_order")} */}
           </p>
           <ol className="list-decimal list-inside space-y-1.5 text-sm text-slate-600 dark:text-slate-300 ml-1">
             <li>
@@ -863,7 +942,8 @@ export default function OrderEditings() {
               <strong>{t("unallocated_capital")}</strong>.
             </li>
             <li>
-              {t("once_completed_proceed_to")} <strong>{t("order_editing")}</strong>.
+              {t("once_completed_proceed_to")}{" "}
+              <strong>{t("order_editing")}</strong>.
             </li>
           </ol>
         </div>
@@ -877,7 +957,7 @@ export default function OrderEditings() {
             {t("attached_photos")}
           </h3>
         </div>
-        <SlideViewer images={orderEditingImages} />
+        <SlideViewer images={freshSalesReturnBelow24hImages} />
       </div>
 
       {/* Action Buttons Section */}

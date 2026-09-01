@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import { Link } from "react-router-dom";
 import {
   ZoomIn,
   ZoomOut,
@@ -20,15 +21,22 @@ import {
   FileText,
 } from "lucide-react";
 
+// const { t } = useLanguage();
+
 // ----------------------------------------------------------------------
-// 3. Order Editing
+// 2. Check Stock Order Imports
 // ----------------------------------------------------------------------
-import orderEditingImg1 from "../../assets/orderbooking/order-editing/img1.jpg";
-import orderEditingImg2 from "../../assets/orderbooking/order-editing/img2.jpg";
-import orderEditingImg3 from "../../assets/orderbooking/order-editing/img3.jpg";
-import orderEditingImg4 from "../../assets/orderbooking/order-editing/img4.jpg";
-import orderEditingImg5 from "../../assets/orderbooking/order-editing/img5.jpg";
-import orderEditingImg6 from "../../assets/orderbooking/order-editing/img6.jpg";
+import dispatchAdviceIIImg1 from "../../assets/dispatchadviceii/dispatch-advice-ii/dispatch-advice-ii-1.png";
+import dispatchAdviceIIImg2 from "../../assets/dispatchadviceii/dispatch-advice-ii/dispatch-advice-ii-2.png";
+import dispatchAdviceIIImg3 from "../../assets/dispatchadviceii/dispatch-advice-ii/dispatch-advice-ii-3.png";
+// import dispatchAdviceIIImg4 from "../../assets/dispatchadviceii/dispatch-advice-ii/dispatch-advice-ii-4.png";
+// import dispatchAdviceIIImg5 from "../../assets/dispatchadviceii/dispatch-advice-ii/dispatch-advice-ii-5.png";
+import dispatchAdviceIIImg6 from "../../assets/dispatchadviceii/dispatch-advice-ii/dispatch-advice-ii-6.png";
+// import dispatchAdviceIIImg7 from "../../assets/dispatchadviceii/dispatch-advice-ii/dispatch-advice-ii-7.png";
+import dispatchAdviceIIImg8 from "../../assets/dispatchadviceii/dispatch-advice-ii/dispatch-advice-ii-8.png";
+import dispatchAdviceIIImg9 from "../../assets/dispatchadviceii/dispatch-advice-ii/dispatch-advice-ii-9.png";
+import dispatchAdviceIIImg10 from "../../assets/dispatchadviceii/dispatch-advice-ii/dispatch-advice-ii-10.png";
+import dispatchAdviceIIImg11 from "../../assets/dispatchadviceii/dispatch-advice-ii/dispatch-advice-ii-11.png";
 
 // ---------- Fullscreen zoom lightbox ----------
 function Lightbox({
@@ -737,80 +745,149 @@ function SlideViewer({ images }) {
   );
 }
 
-export default function OrderEditings() {
+export default function DispatchAdviceII() {
   const { language, t } = useLanguage();
 
-  // ----------------------------------------------------------------------
-  // Order Editing Data Array
-  // ----------------------------------------------------------------------
-  const orderEditingImages = [
+  const dispatchAdviceIIImages = [
     {
-      src: orderEditingImg1,
-      title: t("oe_title_1"),
-      caption: t("oe_cap_1"),
+      src: dispatchAdviceIIImg1,
+      title: t("sa_title_1"),
+      caption: t("sa_cap_1"),
       description: (
         <span>
           {t("click_on_icon")} "
           <SettingsIcon className="inline align-middle h-4 w-4 -translate-y-[1px]" />
-          "! {t("oe_des_1")}
+          "! {t("sa_des_1")}
         </span>
       ),
     },
     {
-      src: orderEditingImg2,
-      title: t("oe_title_2"),
-      caption: t("oe_cap_2"),
+      src: dispatchAdviceIIImg2,
+      title: t("sa_title_1"),
+      caption: t("sa_cap_1"),
       description: (
-        <div className="space-y-1.5">
-          <p className="">
-            {t("oe_des2_txt1")}
-          </p>
-          <p>
-            {t("oe_des2_txt2")}
-          </p>
-          <p>
-            {t("oe_des2_txt3")}
-          </p>
-          <p>{t("oe_des2_txt4")}</p>
-        </div>
+        <span>
+          {t("click_on_icon")} "
+          <SettingsIcon className="inline align-middle h-4 w-4 -translate-y-[1px]" />
+          "! {t("sa_des_1")}
+        </span>
       ),
     },
     {
-      src: orderEditingImg3,
-      title: t("oe_title_3"),
-      caption: t("oe_cap_3"),
+      src: dispatchAdviceIIImg3,
+      title: t("sa_title_1"),
+      caption: t("sa_cap_1"),
       description: (
-        <div className="space-y-1.5">
-          <p>{t("oe_des3_txt1")}</p>
-          <p>
-            {t("oe_des3_txt2")}
-          </p>
-          <p>
-            {t("oe_des3_txt3")}
-          </p>
-        </div>
+        <span>
+          {t("click_on_icon")} "
+          <SettingsIcon className="inline align-middle h-4 w-4 -translate-y-[1px]" />
+          "! {t("sa_des_1")}
+        </span>
       ),
     },
     {
-      src: orderEditingImg4,
-      title: t("oe_title_4"),
-      caption: t("oe_cap_4"),
-      description: t("oe_des4_txt1"),
+      src: dispatchAdviceIIImg6,
+      title: t("sa_title_1"),
+      caption: t("sa_cap_1"),
+      description: (
+        <span>
+          {t("click_on_icon")} "
+          <SettingsIcon className="inline align-middle h-4 w-4 -translate-y-[1px]" />
+          "! {t("sa_des_1")}
+        </span>
+      ),
     },
     {
-      src: orderEditingImg5,
-      title: t("oe_title_5"),
-      caption: t("oe_cap_5"),
-      description:
-        t("oe_des5_txt1"),
+      src: dispatchAdviceIIImg8,
+      title: t("sa_title_1"),
+      caption: t("sa_cap_1"),
+      description: (
+        <span>
+          {t("click_on_icon")} "
+          <SettingsIcon className="inline align-middle h-4 w-4 -translate-y-[1px]" />
+          "! {t("sa_des_1")}
+        </span>
+      ),
     },
     {
-      src: orderEditingImg6,
-      title: t("oe_title_6"),
-      caption: t("oe_cap_6"),
-      description:
-        t("oe_des6_txt1"),
+      src: dispatchAdviceIIImg9,
+      title: t("sa_title_1"),
+      caption: t("sa_cap_1"),
+      description: (
+        <span>
+          {t("click_on_icon")} "
+          <SettingsIcon className="inline align-middle h-4 w-4 -translate-y-[1px]" />
+          "! {t("sa_des_1")}
+        </span>
+      ),
     },
+    {
+      src: dispatchAdviceIIImg10,
+      title: t("sa_title_1"),
+      caption: t("sa_cap_1"),
+      description: (
+        <span>
+          {t("click_on_icon")} "
+          <SettingsIcon className="inline align-middle h-4 w-4 -translate-y-[1px]" />
+          "! {t("sa_des_1")}
+        </span>
+      ),
+    },
+    {
+      src: dispatchAdviceIIImg11,
+      title: t("sa_title_1"),
+      caption: t("sa_cap_1"),
+      description: (
+        <span>
+          {t("click_on_icon")} "
+          <SettingsIcon className="inline align-middle h-4 w-4 -translate-y-[1px]" />
+          "! {t("sa_des_1")}
+        </span>
+      ),
+    },
+    // {
+    //   src: stockAllocationImg2,
+    //   title: "Unallocated Tab",
+    //   caption: t("sa_cap_2"),
+    //   description: (
+    //     <div className="space-y-1.5">
+    //       <p>{t("sa_des2_txt1")}</p>
+    //       <p className="font-medium">{t("sa_des2_txt2")}</p>
+    //       <ol className="list-decimal list-inside space-y-0.5 ml-1">
+    //         <li>{t("sa_des2_txt3")}</li>
+    //         <li>{t("sa_des2_txt4")}</li>
+    //       </ol>
+    //     </div>
+    //   ),
+    // },
+    // {
+    //   src: stockAllocationImg3,
+    //   title: t("sa_title_3"),
+    //   caption: t("sa_cap_3"),
+    //   description: (
+    //     <div className="space-y-1.5">
+    //       <p>{t("sa_des3_txt1")}</p>
+    //       <p className="font-medium">{t("sa_des3_txt2")}</p>
+    //       <ol className="list-decimal list-inside space-y-0.5 ml-1">
+    //         <li>{t("sa_des3_txt3")}</li>
+    //         <li>{t("sa_des3_txt4")}</li>
+    //       </ol>
+    //     </div>
+    //   ),
+    // },
+    // {
+    //   src: stockAllocationImg4,
+    //   title: t("sa_title_4"),
+    //   caption: t("sa_cap_4"),
+    //   description: (
+    //     <div className="space-y-1.5">
+    //       <ol className="list-decimal list-inside space-y-0.5 ml-1">
+    //         <li>{t("sa_des4_txt1")}</li>
+    //         <li>{t("sa_des4_txt2")}</li>
+    //       </ol>
+    //     </div>
+    //   ),
+    // },
   ];
 
   return (
@@ -819,7 +896,7 @@ export default function OrderEditings() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold dark:text-white text-slate-800">
-            {t("order_editing")}
+            {t("dispatch_advice_ii")}
           </h2>
         </div>
       </div>
@@ -829,12 +906,43 @@ export default function OrderEditings() {
         {/* Section 1: Overview */}
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
-            {t("order_editing_overview")}
+            {t("dispatch_advice_ii_overview")}
           </h3>
           <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
-            {t("order_editing_txt")}
-            {/* Order Editing is a place where we edit the sale order.  */}
+            {/* {t("stock_allocation_txt")} */}
+            Dispatch Advice II is a place where we receive the POs from
+            Unilever.
           </p>
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
+            {/* {t("stock_allocation_txt")} */}
+            It is also related to Stock Inquiry II. Stock Inquiry II is a place
+            where we see the products (POs) more detailed in stock.
+          </p>
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
+            {/* {t("stock_allocation_txt")} */}
+            Once POs are received and approved (Dispatch Advice II). POs will be
+            added into stock (Stock Inquiry II).
+          </p>
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
+            {/* {t("stock_allocation_txt")} */}
+            For Example:
+          </p>
+          <ol className="list-decimal list-inside space-y-1.5 text-sm text-slate-600 dark:text-slate-300 ml-1">
+            <li>
+              Before Approving
+              <ul>
+                <li>Dispatch Advice II | Received 10 CS of Sunlight</li>
+                <li>Stock Inquiry II | Already remained 25 CS of Sunlight</li>
+              </ul>
+            </li>
+            <li>
+              After Approving
+              <ul>
+                <li>Stock Inquiry II | Existed 25 CS of Sunlight + 10 CS of Sunlight (From Dispatch Advice II)</li>
+                <li>Thus, Sunlight has 30 CS totally (Stock Inquiry II).</li>
+              </ul>
+            </li>
+          </ol>
         </div>
 
         {/* Section 2: Editing Sale Order */}
@@ -863,7 +971,7 @@ export default function OrderEditings() {
               <strong>{t("unallocated_capital")}</strong>.
             </li>
             <li>
-              {t("once_completed_proceed_to")} <strong>{t("order_editing")}</strong>.
+              Once completed, proceed to <strong>Order Editing</strong>.
             </li>
           </ol>
         </div>
@@ -877,26 +985,41 @@ export default function OrderEditings() {
             {t("attached_photos")}
           </h3>
         </div>
-        <SlideViewer images={orderEditingImages} />
+        <SlideViewer images={dispatchAdviceIIImages} />
       </div>
 
       {/* Action Buttons Section */}
       <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-end gap-3">
         {/* View as Slide Button */}
-        <a
-          href="/order-editing-slides"
+        {/* <a
+          href=""
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors shadow-sm"
         >
           <span>{t("view_as_slide") || "View as Slide"}</span>
           <ExternalLink className="w-4 h-4" />
-        </a>
+        </a> */}
+        {/* <Link
+          to="/stock-allocation-slides"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors shadow-sm"
+        >
+          <span>{t("view_as_slide") || "View as Slide"}</span>
+          <ExternalLink className="w-4 h-4" />
+        </Link> */}
+        {/* View as Slide Button */}
+        <Link
+          to="/stock-allocation-slides"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors shadow-sm"
+        >
+          <span>{t("view_as_slide") || "View as Slide"}</span>
+          <ExternalLink className="w-4 h-4" />
+        </Link>
 
         {/* Export as PowerPoint Button */}
         <a
-          href="../../assets/powerpoint/order-editing.pptx"
-          download="order-editing.pptx"
+          href="../../assets/powerpoint/stock-allocation.pptx"
+          download="stock-allocation.pptx"
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors shadow-sm border border-slate-200 dark:border-slate-700"
         >
           <Presentation className="w-4 h-4 text-amber-500" />
@@ -906,8 +1029,8 @@ export default function OrderEditings() {
 
         {/* Export as PDF Button */}
         <a
-          href="../../assets/pdf/order-editing.pdf"
-          download="order-editing.pdf"
+          href="../../assets/pdf/stock-allocation.pdf"
+          download="stock-allocation.pdf"
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors shadow-sm border border-slate-200 dark:border-slate-700"
         >
           <FileText className="w-4 h-4 text-red-500" />
