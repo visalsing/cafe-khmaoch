@@ -17,16 +17,39 @@ import {
   X,
   Search,
   SearchX,
+  HomeIcon,
+  Coffee,
+  ShoppingCart,
+  Receipt,
 } from "lucide-react";
 
 const menuItems = [
   {
-    id: "homepage",
-    path: "/homepage",
+    id: "dashboard",
+    path: "/dashboard",
     icon: LayoutDashboard,
+    label: "Dashboard",
+  },
+  { id: "pos", path: "/dashboard/pos", icon: ShoppingCart, label: "POS" },
+  {
+    id: "menu-manager",
+    path: "/dashboard/menu",
+    icon: Coffee,
+    label: "Menu Manager",
+  },
+  { id: "orders", path: "/dashboard/orders", icon: Receipt, label: "Orders" },
+  {
+    id: "homepage",
+    path: "/dashboard/homepage",
+    icon: HomeIcon,
     label: "Homepage",
   },
-  { id: "settings", path: "/settings", icon: Settings, label: "Settings" },
+  {
+    id: "settings",
+    path: "/dashboard/settings",
+    icon: Settings,
+    label: "Settings",
+  },
   {
     id: "orderbooking",
     icon: ListOrderedIcon,
@@ -34,29 +57,37 @@ const menuItems = [
     submenu: [
       {
         id: "takeorderimports",
-        path: "/takeorderimports",
+        path: "/dashboard/takeorderimports",
         label: "Take Order Imports",
       },
       {
         id: "stock-allocation",
-        path: "/stock-allocation",
+        path: "/dashboard/stock-allocation",
         label: "Stock Allocation",
       },
-      { id: "orderediting", path: "/orderediting", label: "Order Editing" },
-      { id: "ordercancel", path: "/ordercancel", label: "Order Cancel" },
+      {
+        id: "orderediting",
+        path: "/dashboard/orderediting",
+        label: "Order Editing",
+      },
+      {
+        id: "ordercancel",
+        path: "/dashboard/ordercancel",
+        label: "Order Cancel",
+      },
       {
         id: "manualSaleOrderCreation",
-        path: "/manualSaleOrderCreation",
+        path: "/dashboard/manualSaleOrderCreation",
         label: "Manual Sale Order Creation",
       },
       {
         id: "takeOrderFromSalesman",
-        path: "/takeOrderFromSalesman",
+        path: "/dashboard/takeOrderFromSalesman",
         label: "Take Order From Salesman",
       },
       {
         id: "editOrderSaleDcode",
-        path: "/editOrderSaleDcode",
+        path: "/dashboard/editOrderSaleDcode",
         label: "Edit Order Sale in DCode",
       },
     ],
@@ -68,10 +99,14 @@ const menuItems = [
     submenu: [
       {
         id: "changeProductType",
-        path: "/changeProductType",
+        path: "/dashboard/changeProductType",
         label: "Change Product Type",
       },
-      { id: "moveWarehouse", path: "/moveWarehouse", label: "Move Warehouse" },
+      {
+        id: "moveWarehouse",
+        path: "/dashboard/moveWarehouse",
+        label: "Move Warehouse",
+      },
     ],
   },
   {
@@ -81,12 +116,12 @@ const menuItems = [
     submenu: [
       {
         id: "good-issue-note",
-        path: "/good-issue-note",
+        path: "/dashboard/good-issue-note",
         label: "Good Issue Note",
       },
       {
         id: "goodReturnNote",
-        path: "/goodReturnNote",
+        path: "/dashboard/goodReturnNote",
         label: "Good Return Note",
       },
     ],
@@ -98,17 +133,17 @@ const menuItems = [
     submenu: [
       {
         id: "sales-return",
-        path: "/sales-return",
+        path: "/dashboard/sales-return",
         label: "Sales Return",
       },
       {
         id: "fresh-sales-return",
-        path: "/fresh-sales-return",
+        path: "/dashboard/fresh-sales-return",
         label: "Fresh Sales Return",
       },
       {
         id: "fresh-sales-return-below24h",
-        path: "/fresh-sales-return-below24h",
+        path: "/dashboard/fresh-sales-return-below24h",
         label: "Fresh Sales Return Below 24h",
       },
     ],
@@ -118,7 +153,11 @@ const menuItems = [
     icon: SendToBackIcon,
     label: "Stock Inquiry",
     submenu: [
-      { id: "stock-inquiry", path: "/stock-inquiry", label: "Stock Inquiry" },
+      {
+        id: "stock-inquiry",
+        path: "/dashboard/stock-inquiry",
+        label: "Stock Inquiry",
+      },
     ],
   },
   {
@@ -128,7 +167,7 @@ const menuItems = [
     submenu: [
       {
         id: "dispatch-advice-ii",
-        path: "/dispatch-advice-ii",
+        path: "/dashboard/dispatch-advice-ii",
         label: "Dispatch Advice II",
       },
     ],
@@ -140,12 +179,12 @@ const menuItems = [
     submenu: [
       {
         id: "checkDepositSlip",
-        path: "/checkDepositSlip",
+        path: "/dashboard/checkDepositSlip",
         label: "Check Deposit Slip",
       },
       {
         id: "editDepositSlip",
-        path: "/editDepositSlip",
+        path: "/dashboard/editDepositSlip",
         label: "Edit Deposit Slip",
       },
     ],
@@ -157,7 +196,7 @@ const menuItems = [
     submenu: [
       {
         id: "changeDeliveryDate",
-        path: "/changeDeliveryDate",
+        path: "/dashboard/changeDeliveryDate",
         label: "Change Delivery Date",
       },
     ],
@@ -167,13 +206,21 @@ const menuItems = [
     icon: PrinterIcon,
     label: "Print",
     submenu: [
-      { id: "printInvoice", path: "/printInvoice", label: "Print Invoice" },
-      { id: "printPicklist", path: "/printPicklist", label: "Print Picklist" },
+      {
+        id: "printInvoice",
+        path: "/dashboard/printInvoice",
+        label: "Print Invoice",
+      },
+      {
+        id: "printPicklist",
+        path: "/dashboard/printPicklist",
+        label: "Print Picklist",
+      },
     ],
   },
   {
     id: "routeSettlement",
-    path: "/routeSettlement",
+    path: "/dashboard/routeSettlement",
     icon: RouteIcon,
     label: "Route Settlement",
   },
@@ -184,12 +231,12 @@ const menuItems = [
     submenu: [
       {
         id: "priceOutlet",
-        path: "/priceOutlet",
+        path: "/dashboard/priceOutlet",
         label: "Check SKU Price Sale to Outlet",
       },
       {
         id: "priceUnilever",
-        path: "/priceUnilever",
+        path: "/dashboard/priceUnilever",
         label: "Check SKU Price from Unilever",
       },
     ],
@@ -203,9 +250,6 @@ function Sidebar({ collapsed, onToggle }) {
 
   const isSearching = searchQuery.trim().length > 0;
 
-  // Filter menu items (and submenu items) by the search query.
-  // - If a top-level item's own label matches, keep ALL of its submenu items.
-  // - If only some submenu items match, keep just those.
   const filteredMenuItems = useMemo(() => {
     if (!isSearching) return menuItems;
 
@@ -233,9 +277,8 @@ function Sidebar({ collapsed, onToggle }) {
     }, []);
   }, [searchQuery, isSearching]);
 
-  // Auto expand parent dropdown if a child page route is active
   useEffect(() => {
-    if (isSearching) return; // search-driven expansion is handled below
+    if (isSearching) return;
     menuItems.forEach((item) => {
       if (item.submenu?.some((sub) => sub.path === location.pathname)) {
         setExpandedItems((prev) => new Set([...prev, item.id]));
@@ -243,7 +286,6 @@ function Sidebar({ collapsed, onToggle }) {
     });
   }, [location.pathname, isSearching]);
 
-  // While actively searching, auto-expand every group that has visible results
   useEffect(() => {
     if (!isSearching) return;
     const matchedIds = filteredMenuItems
@@ -317,7 +359,6 @@ function Sidebar({ collapsed, onToggle }) {
           return (
             <div key={item.id}>
               {item.submenu ? (
-                /* Dropdown toggle button */
                 <button
                   className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
                     isParentActive
@@ -341,9 +382,9 @@ function Sidebar({ collapsed, onToggle }) {
                   )}
                 </button>
               ) : (
-                /* Actual React Router NavLink */
                 <NavLink
                   to={item.path}
+                  end // <--- Add this prop here so it only matches "/dashboard" exactly!
                   onClick={() => handleLinkClick(isMobile)}
                   className={({ isActive }) =>
                     `w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
@@ -362,7 +403,6 @@ function Sidebar({ collapsed, onToggle }) {
                 </NavLink>
               )}
 
-              {/* Submenus */}
               {(!collapsed || isMobile) &&
                 item.submenu &&
                 expandedItems.has(item.id) && (
@@ -394,7 +434,6 @@ function Sidebar({ collapsed, onToggle }) {
 
   return (
     <>
-      {/* DESKTOP SIDEBAR */}
       <div
         className={`hidden md:flex ${
           collapsed ? "w-20" : "w-72"
@@ -422,8 +461,6 @@ function Sidebar({ collapsed, onToggle }) {
           </div>
         </div>
 
-        {/* Search bar only makes sense when the sidebar is expanded (there's no
-            room to show a text input in the collapsed 80px rail) */}
         {!collapsed && renderSearchBar()}
 
         {renderNavContent(false)}
@@ -449,7 +486,6 @@ function Sidebar({ collapsed, onToggle }) {
         )}
       </div>
 
-      {/* MOBILE OVERLAY */}
       {!collapsed && (
         <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900 md:hidden transition-all duration-300 ease-in-out transform animate-in slide-in-from-top fade-in">
           <div className="flex items-center justify-between p-6 border-b border-slate-200/50 dark:border-slate-700/50">

@@ -61,7 +61,6 @@
 //   </StrictMode>,
 // );
 
-
 // import React from "react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -70,6 +69,8 @@ import { HelmetProvider } from "react-helmet-async";
 import App from "./App.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
+import { MenuProvider } from "./context/MenuContext.jsx";
+import { CartProvider } from "./context/CartContext.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -77,7 +78,11 @@ createRoot(document.getElementById("root")).render(
       <ThemeProvider>
         <LanguageProvider>
           <BrowserRouter>
-            <App />
+            <MenuProvider>
+              <CartProvider>
+                <App />
+              </CartProvider>
+            </MenuProvider>
           </BrowserRouter>
         </LanguageProvider>
       </ThemeProvider>

@@ -1,3 +1,4 @@
+// App.jsx
 import React, { useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
@@ -36,18 +37,12 @@ import DispatchAdviceII from "./components/DispatchAdviceII/DispatchAdviceII.jsx
 import FreshSalesOrderBelow24h from "./components/SalesReturn/FreshSalesReturnBelow24h.jsx";
 import IndexPage from "./components/Index.jsx";
 import CartPage from "./components/Cart/Cart.jsx";
-import SettingsPage from "./components/Settings/SettingsPage.jsx";
-import ShopAll from "./components/IndexPage/ShopAll.jsx";
-import POS from "./components/Dashboard/POS.jsx";
-import MenuManager from "./components/Dashboard/MenuManager.jsx";
-import Orders from "./components/Dashboard/Orders.jsx";
 
 function DashboardLayout() {
   const [sideBarCollapsed, setSideBarCollapsed] = useState(false);
   const location = useLocation();
 
-  const currentPage =
-    location.pathname.replace(/^\/dashboard\/?/, "") || "dashboard";
+  const currentPage = location.pathname.replace(/^\//, "") || "homepage";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-all duration-500">
@@ -66,72 +61,43 @@ function DashboardLayout() {
           <main className="flex-1 overflow-y-auto bg-transparent">
             <div className="p-6 space-y-6">
               <Routes>
-                {/* Fixed: Use path="" to match the base /dashboard route cleanly */}
-                <Route path="" element={<Dashboard />} />
+                <Route path="/" element={<Navigate to="/homepage" replace />} />
                 <Route path="/homepage" element={<HomePage />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                {/* <Route path="/dashboard" element={<Dashboard />} /> */}
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/pos" element={<POS />} />
-                <Route path="/menu" element={<MenuManager />} />
-                <Route path="/orders" element={<Orders />} />
 
                 {/* Order Booking */}
-                <Route
-                  path="/takeorderimports"
-                  element={<TakeOrderImports />}
-                />
+                <Route path="/takeorderimports" element={<TakeOrderImports />} />
                 <Route path="/stock-allocation" element={<StockAllocation />} />
                 <Route path="/orderediting" element={<OrderEditing />} />
                 <Route path="/ordercancel" element={<OrderCancel />} />
-                <Route
-                  path="/manualSaleOrderCreation"
-                  element={<ManualSaleOrderCreation />}
-                />
-                <Route
-                  path="/takeOrderFromSalesman"
-                  element={<TakeOrderFromSalesman />}
-                />
-                <Route
-                  path="/editOrderSaleDcode"
-                  element={<EditOrderSaleDcode />}
-                />
+                <Route path="/manualSaleOrderCreation" element={<ManualSaleOrderCreation />} />
+                <Route path="/takeOrderFromSalesman" element={<TakeOrderFromSalesman />} />
+                <Route path="/editOrderSaleDcode" element={<EditOrderSaleDcode />} />
 
                 {/* SAN */}
-                <Route
-                  path="/changeProductType"
-                  element={<ChangeProductType />}
-                />
+                <Route path="/changeProductType" element={<ChangeProductType />} />
                 <Route path="/moveWarehouse" element={<MoveWarehouse />} />
 
                 {/* GIN / GRN */}
                 <Route path="/good-issue-note" element={<GoodIssueNote />} />
 
                 {/* Sales Return */}
-                <Route
-                  path="/fresh-sales-return-below24h"
-                  element={<FreshSalesOrderBelow24h />}
-                />
+                <Route path="/fresh-sales-return-below24h" element={<FreshSalesOrderBelow24h />} />
 
                 {/* Stock Inquiry */}
                 <Route path="/stock-inquiry" element={<StockInquiry />} />
 
                 {/* Dispatch Advice II */}
-                <Route
-                  path="/dispatch-advice-ii"
-                  element={<DispatchAdviceII />}
-                />
+                <Route path="/dispatch-advice-ii" element={<DispatchAdviceII />} />
 
                 {/* Deposit Slip */}
-                <Route
-                  path="/checkDepositSlip"
-                  element={<CheckDepositSlip />}
-                />
+                <Route path="/checkDepositSlip" element={<CheckDepositSlip />} />
                 <Route path="/editDepositSlip" element={<EditDepositSlip />} />
 
                 {/* Delivery */}
-                <Route
-                  path="/changeDeliveryDate"
-                  element={<ChangeDeliveryDate />}
-                />
+                <Route path="/changeDeliveryDate" element={<ChangeDeliveryDate />} />
 
                 {/* Print */}
                 <Route path="/printInvoice" element={<PrintInvoice />} />
@@ -141,14 +107,8 @@ function DashboardLayout() {
                 <Route path="/routeSettlement" element={<RouteSettlement />} />
 
                 {/* Price */}
-                <Route
-                  path="/priceOutlet"
-                  element={<CheckSKUPriceSaleOutlet />}
-                />
-                <Route
-                  path="/priceUnilever"
-                  element={<CheckSKUPriceUnilever />}
-                />
+                <Route path="/priceOutlet" element={<CheckSKUPriceSaleOutlet />} />
+                <Route path="/priceUnilever" element={<CheckSKUPriceUnilever />} />
               </Routes>
             </div>
           </main>
@@ -161,21 +121,19 @@ function DashboardLayout() {
 export default function App() {
   return (
     <Routes>
-      {/* Public Pages (No /dashboard prefix) */}
+      {/* Root path now loads IndexPage directly without requiring /index */}
       <Route path="/" element={<IndexPage />} />
+
       <Route path="/cart" element={<CartPage />} />
+
+      {/* Login */}
       <Route path="/login" element={<Login />} />
-      <Route path="/settings-page" element={<SettingsPage />} />
-      <Route path="/shop" element={<ShopAll />} />
 
       {/* Full screen slide view without header & sidebar */}
-      <Route
-        path="/stock-allocation-slides"
-        element={<StockAllocationSlideDeck />}
-      />
+      <Route path="/stock-allocation-slides" element={<StockAllocationSlideDeck />} />
 
-      {/* Main Dashboard Layout (Handles all /dashboard/* routes) */}
-      <Route path="/dashboard/*" element={<DashboardLayout />} />
+      {/* Main Dashboard Layout containing all other dashboard routes */}
+      <Route path="/*" element={<DashboardLayout />} />
     </Routes>
   );
 }

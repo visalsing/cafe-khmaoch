@@ -9,17 +9,13 @@ import About from "./IndexPage/About";
 import Footer from "./IndexPage/Footer";
 // import { categories, products } from "./Data/menuData";
 import { useMenu } from "../context/MenuContext";
-import { useCart } from "../context/CartContext";
 
 export default function IndexPage() {
     const { availableItems: products, categories } = useMenu();
 // the filteredProducts code stays the same (with .slice(0, 6))
 
-// inside IndexPage(): delete `const [cartCount, setCartCount] = useState(3);`
-const { cartCount, addItem } = useCart();
-
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  // const [cartCount, setCartCount] = useState(3);
+  const [cartCount, setCartCount] = useState(3);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -149,8 +145,7 @@ const { cartCount, addItem } = useCart();
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           filteredProducts={filteredProducts}
-          // setCartCount={setCartCount}
-          onAddToCart={addItem}
+          setCartCount={setCartCount}
         />
         <About />
       </main>

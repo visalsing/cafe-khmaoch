@@ -4,8 +4,8 @@ import translations from "../locales/index.js"; // adjust path if needed
 const LanguageContext = createContext();
 
 export const LANGUAGES = [
-  { code: "en", label: "English", nativeLabel: "English" },
   { code: "km", label: "Khmer", nativeLabel: "ខ្មែរ" },
+  { code: "en", label: "English", nativeLabel: "English" },
   { code: "zh", label: "Chinese", nativeLabel: "中文" },
   { code: "lo", label: "Lao", nativeLabel: "ລາວ" },
 ];
