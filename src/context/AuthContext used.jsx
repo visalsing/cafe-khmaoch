@@ -15,17 +15,9 @@ export function AuthProvider({ children }) {
 
   const refresh = useCallback(async () => {
     try {
-      // Check if emergency local bypass user is already stored
-      const localAdmin = localStorage.getItem("bb_emergency_admin");
-      if (localAdmin) {
-        applySession(JSON.parse(localAdmin));
-        setLoading(false);
-        return;
-      }
-
       applySession(await authService.me());
     } catch (err) {
-      if (err.status === 401) applySession(null); 
+      if (err.status === 401) applySession(null); // network errors keep the current state
     } finally {
       setLoading(false);
     }
@@ -35,36 +27,19 @@ export function AuthProvider({ children }) {
     refresh();
   }, [refresh]);
 
+  // re-check when you come back to the tab: blocked users and changed permissions take effect
   useEffect(() => {
     window.addEventListener("focus", refresh);
     return () => window.removeEventListener("focus", refresh);
   }, [refresh]);
 
   const login = async (email, password) => {
-    // --- EMERGENCY BYPASS FOR LOCAL TESTING ---
-    if (email.trim() === "sovisalsing55@gmail.com" && password === "visal-sing.55$") {
-      const adminSession = {
-        user: {
-          id: 999,
-          firstName: "Visalsing",
-          lastName: "Admin",
-          email: "sovisalsing55@gmail.com",
-          role: "admin"
-        },
-        permissions: ["manage_menu", "manage_orders", "manage_users", "manage_hero", "view_dashboard"]
-      };
-      localStorage.setItem("bb_emergency_admin", JSON.stringify(adminSession));
-      applySession(adminSession);
-      return { ok: true, user: adminSession.user };
-    }
-    // ------------------------------------------
-
     try {
       const data = await authService.login(email, password);
       applySession(data);
       return { ok: true, user: data.user };
     } catch (err) {
-      return { ok: false, error: err.message || "Cannot reach the server." };
+      return { ok: false, error: err.message };
     }
   };
 
@@ -80,7 +55,6 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      localStorage.removeItem("bb_emergency_admin");
       await authService.logout();
     } finally {
       applySession(null);
