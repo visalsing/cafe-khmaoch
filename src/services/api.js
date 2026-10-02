@@ -7,15 +7,22 @@ import { products as seedProducts } from "../components/Data/menuData";
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
 async function http(path, { method = "GET", body } = {}) {
-  const res = await fetch(`${API_BASE}/api${path}`, {
-    method,
-    credentials: "include", // sends the login cookie
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(`${API_BASE}/api${path}`, {
+      method,
+      credentials: "include", // sends the login cookie
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    const err = new Error("Cannot reach the server. Please try again.");
+    err.status = 0;
+    throw err;
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(data.error || "Request failed.");
+    const err = new Error(data.error || `Request failed (HTTP ${res.status}).`);
     err.status = res.status;
     throw err;
   }
@@ -222,21 +229,21 @@ export const heroService = {
    BACKEND API (Express + Neon PostgreSQL)
    Auth, users, roles & permissions
    ========================================================= */
-async function http(path, { method = "GET", body } = {}) {
-  const res = await fetch(`/api${path}`, {
-    method,
-    credentials: "include", // sends the login cookie
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = new Error(data.error || "Request failed.");
-    err.status = res.status;
-    throw err;
-  }
-  return data;
-}
+// async function http(path, { method = "GET", body } = {}) {
+//   const res = await fetch(`/api${path}`, {
+//     method,
+//     credentials: "include", // sends the login cookie
+//     headers: body ? { "Content-Type": "application/json" } : undefined,
+//     body: body ? JSON.stringify(body) : undefined,
+//   });
+//   const data = await res.json().catch(() => ({}));
+//   if (!res.ok) {
+//     const err = new Error(data.error || "Request failed.");
+//     err.status = res.status;
+//     throw err;
+//   }
+//   return data;
+// }
 
 export const authService = {
   login: (email, password) => http("/auth/login", { method: "POST", body: { email, password } }),
