@@ -15,11 +15,46 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setBusy(true);
-    const res = await login(email, password);
-    setBusy(false);
-    if (!res.ok) return setError(res.error);
-    // staff and admins go to the dashboard, customers back to the website
-    navigate(res.user.role === "customer" ? "/" : location.state?.from || "/dashboard", { replace: true });
+
+    try {
+      // 1. Check for hardcoded emergency/offline fallback account
+      if (email === "abc@example.com" && password === "123456789") {
+        // Simulate a successful fake user response object
+        const fakeResponse = {
+          ok: true,
+          user: { email: "abc@example.com", role: "admin" }
+        };
+        
+        // If your AuthContext has a manual state setter or you can fake it:
+        // You can also try calling login, but if server is down, intercept it:
+        navigate(location.state?.from || "/dashboard", { replace: true });
+        return;
+      }
+
+      // 2. Normal Database Login flow via AuthContext
+      const res = await login(email, password);
+      
+      if (!res || !res.ok) {
+        setError(res?.error || "Request failed.");
+        setBusy(false);
+        return;
+      }
+
+      // Staff and admins go to the dashboard, customers back to the website
+      navigate(
+        res.user.role === "customer" ? "/" : location.state?.from || "/dashboard",
+        { replace: true }
+      );
+    } catch (err) {
+      // Catch network errors (like Render backend sleeping or offline)
+      if (email === "abc@example.com" && password === "123456789") {
+        navigate(location.state?.from || "/dashboard", { replace: true });
+      } else {
+        setError("Cannot reach the server. Please try again later.");
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
   const inputCls =
@@ -37,16 +72,37 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Email</label>
-            <input type="email" required autoComplete="email" value={email}
-              onChange={(e) => { setEmail(e.target.value); setError(""); }} className={inputCls} />
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setError("");
+              }}
+              className={inputCls}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Password</label>
-            <input type="password" required autoComplete="current-password" value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(""); }} className={inputCls} />
+            <input
+              type="password"
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError("");
+              }}
+              className={inputCls}
+            />
           </div>
           {error && <p className="text-xs text-rose-500 font-medium">{error}</p>}
-          <button disabled={busy} className="w-full py-3 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold rounded-xl shadow-md text-sm">
+          <button
+            disabled={busy}
+            className="w-full py-3 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold rounded-xl shadow-md text-sm"
+          >
             {busy ? "Signing in..." : "Sign In"}
           </button>
         </form>
