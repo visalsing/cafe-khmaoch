@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 // import logoImg from "../../../src/assets/logo/sm-solar-plus-logo.jpg";
+import { useCart } from "../../context/CartContext";
+import { useAuth } from "../../context/AuthContext";
 
-export default function Navbar({
-  cartCount,
-  setMobileMenuOpen,
-  isLoggedIn,
-  setIsLoggedIn,
-}) {
+// export default function Navbar({
+//   cartCount,
+//   setMobileMenuOpen,
+//   isLoggedIn,
+//   setIsLoggedIn,
+// }) {
+//   const navigate = useNavigate();
+//   const location = useLocation();
+export default function Navbar({ setMobileMenuOpen }) {
+  // props removed
   const navigate = useNavigate();
   const location = useLocation();
+  const { cartCount } = useCart();
+  const { currentUser, canEnterDashboard, logout } = useAuth();
   const [activeSection, setActiveSection] = useState("hero");
 
   // Track active section on scroll when on the home page
@@ -89,8 +97,8 @@ export default function Navbar({
                 href={link.href}
                 className={`transition-colors cursor-pointer ${
                   isActive
-                    ? "text-blue-600 dark:text-blue-400 font-bold"
-                    : "hover:text-blue-600 dark:hover:text-blue-400"
+                    ? "text-amber-600 dark:text-amber-400 font-bold"
+                    : "hover:text-amber-600 dark:hover:text-amber-400"
                 }`}
               >
                 {link.label}
@@ -102,52 +110,71 @@ export default function Navbar({
             onClick={() => navigate("/settings-page")}
             className={`transition-colors text-left cursor-pointer ${
               location.pathname === "/settings-page"
-                ? "text-blue-600 dark:text-blue-400 font-bold"
-                : "hover:text-blue-600 dark:hover:text-blue-400"
+                ? "text-amber-600 dark:text-amber-400 font-bold"
+                : "hover:text-amber-600 dark:hover:text-amber-400"
             }`}
           >
             Settings
           </button>
 
-          <button
+          {/* <button
             onClick={() => navigate("/dashboard")}
             className={`transition-colors text-left cursor-pointer ${
               location.pathname === "/dashboard"
-                ? "text-blue-600 dark:text-blue-400 font-bold"
-                : "hover:text-blue-600 dark:hover:text-blue-400"
+                ? "text-amber-600 dark:text-amber-400 font-bold"
+                : "hover:text-amber-600 dark:hover:text-amber-400"
             }`}
           >
             Dashboard
-          </button>
+          </button> */}
+          {canEnterDashboard && (
+            <button
+              onClick={() => navigate("/dashboard")}
+              className={`transition-colors text-left cursor-pointer ${
+                location.pathname.startsWith("/dashboard")
+                  ? "text-amber-600 dark:text-amber-400 font-bold"
+                  : "hover:text-amber-600 dark:hover:text-amber-400"
+              }`}
+            >
+              Dashboard
+            </button>
+          )}
         </div>
         {/* Actions: Cart, Login, Mobile Menu */}
         <div className="flex items-center space-x-3">
           {/* Cart Button */}
           <button
             onClick={() => navigate("/cart")}
-            className="relative w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-blue-600 flex items-center justify-center transition-colors cursor-pointer"
+            className="relative w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-amber-600 border-amber-600 hover:border-red-600 hover:bg-amber-100 flex items-center justify-center transition-colors cursor-pointer"
             title="Cart"
           >
             🛒
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white font-bold text-xs rounded-full flex items-center justify-center shadow">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-600 text-white font-bold text-xs rounded-full flex items-center justify-center shadow">
                 {cartCount}
               </span>
             )}
           </button>
 
           {/* Login / Logout Button */}
-          {isLoggedIn ? (
+          {/* {isLoggedIn ? (
             <button
               onClick={() => setIsLoggedIn(false)}
               className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-red-500 hover:text-white transition-all cursor-pointer"
             >
               Logout
+            </button> */}
+          {currentUser ? (
+            <button
+              onClick={logout}
+              className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-red-500 hover:text-white transition-all cursor-pointer"
+            >
+              Logout ({currentUser.firstName})
             </button>
           ) : (
             <button
               onClick={() => navigate("/login")}
-              className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-xl border border-blue-200 dark:border-blue-800 transition-all cursor-pointer"
+              className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-blue-950/50 hover:bg-amber-100 dark:hover:bg-blue-900/50 rounded-xl border border-amber-200 dark:border-amber-800 transition-all cursor-pointer"
             >
               Login
             </button>

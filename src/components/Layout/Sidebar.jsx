@@ -21,7 +21,29 @@ import {
   Coffee,
   ShoppingCart,
   Receipt,
+  ChartColumn,
+  LayoutTemplate,
+  Users,
+  ShieldCheck,
+  LogOut,
 } from "lucide-react";
+
+import { useAuth } from "../../context/AuthContext";
+import Avatar from "../Dashboard/Users/Avatar";
+import { ROLE_INFO, fullName } from "../../utils/access";
+
+const PERMISSION_BY_ID = {
+  dashboard: "dashboard",
+  pos: "pos",
+  orders: "orders",
+  "menu-manager": "menu",
+  reports: "reports",
+  pages: "pages",
+  "pages-overview": "pages",
+  "pages-hero": "pages",
+  "users-list": "users",
+  "roles-permissions": "roles",
+};
 
 const menuItems = [
   {
@@ -39,6 +61,21 @@ const menuItems = [
   },
   { id: "orders", path: "/dashboard/orders", icon: Receipt, label: "Orders" },
   {
+    id: "reports",
+    path: "/dashboard/reports",
+    icon: ChartColumn,
+    label: "Reports",
+  },
+  {
+    id: "pages",
+    icon: LayoutTemplate,
+    label: "Pages",
+    submenu: [
+      { id: "pages-overview", path: "/dashboard/pages", label: "Pages" },
+      { id: "pages-hero", path: "/dashboard/pages/hero", label: "Hero" },
+    ],
+  },
+  {
     id: "homepage",
     path: "/dashboard/homepage",
     icon: HomeIcon,
@@ -49,6 +86,19 @@ const menuItems = [
     path: "/dashboard/settings",
     icon: Settings,
     label: "Settings",
+  },
+  {
+    id: "users",
+    icon: Users,
+    label: "Users",
+    submenu: [
+      { id: "users-list", path: "/dashboard/users", label: "Users" },
+      {
+        id: "roles-permissions",
+        path: "/dashboard/roles-permissions",
+        label: "Roles & Permissions",
+      },
+    ],
   },
   {
     id: "orderbooking",
@@ -245,17 +295,37 @@ const menuItems = [
 
 function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
+  const { currentUser, can, logout } = useAuth();
+  
   const [expandedItems, setExpandedItems] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState("");
 
+  const isAdmin = currentUser?.role === "admin";
+  // const allowed = (id) => isAdmin || !PERMISSION_BY_ID[id] || can(PERMISSION_BY_ID[id]);
+     const allowed = (id) => isAdmin || (PERMISSION_BY_ID[id] && can(PERMISSION_BY_ID[id]));
+
+  // 1. First filter items based on user permissions
+  const authorizedMenuItems = useMemo(() => {
+    return menuItems.reduce((acc, item) => {
+      if (item.submenu) {
+        const subs = item.submenu.filter((s) => allowed(s.id));
+        if (subs.length) acc.push({ ...item, submenu: subs });
+      } else if (allowed(item.id)) {
+        acc.push(item);
+      }
+      return acc;
+    }, []);
+  }, [currentUser, can]);
+
   const isSearching = searchQuery.trim().length > 0;
 
+  // 2. Then filter items based on search query
   const filteredMenuItems = useMemo(() => {
-    if (!isSearching) return menuItems;
+    if (!isSearching) return authorizedMenuItems;
 
     const query = searchQuery.trim().toLowerCase();
 
-    return menuItems.reduce((acc, item) => {
+    return authorizedMenuItems.reduce((acc, item) => {
       const labelMatches = item.label.toLowerCase().includes(query);
 
       if (item.submenu) {
@@ -275,16 +345,16 @@ function Sidebar({ collapsed, onToggle }) {
 
       return acc;
     }, []);
-  }, [searchQuery, isSearching]);
+  }, [searchQuery, isSearching, authorizedMenuItems]);
 
   useEffect(() => {
     if (isSearching) return;
-    menuItems.forEach((item) => {
+    authorizedMenuItems.forEach((item) => {
       if (item.submenu?.some((sub) => sub.path === location.pathname)) {
         setExpandedItems((prev) => new Set([...prev, item.id]));
       }
     });
-  }, [location.pathname, isSearching]);
+  }, [location.pathname, isSearching, authorizedMenuItems]);
 
   useEffect(() => {
     if (!isSearching) return;
@@ -384,7 +454,7 @@ function Sidebar({ collapsed, onToggle }) {
               ) : (
                 <NavLink
                   to={item.path}
-                  end // <--- Add this prop here so it only matches "/dashboard" exactly!
+                  end
                   onClick={() => handleLinkClick(isMobile)}
                   className={({ isActive }) =>
                     `w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
@@ -411,6 +481,7 @@ function Sidebar({ collapsed, onToggle }) {
                       <NavLink
                         key={subitem.id}
                         to={subitem.path}
+                        end
                         onClick={() => handleLinkClick(isMobile)}
                         className={({ isActive }) =>
                           `block w-full text-left p-2 text-sm rounded-lg transition-all ${
@@ -443,18 +514,18 @@ function Sidebar({ collapsed, onToggle }) {
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
               <img
-                src="https://cl2.dcode.unilever.com/ngui/asset/images/dcode-logo.svg"
-                alt="DCode Logo"
+                src="https://scontent.fpnh18-2.fna.fbcdn.net/v/t39.30808-6/654322007_1356423336538566_7798828526873508250_n.jpg?stp=dst-jpg_tt6&cstp=mx828x828&ctp=s828x828&_nc_cat=102&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeHLG6cF5oyO4KIltffKzPkDg29pJuzyes6Db2km7PJ6zpXH9qffAs3khTNUihEpFRrsZFf3KZdhc7xw3M_AbuW0&_nc_ohc=J5bssy70AskQ7kNvwHPTAbX&_nc_oc=AdpWJ1T-7jOxXxsyrnSi2nU5NW7LqRBvVq-W-us9kyZgMzbrfPAn6TOqzu7g1wCzez0&_nc_zt=23&_nc_ht=scontent.fpnh18-2.fna&_nc_gid=3-Ys3WRWKOaqozE_9uImAw&_nc_ss=7b2a8&oh=00_AQM2yfXLaYir7lHFD79tfpyYIK_D0B35d290lbOfcx8KYA&oe=6AC3E969"
+                alt="Café Logo"
                 className="w-6 h-6 object-contain"
               />
             </div>
             {!collapsed && (
               <div>
                 <h1 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">
-                  DDT & DCODE Docs
+                  Café ខ្មោច
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Digitized, Distributor, Transform
+                  Coffee, Relaxed & Thrilled
                 </p>
               </div>
             )}
@@ -468,25 +539,25 @@ function Sidebar({ collapsed, onToggle }) {
         {!collapsed && (
           <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50">
             <div className="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-              <img
-                src="https://play-lh.googleusercontent.com/7Ac5TgaL15Ra4bvFVHJKCdJp4qvnL4djZj5bKc6RN-MZjzrvkeHbJytek0NPTSdZcp8"
-                alt="user avatar"
-                className="w-10 h-10 rounded-full ring-2 ring-blue-500 flex-shrink-0"
-              />
+              <Avatar user={currentUser} className="w-10 h-10 rounded-full ring-2 ring-blue-500 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
-                  Visalsing
+                  {fullName(currentUser) || "User"}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  Administrator
+                  {ROLE_INFO[currentUser?.role]?.label || currentUser?.role || "Member"}
                 </p>
               </div>
+              {/* Optional logout button */}
+              <button onClick={logout} className="text-slate-400 hover:text-red-500 transition-colors">
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </div>
         )}
       </div>
 
-      {!collapsed && (
+      {collapsed && (
         <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900 md:hidden transition-all duration-300 ease-in-out transform animate-in slide-in-from-top fade-in">
           <div className="flex items-center justify-between p-6 border-b border-slate-200/50 dark:border-slate-700/50">
             <div className="flex items-center space-x-3">
@@ -495,10 +566,10 @@ function Sidebar({ collapsed, onToggle }) {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">
-                  DDT & DCODE Docs
+                  Café ខ្មោច
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Unilever
+                  Coffee, Relaxed & Thrilled
                 </p>
               </div>
             </div>
@@ -516,17 +587,13 @@ function Sidebar({ collapsed, onToggle }) {
 
           <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50">
             <div className="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-              <img
-                src="https://play-lh.googleusercontent.com/7Ac5TgaL15Ra4bvFVHJKCdJp4qvnL4djZj5bKc6RN-MZjzrvkeHbJytek0NPTSdZcp8"
-                alt="user avatar"
-                className="w-10 h-10 rounded-full ring-2 ring-blue-500 flex-shrink-0"
-              />
+              <Avatar user={currentUser} className="w-10 h-10 rounded-full ring-2 ring-blue-500 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
-                  Visalsing
+                  {fullName(currentUser) || "User"}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  Administrator
+                  {ROLE_INFO[currentUser?.role]?.label || currentUser?.role || "Member"}
                 </p>
               </div>
             </div>

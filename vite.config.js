@@ -14,6 +14,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: { dedupe: ["react", "react-dom"] },
+  server: { proxy: { "/api": "http://localhost:4000" } },
 });
 
 // export default defineConfig({

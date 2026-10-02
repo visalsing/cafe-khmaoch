@@ -1,0 +1,1 @@
+node --input-type=module -e "import {randomBytes} from 'crypto'; console.log(randomBytes(48).toString('hex'))"

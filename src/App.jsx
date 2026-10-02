@@ -41,6 +41,13 @@ import ShopAll from "./components/IndexPage/ShopAll.jsx";
 import POS from "./components/Dashboard/POS.jsx";
 import MenuManager from "./components/Dashboard/MenuManager.jsx";
 import Orders from "./components/Dashboard/Orders.jsx";
+import Reports from "./components/Dashboard/Report.jsx";
+import Checkout from "./components/Checkout/Checkout.jsx";
+import PagesOverview from "./components/Dashboard/Pages/PagesOverview.jsx";
+import HeroManager from "./components/Dashboard/Pages/HeroManager.jsx";
+import { RequireDashboard, Guard, HomeGuard } from "./components/Auth/AccessControl.jsx";
+import Users from "./components/Dashboard/Users/Users.jsx";
+import RolesPermissions from "./components/Dashboard/Users/RolesPermissions.jsx";
 
 function DashboardLayout() {
   const [sideBarCollapsed, setSideBarCollapsed] = useState(false);
@@ -67,12 +74,89 @@ function DashboardLayout() {
             <div className="p-6 space-y-6">
               <Routes>
                 {/* Fixed: Use path="" to match the base /dashboard route cleanly */}
-                <Route path="" element={<Dashboard />} />
+                {/* <Route path="" element={<Dashboard />} />
                 <Route path="/homepage" element={<HomePage />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/pos" element={<POS />} />
                 <Route path="/menu" element={<MenuManager />} />
                 <Route path="/orders" element={<Orders />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/pages" element={<PagesOverview />} />
+                <Route path="/pages/hero" element={<HeroManager />} /> */}
+                <Route path="/homepage" element={<HomePage />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route
+                  path=""
+                  element={
+                    <HomeGuard>
+                      <Dashboard />
+                    </HomeGuard>
+                  }
+                />
+                <Route
+                  path="/pos"
+                  element={
+                    <Guard permission="pos">
+                      <POS />
+                    </Guard>
+                  }
+                />
+                <Route
+                  path="/menu"
+                  element={
+                    <Guard permission="menu">
+                      <MenuManager />
+                    </Guard>
+                  }
+                />
+                <Route
+                  path="/orders"
+                  element={
+                    <Guard permission="orders">
+                      <Orders />
+                    </Guard>
+                  }
+                />
+                <Route
+                  path="/reports"
+                  element={
+                    <Guard permission="reports">
+                      <Reports />
+                    </Guard>
+                  }
+                />
+                <Route
+                  path="/pages"
+                  element={
+                    <Guard permission="pages">
+                      <PagesOverview />
+                    </Guard>
+                  }
+                />
+                <Route
+                  path="/pages/hero"
+                  element={
+                    <Guard permission="pages">
+                      <HeroManager />
+                    </Guard>
+                  }
+                />
+                <Route
+                  path="/users"
+                  element={
+                    <Guard permission="users">
+                      <Users />
+                    </Guard>
+                  }
+                />
+                <Route
+                  path="/roles-permissions"
+                  element={
+                    <Guard permission="roles">
+                      <RolesPermissions />
+                    </Guard>
+                  }
+                />
 
                 {/* Order Booking */}
                 <Route
@@ -167,6 +251,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/settings-page" element={<SettingsPage />} />
       <Route path="/shop" element={<ShopAll />} />
+      <Route path="/checkout" element={<Checkout />} />
 
       {/* Full screen slide view without header & sidebar */}
       <Route
@@ -175,7 +260,8 @@ export default function App() {
       />
 
       {/* Main Dashboard Layout (Handles all /dashboard/* routes) */}
-      <Route path="/dashboard/*" element={<DashboardLayout />} />
+      {/* <Route path="/dashboard/*" element={<DashboardLayout />} /> */}
+      <Route path="/dashboard/*" element={<RequireDashboard><DashboardLayout /></RequireDashboard>} />
     </Routes>
   );
 }

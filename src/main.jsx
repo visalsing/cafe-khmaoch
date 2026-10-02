@@ -71,6 +71,8 @@ import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 import { MenuProvider } from "./context/MenuContext.jsx";
 import { CartProvider } from "./context/CartContext.jsx";
+import { HeroProvider } from "./context/HeroContext.jsx";
+import { AuthProvider } from "./context/AuthContext.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -78,11 +80,15 @@ createRoot(document.getElementById("root")).render(
       <ThemeProvider>
         <LanguageProvider>
           <BrowserRouter>
+          <AuthProvider>
             <MenuProvider>
               <CartProvider>
-                <App />
+                <HeroProvider>
+                  <App />
+                </HeroProvider>
               </CartProvider>
             </MenuProvider>
+            </AuthProvider>
           </BrowserRouter>
         </LanguageProvider>
       </ThemeProvider>

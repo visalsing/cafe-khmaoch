@@ -8,8 +8,8 @@ import Shop from "./IndexPage/Shop";
 import About from "./IndexPage/About";
 import Footer from "./IndexPage/Footer";
 // import { categories, products } from "./Data/menuData";
-import { useMenu } from "../context/MenuContext";
 import { useCart } from "../context/CartContext";
+import { useMenu } from "../context/MenuContext";
 
 export default function IndexPage() {
     const { availableItems: products, categories } = useMenu();

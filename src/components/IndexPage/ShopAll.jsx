@@ -3,33 +3,37 @@ import Navbar from "./Navbar";
 import MobileMenu from "./MobileMenu";
 import Footer from "./Footer";
 import { useMenu } from "../../context/MenuContext";
+import { useCart } from "../../context/CartContext";
 
 export default function ShopAll() {
   const { availableItems: products, categories } = useMenu();
+  const { addItem } = useCart();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [cartCount, setCartCount] = useState(3);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [addedId, setAddedId] = useState(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
+  const handleAdd = (product) => {
+    addItem(product);
+    setAddedId(product.id);
+    setTimeout(() => setAddedId(null), 1000);
+  };
+
   const filteredProducts = products.filter((item) => {
-    const matchesCategory =
-      selectedCategory === "All" || item.category === selectedCategory;
-    const matchesSearch = item.title
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+    const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 transition-colors duration-300">
       <Navbar
-        cartCount={cartCount}
         setMobileMenuOpen={setMobileMenuOpen}
         isLoggedIn={isLoggedIn}
         setIsLoggedIn={setIsLoggedIn}
@@ -45,9 +49,7 @@ export default function ShopAll() {
         <section id="shop" className="space-y-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight">
-                Bean & Blossom Full Menu
-              </h1>
+              <h1 className="text-3xl font-extrabold tracking-tight">Bean & Blossom Full Menu</h1>
               <p className="text-sm text-stone-500 dark:text-stone-400">
                 Handcrafted coffee, teas, cold drinks and fresh pastries
               </p>
@@ -98,17 +100,17 @@ export default function ShopAll() {
                         alt={product.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
-                      <span className="absolute top-3 left-3 px-3 py-1 text-xs font-bold uppercase tracking-wider bg-black/60 backdrop-blur-md text-white rounded-lg">
-                        {product.badge}
-                      </span>
+                      {product.badge && (
+                        <span className="absolute top-3 left-3 px-3 py-1 text-xs font-bold uppercase tracking-wider bg-black/60 backdrop-blur-md text-white rounded-lg">
+                          {product.badge}
+                        </span>
+                      )}
                     </div>
                     <div className="p-5 space-y-2">
                       <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                         {product.category}
                       </span>
-                      <h3 className="font-semibold text-stone-900 dark:text-white line-clamp-1">
-                        {product.title}
-                      </h3>
+                      <h3 className="font-semibold text-stone-900 dark:text-white line-clamp-1">{product.title}</h3>
                       <div className="flex items-center space-x-1 text-xs text-stone-500">
                         <span>⭐ {product.rating}</span>
                         <span>({product.reviews} reviews)</span>
@@ -120,13 +122,12 @@ export default function ShopAll() {
                       ${Number(product.price).toFixed(2)}
                     </span>
                     <button
-                      onClick={() => {
-                        setCartCount((prev) => prev + 1);
-                        alert(`Added ${product.title} to your order!`);
-                      }}
-                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-xl shadow-sm transition-all cursor-pointer"
+                      onClick={() => handleAdd(product)}
+                      className={`px-4 py-2 text-white font-semibold text-xs rounded-xl shadow-sm transition-all cursor-pointer ${
+                        addedId === product.id ? "bg-emerald-600" : "bg-amber-600 hover:bg-amber-700"
+                      }`}
                     >
-                      Add to Order
+                      {addedId === product.id ? "Added ✓" : "Add to Order"}
                     </button>
                   </div>
                 </div>

@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Menu,
   Search,
@@ -10,12 +11,13 @@ import {
   Sun,
   Moon,
   Monitor,
+  Eye,
 } from "lucide-react";
 
 import { useTheme } from "../../context/ThemeContext.jsx"; // adjust path
 
 function Header({ sideBarCollapsed, onToggleSidebar, currentPage = "dashboard" }) {
-  // inside Header component:
+  const navigate = useNavigate();
   const { theme, cycleTheme } = useTheme();
   const ThemeIcon = theme === "light" ? Sun : theme === "dark" ? Moon : Monitor;
 
@@ -62,8 +64,20 @@ function Header({ sideBarCollapsed, onToggleSidebar, currentPage = "dashboard" }
             <ThemeIcon className="w-5 h-5" />
           </button>
 
-          {/* Settings */}
+          {/* Preview Button (Goes to website '/') */}
           <button
+            onClick={() => navigate("/")}
+            title="Preview Website"
+            className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100
+          dark:hover:bg-slate-800 transition-colors"
+          >
+            <Eye className="w-5 h-5" />
+          </button>
+
+          {/* Settings Button (Navigates to absolute route '/dashboard/settings') */}
+          <button
+            onClick={() => navigate("/dashboard/settings")}
+            title="Settings"
             className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100
           dark:hover:bg-slate-800 transition-colors"
           >
@@ -74,4 +88,5 @@ function Header({ sideBarCollapsed, onToggleSidebar, currentPage = "dashboard" }
     </div>
   );
 }
+
 export default Header;

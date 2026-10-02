@@ -1,157 +1,120 @@
-import React from "react";
-import {
-    BarChart,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    ResponsiveContainer,
-    Tooltip,
-    Bar
-} from "recharts";
+import React, { useMemo, useState } from "react";
+import { BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Bar } from "recharts";
+import { money, round2 } from "../../utils/orderCalc";
+import { activeOrders, dayKey, daysAgo, sumTotal } from "./dashboardUtils";
 
-function RevenueChart () {
-    const data = [
-        {month: "Jan", revenue: 45000, expense: 32000},
-        {month: "Feb", revenue: 52000, expense: 38000},
-        {month: "Mar", revenue: 48000, expense: 35000},
-        {month: "Apr", revenue: 61000, expense: 42000},
-        {month: "May", revenue: 55000, expense: 40000},
-        {month: "Jun", revenue: 67000, expense: 45000},
-        {month: "Jul", revenue: 72000, expense: 48000},
-        {month: "Aug", revenue: 69000, expense: 46000},
-        {month: "Sep", revenue: 78000, expense: 52000},
-        {month: "Oct", revenue: 74000, expense: 50000},
-        {month: "Nov", revenue: 82000, expense: 55000},
-        {month: "Dec", revenue: 89000, expense: 58000},
-    ];
-    return (
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-b-2xl border 
-        border-slate-200/50 dark:border-slate-700/50 p-6">
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h3 className="text-xl font-bold text-slate-800 dark:text-white">
-                        Revenue Chart
-                    </h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Monthly revenue and expense</p>
-                </div>
-                <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full">
-                            {/*  */}
-                        </div>
-                        <div className="text-sm text-slate-600 dark:text-slate-400">
-                            <span>Revenue</span>
-                        </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-gradient-to-r from-slate-400 to-slate-500 rounded-full">
-                            {/*  */}
-                        </div>
-                        <div className="text-sm text-slate-600 dark:text-slate-400">
-                            <span>Expense</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+function RevenueChart({ orders = [] }) {
+  const [hoveredBar, setHoveredBar] = useState(null);
+  const [range, setRange] = useState("7d");
 
-            {/* <div className="h-80">
-                {" "}
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data} margin={{top:20, right:30, left:20, bottom:5}}>
-                        
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.3} />
+  const data = useMemo(() => {
+    const days = range === "7d" ? 7 : 30;
+    const map = {};
+    for (let i = days - 1; i >= 0; i--) map[dayKey(daysAgo(i))] = { pos: 0, online: 0 };
 
-                        <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
+    activeOrders(orders).forEach((o) => {
+      const k = dayKey(o.createdAt);
+      if (!map[k]) return;
+      const key = o.source === "online" ? "online" : "pos";
+      map[k][key] = round2(map[k][key] + o.total);
+    });
 
-                        <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value / 1000}k`} />
-                        
-                        <Tooltip contentStyle={{
-                            backgroundColor: "rgba(255, 255, 255, 0.95)",
-                            border: "none",
-                            borderRadius: "12px",
-                            boxShade: "0 10px 40px rgba(0, 0, 0, 0.1)",
-                        }} 
-                        formatter={(value) => [`$${value.toLocaleString()}`, ""]} />
+    return Object.entries(map).map(([k, v]) => ({ label: k.slice(5), ...v })); // "MM-DD"
+  }, [orders, range]);
 
-                        <Bar dataKey="revenue" 
-                        fill="url(#revenueGradient)"
-                        radius={[4, 4, 0, 0]}
-                        maxBarSize={40} />
+  const total = round2(data.reduce((s, d) => s + d.pos + d.online, 0));
 
-                        <Bar dataKey="expense"
-                        fill="url(#expenseGradient)"
-                        radius={[4, 4, 0, 0]}
-                        maxBarSize={40} />
+  return (
+    <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/50 dark:border-slate-700/50 p-6 shadow-xl transition-all duration-300">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <div>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-white">Sales Overview</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {money(total)} in the last {range === "7d" ? "7" : "30"} days
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-gradient-to-r from-amber-500 to-orange-600 rounded-full" />
+            <span className="text-sm text-slate-600 dark:text-slate-400">POS</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-gradient-to-r from-sky-400 to-blue-500 rounded-full" />
+            <span className="text-sm text-slate-600 dark:text-slate-400">Online</span>
+          </div>
+          <div className="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 text-xs font-semibold">
+            {["7d", "30d"].map((r) => (
+              <button
+                key={r}
+                onClick={() => setRange(r)}
+                className={`px-3 py-1.5 ${range === r ? "bg-amber-600 text-white" : "bg-transparent text-slate-600 dark:text-slate-300"}`}
+              >
+                {r === "7d" ? "7 days" : "30 days"}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
-                        <defs>
-                            <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#3b82f6"/>
-                                <stop offset="100%" stopColor="#8b5cf6" />
-                            </linearGradient>
-                            <linearGradient id="expensesGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#94a3b8"/>
-                                <stop offset="100%" stopColor="#64748b"/>
-                            </linearGradient>
-                        </defs>
-                    </BarChart>
-                </ResponsiveContainer>
-            </div> */}
-
-            <div className="h-80">
+      <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <BarChart data={data} margin={{ top: 20, right: 30, left: 10, bottom: 5 }} onMouseLeave={() => setHoveredBar(null)}>
             <defs>
-              <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#3b82f6" />
-                <stop offset="100%" stopColor="#8b5cf6" />
+              <linearGradient id="posGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#f59e0b" />
+                <stop offset="100%" stopColor="#ea580c" />
               </linearGradient>
-              <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#94a3b8" />
-                <stop offset="100%" stopColor="#64748b" />
+              <linearGradient id="onlineGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#38bdf8" />
+                <stop offset="100%" stopColor="#3b82f6" />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.3} vertical={false} />
-            <XAxis 
-                dataKey="month" 
-                stroke="#64748b" 
-                fontSize={12} 
-                tickLine={false} 
-                axisLine={false} 
-            />
-            <YAxis
-              stroke="#64748b"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(value) => `$${value / 1000}k`}
-            />
+            <XAxis dataKey="label" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} interval={range === "30d" ? 3 : 0} />
+            <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
             <Tooltip
               contentStyle={{
                 backgroundColor: "rgba(255, 255, 255, 0.95)",
                 border: "none",
                 borderRadius: "12px",
-                boxShadow: "0 10px 40px rgba(0, 0, 0, 0.1)", // Fixed typo
+                boxShadow: "0 10px 40px rgba(0, 0, 0, 0.1)",
               }}
-              cursor={{ fill: 'transparent' }}
-              formatter={(value) => [`$${value.toLocaleString()}`, ""]}
+              cursor={{ fill: "transparent" }}
+              formatter={(value, name) => [money(value), name]}
             />
+            {/* POS bar keeps your lift + shadow hover effect */}
             <Bar
-              dataKey="revenue"
-              fill="url(#revenueGradient)"
+              dataKey="pos"
+              name="POS"
+              fill="url(#posGradient)"
               radius={[4, 4, 0, 0]}
-              maxBarSize={40}
+              maxBarSize={32}
+              shape={(props) => {
+                const { x, y, width, height, fill, index } = props;
+                const isHovered = hoveredBar === index;
+                return (
+                  <rect
+                    x={x}
+                    y={isHovered ? y - 6 : y}
+                    width={width}
+                    height={isHovered ? height + 6 : height}
+                    rx={4}
+                    ry={4}
+                    fill={fill}
+                    filter={isHovered ? "drop-shadow(0px 8px 12px rgba(245, 158, 11, 0.4))" : "none"}
+                    opacity={hoveredBar === null || isHovered ? 1 : 0.35}
+                    style={{ transition: "all 0.25s ease-in-out", cursor: "pointer" }}
+                    onMouseEnter={() => setHoveredBar(index)}
+                  />
+                );
+              }}
             />
-            <Bar
-              dataKey="expense"
-              fill="url(#expenseGradient)" // Matches defs ID now
-              radius={[4, 4, 0, 0]}
-              maxBarSize={40}
-            />
+            <Bar dataKey="online" name="Online" fill="url(#onlineGradient)" radius={[4, 4, 0, 0]} maxBarSize={32} />
           </BarChart>
         </ResponsiveContainer>
       </div>
-        </div>
-    );
-};
+    </div>
+  );
+}
 
 export default RevenueChart;

@@ -1,74 +1,55 @@
-// src/components/Auth/Login.jsx
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Login() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Frontend-only mock login: simply navigate to the homepage/dashboard on submit
-    if (username && password) {
-      navigate("/homepage");
-    } else {
-      alert("Please enter username and password");
-    }
+    setError("");
+    setBusy(true);
+    const res = await login(email, password);
+    setBusy(false);
+    if (!res.ok) return setError(res.error);
+    // staff and admins go to the dashboard, customers back to the website
+    navigate(res.user.role === "customer" ? "/" : location.state?.from || "/dashboard", { replace: true });
   };
 
+  const inputCls =
+    "w-full px-4 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm";
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-4">
-      <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 space-y-6 border border-slate-100 dark:border-slate-700">
-        
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Welcome Back
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Sign in to access your dashboard & order management
-          </p>
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 shadow-sm p-8 space-y-6">
+        <div className="text-center space-y-1">
+          <div className="text-4xl mb-1">☕</div>
+          <h1 className="text-2xl font-extrabold tracking-tight">Café ខ្មោច</h1>
+          <p className="text-sm text-stone-500">Sign in to your account</p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Username
-            </label>
-            <input
-              type="text"
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
-              className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-            />
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <input type="email" required autoComplete="email" value={email}
+              onChange={(e) => { setEmail(e.target.value); setError(""); }} className={inputCls} />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-4 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-            />
+            <label className="block text-sm font-medium mb-1">Password</label>
+            <input type="password" required autoComplete="current-password" value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(""); }} className={inputCls} />
           </div>
-
-          <button
-            type="submit"
-            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-          >
-            Sign In
+          {error && <p className="text-xs text-rose-500 font-medium">{error}</p>}
+          <button disabled={busy} className="w-full py-3 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold rounded-xl shadow-md text-sm">
+            {busy ? "Signing in..." : "Sign In"}
           </button>
         </form>
-
       </div>
     </div>
   );
