@@ -1,36 +1,7 @@
 import { products as seedProducts } from "../components/Data/menuData";
 
-
-
-
 // Automatically use Vercel's environment variable online, or fallback to local proxy
 const API_BASE = import.meta.env.VITE_API_URL || "";
-
-async function http(path, { method = "GET", body } = {}) {
-  let res;
-  try {
-    res = await fetch(`${API_BASE}/api${path}`, {
-      method,
-      credentials: "include", // sends the login cookie
-      headers: body ? { "Content-Type": "application/json" } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-  } catch {
-    const err = new Error("Cannot reach the server. Please try again.");
-    err.status = 0;
-    throw err;
-  }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = new Error(data.error || `Request failed (HTTP ${res.status}).`);
-    err.status = res.status;
-    throw err;
-  }
-  return data;
-}
-
-
-
 
 /* =========================================================
    Shared helpers (localStorage: menu, orders, hero)
@@ -111,7 +82,10 @@ export const menuService = {
 
   async remove(id) {
     await wait();
-    write(MENU_KEY, loadMenu().filter((i) => i.id !== id));
+    write(
+      MENU_KEY,
+      loadMenu().filter((i) => i.id !== id),
+    );
     return true;
   },
 
@@ -161,22 +135,46 @@ export const orderService = {
    HERO (still localStorage for now)
    ========================================================= */
 const SEED_HERO = [
-  { id: 1, visible: true, tag: "Café & Drinks", title: "Bean & Blossom ☕",
+  {
+    id: 1,
+    visible: true,
+    tag: "Café & Drinks",
+    title: "Bean & Blossom ☕",
     text: "Freshly roasted coffee, handcrafted in a cozy corner of the city.",
     img: "https://images.unsplash.com/photo-1445116572660-236099ec97a0?auto=format&fit=crop&w=1600&q=80",
-    cta: "Order Drinks", link: "#shop" },
-  { id: 2, visible: true, tag: "Signature Latte", title: "Sip Something Special",
+    cta: "Order Drinks",
+    link: "#shop",
+  },
+  {
+    id: 2,
+    visible: true,
+    tag: "Signature Latte",
+    title: "Sip Something Special",
     text: "Silky espresso, steamed milk and house-made caramel in every cup.",
     img: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1600&q=80",
-    cta: "View Coffee Menu", link: "/shop" },
-  { id: 3, visible: true, tag: "Fresh Bakery", title: "Baked Every Morning",
+    cta: "View Coffee Menu",
+    link: "/shop",
+  },
+  {
+    id: 3,
+    visible: true,
+    tag: "Fresh Bakery",
+    title: "Baked Every Morning",
     text: "Warm croissants and pastries, the perfect partner for your brew.",
     img: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=1600&q=80",
-    cta: "See Pastries", link: "/shop" },
-  { id: 4, visible: true, tag: "Visit Us", title: "Gather. Relax. Enjoy.",
+    cta: "See Pastries",
+    link: "/shop",
+  },
+  {
+    id: 4,
+    visible: true,
+    tag: "Visit Us",
+    title: "Gather. Relax. Enjoy.",
     text: "A cozy place for meetups, study sessions or a quiet afternoon.",
     img: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=1600&q=80",
-    cta: "Find Us", link: "#contact" },
+    cta: "Find Us",
+    link: "#contact",
+  },
 ];
 
 const loadHero = () => {
@@ -208,7 +206,10 @@ export const heroService = {
   },
   async remove(id) {
     await wait();
-    write(HERO_KEY, loadHero().filter((s) => s.id !== id));
+    write(
+      HERO_KEY,
+      loadHero().filter((s) => s.id !== id),
+    );
     return true;
   },
   async reorder(ids) {
@@ -245,8 +246,32 @@ export const heroService = {
 //   return data;
 // }
 
+async function http(path, { method = "GET", body } = {}) {
+  let res;
+  try {
+    res = await fetch(`${API_BASE}/api${path}`, {
+      method,
+      credentials: "include", // sends the login cookie
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    const err = new Error("Cannot reach the server. Please try again.");
+    err.status = 0;
+    throw err;
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.error || `Request failed (HTTP ${res.status}).`);
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
 export const authService = {
-  login: (email, password) => http("/auth/login", { method: "POST", body: { email, password } }),
+  login: (email, password) =>
+    http("/auth/login", { method: "POST", body: { email, password } }),
   register: (data) => http("/auth/register", { method: "POST", body: data }),
   logout: () => http("/auth/logout", { method: "POST" }),
   me: () => http("/auth/me"),
@@ -255,12 +280,14 @@ export const authService = {
 export const userService = {
   list: () => http("/users"),
   create: (data) => http("/users", { method: "POST", body: data }),
-  update: (id, changes) => http(`/users/${id}`, { method: "PUT", body: changes }),
+  update: (id, changes) =>
+    http(`/users/${id}`, { method: "PUT", body: changes }),
   remove: (id) => http(`/users/${id}`, { method: "DELETE" }),
 };
 
 export const accessService = {
   get: () => http("/access"),
-  saveStaff: (permissions) => http("/access/staff", { method: "PUT", body: { permissions } }),
+  saveStaff: (permissions) =>
+    http("/access/staff", { method: "PUT", body: { permissions } }),
   reset: () => http("/access/staff/reset", { method: "POST" }),
 };
