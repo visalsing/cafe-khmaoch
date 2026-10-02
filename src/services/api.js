@@ -1,7 +1,6 @@
 import { products as seedProducts } from "../components/Data/menuData";
 
 // Automatically use Vercel's environment variable online, or fallback to local proxy
-// const API_BASE = import.meta.env.VITE_API_URL || "";
 const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 
 /* =========================================================
@@ -231,21 +230,6 @@ export const heroService = {
    BACKEND API (Express + Neon PostgreSQL)
    Auth, users, roles & permissions
    ========================================================= */
-// async function http(path, { method = "GET", body } = {}) {
-//   const res = await fetch(`/api${path}`, {
-//     method,
-//     credentials: "include", // sends the login cookie
-//     headers: body ? { "Content-Type": "application/json" } : undefined,
-//     body: body ? JSON.stringify(body) : undefined,
-//   });
-//   const data = await res.json().catch(() => ({}));
-//   if (!res.ok) {
-//     const err = new Error(data.error || "Request failed.");
-//     err.status = res.status;
-//     throw err;
-//   }
-//   return data;
-// }
 
 async function http(path, { method = "GET", body } = {}) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
