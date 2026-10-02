@@ -2,6 +2,13 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  resolve: { dedupe: ["react", "react-dom"] },
+  server: { proxy: { "/api": "http://localhost:4000" } },
+  //  server: { proxy: { "/api": "https://cafe-khmaoch.vercel.app/" } },
+});
+
 // https://vite.dev/config/
 // export default defineConfig({
 //   plugins: [
@@ -10,13 +17,6 @@ import tailwindcss from '@tailwindcss/vite'
 //   ],
 // })
 
-
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  resolve: { dedupe: ["react", "react-dom"] },
-  // server: { proxy: { "/api": "http://localhost:4000" } },
-   server: { proxy: { "/api": "https://cafe-khmaoch.vercel.app/" } },
-});
 
 // export default defineConfig({
 //   plugins: [react()],
