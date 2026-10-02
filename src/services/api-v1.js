@@ -1,8 +1,7 @@
 import { products as seedProducts } from "../components/Data/menuData";
 
 // Automatically use Vercel's environment variable online, or fallback to local proxy
-// const API_BASE = import.meta.env.VITE_API_URL || "";
-const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+const API_BASE = import.meta.env.VITE_API_URL || "";
 
 /* =========================================================
    Shared helpers (localStorage: menu, orders, hero)
@@ -248,51 +247,25 @@ export const heroService = {
 // }
 
 async function http(path, { method = "GET", body } = {}) {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-
-  const url = `${API_BASE}/api${normalizedPath}`;
-
   let res;
-
   try {
-    res = await fetch(url, {
+    res = await fetch(`${API_BASE}/api${path}`, {
       method,
-      credentials: "include",
-      headers:
-        body !== undefined
-          ? { "Content-Type": "application/json" }
-          : undefined,
-      body:
-        body !== undefined
-          ? JSON.stringify(body)
-          : undefined,
+      credentials: "include", // sends the login cookie
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
     });
-  } catch (error) {
-    console.error("API connection error:", error);
-
-    const err = new Error(
-      "Cannot reach the server. Please try again."
-    );
-
+  } catch {
+    const err = new Error("Cannot reach the server. Please try again.");
     err.status = 0;
     throw err;
   }
-
   const data = await res.json().catch(() => ({}));
-
   if (!res.ok) {
-    const err = new Error(
-      data?.error ||
-        data?.message ||
-        `Request failed (HTTP ${res.status}).`
-    );
-
+    const err = new Error(data.error || `Request failed (HTTP ${res.status}).`);
     err.status = res.status;
-    err.data = data;
-
     throw err;
   }
-
   return data;
 }
 
