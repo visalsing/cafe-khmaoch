@@ -6,7 +6,7 @@ import {
 import ImageUpload from "./ImageUpload";
 import {
   inputCls, I18nInput, StatusPill, useList, asList, tr, cleanI18n, money, bySort,
-} from "./shared";
+} from "./Shared.jsx";
 
 // Pill button used by the filter panel
 function Chip({ active, onClick, children }) {

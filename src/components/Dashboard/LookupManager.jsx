@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import {
-  inputCls, I18nInput, StatusPill, useList, tr, cleanI18n, fmtDate, bySort } from "./shared";
+  inputCls, I18nInput, StatusPill, useList, tr, cleanI18n, fmtDate, bySort } from "./Shared.jsx";
 
 const emptyForm = { name: {}, description: {}, img: "", thumbnail: "", status: 1, sort_num: 0 };
 

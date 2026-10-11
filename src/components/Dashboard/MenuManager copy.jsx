@@ -17,7 +17,7 @@ import {
   cleanI18n,
   money,
   bySort,
-} from "./shared";
+} from "./Shared.jsx";
 
 // Pill button used by the filter panel
 function Chip({ active, onClick, children }) {
