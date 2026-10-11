@@ -26,6 +26,9 @@ import {
   Users,
   ShieldCheck,
   LogOut,
+  BoxesIcon,
+  LucideBook,
+  ExternalLink
 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
@@ -59,6 +62,24 @@ const menuItems = [
     icon: Coffee,
     label: "Menu Manager",
   },
+  //   {
+  //   id: "lookup-manager",
+  //   path: "/dashboard/lookup",
+  //   icon: LucideBook,
+  //   label: "Lookup Manager",
+  // },
+    {
+    id: "categories",
+    path: "/dashboard/categories",
+    icon: BoxesIcon,
+    label: "Categories",
+  },
+      {
+    id: "drink-types",
+    path: "/dashboard/drink-types",
+    icon: BoxesIcon,
+    label: "Drink Types",
+  },
   { id: "orders", path: "/dashboard/orders", icon: Receipt, label: "Orders" },
   {
     id: "reports",
@@ -73,6 +94,7 @@ const menuItems = [
     submenu: [
       { id: "pages-overview", path: "/dashboard/pages", label: "Pages" },
       { id: "pages-hero", path: "/dashboard/pages/hero", label: "Hero" },
+      { id: "map", path: "/dashboard/pages/maps", label: "Map" },
     ],
   },
   {
@@ -100,197 +122,197 @@ const menuItems = [
       },
     ],
   },
-  {
-    id: "orderbooking",
-    icon: ListOrderedIcon,
-    label: "Order Booking",
-    submenu: [
-      {
-        id: "takeorderimports",
-        path: "/dashboard/takeorderimports",
-        label: "Take Order Imports",
-      },
-      {
-        id: "stock-allocation",
-        path: "/dashboard/stock-allocation",
-        label: "Stock Allocation",
-      },
-      {
-        id: "orderediting",
-        path: "/dashboard/orderediting",
-        label: "Order Editing",
-      },
-      {
-        id: "ordercancel",
-        path: "/dashboard/ordercancel",
-        label: "Order Cancel",
-      },
-      {
-        id: "manualSaleOrderCreation",
-        path: "/dashboard/manualSaleOrderCreation",
-        label: "Manual Sale Order Creation",
-      },
-      {
-        id: "takeOrderFromSalesman",
-        path: "/dashboard/takeOrderFromSalesman",
-        label: "Take Order From Salesman",
-      },
-      {
-        id: "editOrderSaleDcode",
-        path: "/dashboard/editOrderSaleDcode",
-        label: "Edit Order Sale in DCode",
-      },
-    ],
-  },
-  {
-    id: "san",
-    icon: WarehouseIcon,
-    label: "SAN",
-    submenu: [
-      {
-        id: "changeProductType",
-        path: "/dashboard/changeProductType",
-        label: "Change Product Type",
-      },
-      {
-        id: "moveWarehouse",
-        path: "/dashboard/moveWarehouse",
-        label: "Move Warehouse",
-      },
-    ],
-  },
-  {
-    id: "gin-grn",
-    icon: PackageCheckIcon,
-    label: "GIN/GRN",
-    submenu: [
-      {
-        id: "good-issue-note",
-        path: "/dashboard/good-issue-note",
-        label: "Good Issue Note",
-      },
-      {
-        id: "goodReturnNote",
-        path: "/dashboard/goodReturnNote",
-        label: "Good Return Note",
-      },
-    ],
-  },
-  {
-    id: "sales-return",
-    icon: PackageCheckIcon,
-    label: "Sales Return",
-    submenu: [
-      {
-        id: "sales-return",
-        path: "/dashboard/sales-return",
-        label: "Sales Return",
-      },
-      {
-        id: "fresh-sales-return",
-        path: "/dashboard/fresh-sales-return",
-        label: "Fresh Sales Return",
-      },
-      {
-        id: "fresh-sales-return-below24h",
-        path: "/dashboard/fresh-sales-return-below24h",
-        label: "Fresh Sales Return Below 24h",
-      },
-    ],
-  },
-  {
-    id: "Stock-Inquiry",
-    icon: SendToBackIcon,
-    label: "Stock Inquiry",
-    submenu: [
-      {
-        id: "stock-inquiry",
-        path: "/dashboard/stock-inquiry",
-        label: "Stock Inquiry",
-      },
-    ],
-  },
-  {
-    id: "Dispatch-Advice-II",
-    icon: SendToBackIcon,
-    label: "Dispatch Advice II",
-    submenu: [
-      {
-        id: "dispatch-advice-ii",
-        path: "/dashboard/dispatch-advice-ii",
-        label: "Dispatch Advice II",
-      },
-    ],
-  },
-  {
-    id: "depositslip",
-    icon: CreditCardIcon,
-    label: "Deposit Slip",
-    submenu: [
-      {
-        id: "checkDepositSlip",
-        path: "/dashboard/checkDepositSlip",
-        label: "Check Deposit Slip",
-      },
-      {
-        id: "editDepositSlip",
-        path: "/dashboard/editDepositSlip",
-        label: "Edit Deposit Slip",
-      },
-    ],
-  },
-  {
-    id: "delivery",
-    icon: TruckIcon,
-    label: "Delivery",
-    submenu: [
-      {
-        id: "changeDeliveryDate",
-        path: "/dashboard/changeDeliveryDate",
-        label: "Change Delivery Date",
-      },
-    ],
-  },
-  {
-    id: "print",
-    icon: PrinterIcon,
-    label: "Print",
-    submenu: [
-      {
-        id: "printInvoice",
-        path: "/dashboard/printInvoice",
-        label: "Print Invoice",
-      },
-      {
-        id: "printPicklist",
-        path: "/dashboard/printPicklist",
-        label: "Print Picklist",
-      },
-    ],
-  },
-  {
-    id: "routeSettlement",
-    path: "/dashboard/routeSettlement",
-    icon: RouteIcon,
-    label: "Route Settlement",
-  },
-  {
-    id: "price",
-    icon: BadgeDollarSignIcon,
-    label: "Price",
-    submenu: [
-      {
-        id: "priceOutlet",
-        path: "/dashboard/priceOutlet",
-        label: "Check SKU Price Sale to Outlet",
-      },
-      {
-        id: "priceUnilever",
-        path: "/dashboard/priceUnilever",
-        label: "Check SKU Price from Unilever",
-      },
-    ],
-  },
+  // {
+  //   id: "orderbooking",
+  //   icon: ListOrderedIcon,
+  //   label: "Order Booking",
+  //   submenu: [
+  //     {
+  //       id: "takeorderimports",
+  //       path: "/dashboard/takeorderimports",
+  //       label: "Take Order Imports",
+  //     },
+  //     {
+  //       id: "stock-allocation",
+  //       path: "/dashboard/stock-allocation",
+  //       label: "Stock Allocation",
+  //     },
+  //     {
+  //       id: "orderediting",
+  //       path: "/dashboard/orderediting",
+  //       label: "Order Editing",
+  //     },
+  //     {
+  //       id: "ordercancel",
+  //       path: "/dashboard/ordercancel",
+  //       label: "Order Cancel",
+  //     },
+  //     {
+  //       id: "manualSaleOrderCreation",
+  //       path: "/dashboard/manualSaleOrderCreation",
+  //       label: "Manual Sale Order Creation",
+  //     },
+  //     {
+  //       id: "takeOrderFromSalesman",
+  //       path: "/dashboard/takeOrderFromSalesman",
+  //       label: "Take Order From Salesman",
+  //     },
+  //     {
+  //       id: "editOrderSaleDcode",
+  //       path: "/dashboard/editOrderSaleDcode",
+  //       label: "Edit Order Sale in DCode",
+  //     },
+  //   ],
+  // },
+  // {
+  //   id: "san",
+  //   icon: WarehouseIcon,
+  //   label: "SAN",
+  //   submenu: [
+  //     {
+  //       id: "changeProductType",
+  //       path: "/dashboard/changeProductType",
+  //       label: "Change Product Type",
+  //     },
+  //     {
+  //       id: "moveWarehouse",
+  //       path: "/dashboard/moveWarehouse",
+  //       label: "Move Warehouse",
+  //     },
+  //   ],
+  // },
+  // {
+  //   id: "gin-grn",
+  //   icon: PackageCheckIcon,
+  //   label: "GIN/GRN",
+  //   submenu: [
+  //     {
+  //       id: "good-issue-note",
+  //       path: "/dashboard/good-issue-note",
+  //       label: "Good Issue Note",
+  //     },
+  //     {
+  //       id: "goodReturnNote",
+  //       path: "/dashboard/goodReturnNote",
+  //       label: "Good Return Note",
+  //     },
+  //   ],
+  // },
+  // {
+  //   id: "sales-return",
+  //   icon: PackageCheckIcon,
+  //   label: "Sales Return",
+  //   submenu: [
+  //     {
+  //       id: "sales-return",
+  //       path: "/dashboard/sales-return",
+  //       label: "Sales Return",
+  //     },
+  //     {
+  //       id: "fresh-sales-return",
+  //       path: "/dashboard/fresh-sales-return",
+  //       label: "Fresh Sales Return",
+  //     },
+  //     {
+  //       id: "fresh-sales-return-below24h",
+  //       path: "/dashboard/fresh-sales-return-below24h",
+  //       label: "Fresh Sales Return Below 24h",
+  //     },
+  //   ],
+  // },
+  // {
+  //   id: "Stock-Inquiry",
+  //   icon: SendToBackIcon,
+  //   label: "Stock Inquiry",
+  //   submenu: [
+  //     {
+  //       id: "stock-inquiry",
+  //       path: "/dashboard/stock-inquiry",
+  //       label: "Stock Inquiry",
+  //     },
+  //   ],
+  // },
+  // {
+  //   id: "Dispatch-Advice-II",
+  //   icon: SendToBackIcon,
+  //   label: "Dispatch Advice II",
+  //   submenu: [
+  //     {
+  //       id: "dispatch-advice-ii",
+  //       path: "/dashboard/dispatch-advice-ii",
+  //       label: "Dispatch Advice II",
+  //     },
+  //   ],
+  // },
+  // {
+  //   id: "depositslip",
+  //   icon: CreditCardIcon,
+  //   label: "Deposit Slip",
+  //   submenu: [
+  //     {
+  //       id: "checkDepositSlip",
+  //       path: "/dashboard/checkDepositSlip",
+  //       label: "Check Deposit Slip",
+  //     },
+  //     {
+  //       id: "editDepositSlip",
+  //       path: "/dashboard/editDepositSlip",
+  //       label: "Edit Deposit Slip",
+  //     },
+  //   ],
+  // },
+  // {
+  //   id: "delivery",
+  //   icon: TruckIcon,
+  //   label: "Delivery",
+  //   submenu: [
+  //     {
+  //       id: "changeDeliveryDate",
+  //       path: "/dashboard/changeDeliveryDate",
+  //       label: "Change Delivery Date",
+  //     },
+  //   ],
+  // },
+  // {
+  //   id: "print",
+  //   icon: PrinterIcon,
+  //   label: "Print",
+  //   submenu: [
+  //     {
+  //       id: "printInvoice",
+  //       path: "/dashboard/printInvoice",
+  //       label: "Print Invoice",
+  //     },
+  //     {
+  //       id: "printPicklist",
+  //       path: "/dashboard/printPicklist",
+  //       label: "Print Picklist",
+  //     },
+  //   ],
+  // },
+  // {
+  //   id: "routeSettlement",
+  //   path: "/dashboard/routeSettlement",
+  //   icon: RouteIcon,
+  //   label: "Route Settlement",
+  // },
+  // {
+  //   id: "price",
+  //   icon: BadgeDollarSignIcon,
+  //   label: "Price",
+  //   submenu: [
+  //     {
+  //       id: "priceOutlet",
+  //       path: "/dashboard/priceOutlet",
+  //       label: "Check SKU Price Sale to Outlet",
+  //     },
+  //     {
+  //       id: "priceUnilever",
+  //       path: "/dashboard/priceUnilever",
+  //       label: "Check SKU Price from Unilever",
+  //     },
+  //   ],
+  // },
 ];
 
 function Sidebar({ collapsed, onToggle }) {

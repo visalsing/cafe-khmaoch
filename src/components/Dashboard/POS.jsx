@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Minus, X, Banknote, CreditCard, QrCode, Pause, Play, Bell } from "lucide-react";
-import { useMenu } from "../../context/MenuContext";
-import { orderService } from "../../services/api";
+import { Search, Plus, Minus, X, Banknote, CreditCard, QrCode, Pause, Play, Bell, RotateCcw } from "lucide-react";
+import { categoryService, productService, orderService, assetUrl } from "../../services/api";
 import { calcTotals, promoPercent, round2, money } from "../../utils/orderCalc";
+import { tr, asList, bySort } from "./Shared.jsx";
 import ReceiptModal from "./Receipt";
 
 const HELD_KEY = "bb_held_v1";
@@ -22,13 +22,39 @@ const DELIVERY_OPTIONS = [
 ];
 const emptyCustomer = { name: "", phone: "", address: "" };
 
+/* ---------- products from the database ----------
+   A product can be sold in up to 3 ways: its standard price, a Big size and a Small size.
+   An empty (NULL) price means "not offered". The product's discount_percent applies to every size. */
+const SIZE_DEFS = [
+  { key: "price", label: "Regular", field: "price" },
+  { key: "big", label: "Big", field: "big_size_price" },
+  { key: "small", label: "Small", field: "small_size_price" },
+];
+const hasValue = (v) => v !== null && v !== undefined && v !== "";
+// price after the product's percentage discount (rounded to cents)
+const unitPrice = (base, discountPct) => round2((Number(base) * (100 - Number(discountPct || 0))) / 100);
+// the ways this product can be sold: [{ key, label, base, unit }]
+const sizeOptions = (p) =>
+  SIZE_DEFS.filter((s) => hasValue(p[s.field])).map((s) => ({
+    key: s.key,
+    label: s.label,
+    base: Number(p[s.field]),
+    unit: unitPrice(p[s.field], p.discount_percent),
+  }));
+
 export default function POS() {
   const navigate = useNavigate();
-  const { availableItems, categories, loading } = useMenu();
+
+  // menu from the database
+  const [products, setProducts] = useState([]);
+  const [cats, setCats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   // menu browsing
-  const [category, setCategory] = useState("All");
+  const [category, setCategory] = useState("all"); // "all" | category id
   const [search, setSearch] = useState("");
+  const [sizePick, setSizePick] = useState(null); // product waiting for a size choice
 
   // current order
   const [cart, setCart] = useState([]);
@@ -53,6 +79,25 @@ export default function POS() {
   const [paying, setPaying] = useState(false);
   const [receipt, setReceipt] = useState(null);
 
+  const loadMenu = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const [prods, cs] = await Promise.all([productService.list(), categoryService.list()]);
+      setProducts(asList(prods));
+      setCats(asList(cs));
+    } catch (err) {
+      console.error("Failed to load the menu:", err);
+      setLoadError(err.message || "Could not load the menu.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMenu();
+  }, [loadMenu]);
+
   useEffect(() => {
     const load = () =>
       orderService.list().then((o) => setPendingOnline(o.filter((x) => x.source === "online" && x.status === "pending").length));
@@ -67,22 +112,66 @@ export default function POS() {
     localStorage.setItem(HELD_KEY, JSON.stringify(list));
   };
 
+  // only products that are on the menu (managers also receive the hidden ones) and have a price
+  const availableItems = useMemo(
+    () => products.filter((p) => Number(p.status) === 1 && sizeOptions(p).length > 0).sort(bySort),
+    [products]
+  );
+
+  // category tabs: only active categories that have something to sell
+  const categoryTabs = useMemo(() => {
+    const used = new Set(availableItems.map((p) => p.category_id));
+    return cats.filter((c) => Number(c.status) === 1 && used.has(c.id)).sort(bySort);
+  }, [cats, availableItems]);
+
+  // the chosen category disappeared (hidden / emptied) -> back to All
+  useEffect(() => {
+    if (category !== "all" && !categoryTabs.some((c) => c.id === category)) setCategory("all");
+  }, [categoryTabs, category]);
+
   const visible = useMemo(
     () =>
       availableItems.filter(
-        (i) => (category === "All" || i.category === category) && i.title.toLowerCase().includes(search.toLowerCase())
+        (p) =>
+          (category === "all" || p.category_id === category) &&
+          Object.values(p.name || {}).join(" ").toLowerCase().includes(search.toLowerCase())
       ),
     [availableItems, category, search]
   );
 
   // ---- cart actions ----
-  const addToCart = (item) =>
+  // one cart line per product + size, so "Iced Latte (Big)" and "Iced Latte (Small)" stay separate
+  const addToCart = (product, option) => {
+    const lineId = `${product.id}:${option.key}`;
+    const options = sizeOptions(product);
+    const showSize = options.length > 1 || option.key !== "price";
+    const title = showSize ? `${tr(product.name)} (${option.label})` : tr(product.name);
     setCart((prev) => {
-      const found = prev.find((l) => l.id === item.id);
+      const found = prev.find((l) => l.id === lineId);
       return found
-        ? prev.map((l) => (l.id === item.id ? { ...l, qty: l.qty + 1 } : l))
-        : [...prev, { id: item.id, title: item.title, price: item.price, qty: 1 }];
+        ? prev.map((l) => (l.id === lineId ? { ...l, qty: l.qty + 1 } : l))
+        : [
+            ...prev,
+            {
+              id: lineId,
+              productId: product.id,
+              size: option.key,
+              title,
+              price: option.unit, // price after the product discount: totals below use this
+              basePrice: option.base,
+              discountPercent: Number(product.discount_percent || 0),
+              taxPercent: hasValue(product.tax_percent) ? Number(product.tax_percent) : null,
+              qty: 1,
+            },
+          ];
     });
+  };
+  // tap on a product: one way to sell it -> add it, several sizes -> ask which one
+  const pickProduct = (product) => {
+    const options = sizeOptions(product);
+    if (options.length === 1) addToCart(product, options[0]);
+    else setSizePick(product);
+  };
   const changeQty = (id, d) =>
     setCart((prev) => prev.map((l) => (l.id === id ? { ...l, qty: l.qty + d } : l)).filter((l) => l.qty > 0));
   const removeLine = (id) => setCart((prev) => prev.filter((l) => l.id !== id));
@@ -176,44 +265,83 @@ export default function POS() {
               </button>
             )}
           </div>
-          <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search menu..." className={`${inputCls} pl-9`} />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search menu..." className={`${inputCls} pl-9`} />
+            </div>
+            <button
+              onClick={loadMenu}
+              disabled={loading}
+              title="Reload the menu"
+              aria-label="Reload the menu"
+              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-amber-500 disabled:opacity-60 transition-colors"
+            >
+              <RotateCcw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            </button>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {categories.map((c) => (
+          {[{ id: "all", name: { en: "All" } }, ...categoryTabs].map((c) => (
             <button
-              key={c}
-              onClick={() => setCategory(c)}
+              key={c.id}
+              onClick={() => setCategory(c.id)}
               className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${
-                category === c ? "bg-amber-600 text-white shadow" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-amber-500"
+                category === c.id ? "bg-amber-600 text-white shadow" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-amber-500"
               }`}
             >
-              {c}
+              {tr(c.name)}
             </button>
           ))}
         </div>
 
-        {loading ? (
+        {loadError && (
+          <div className="p-3 rounded-xl bg-rose-50 text-rose-700 text-sm flex items-center justify-between">
+            {loadError}
+            <button onClick={loadMenu} className="font-semibold underline">Retry</button>
+          </div>
+        )}
+
+        {loading && products.length === 0 ? (
           <p className="text-slate-500">Loading menu...</p>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {visible.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => addToCart(item)}
-                className="text-left bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:border-amber-500 hover:shadow-lg active:scale-[0.98] transition-all"
-              >
-                <img src={item.img} alt={item.title} className="h-28 w-full object-cover" />
-                <div className="p-3">
-                  <p className="font-semibold text-sm line-clamp-1">{item.title}</p>
-                  <p className="text-amber-600 dark:text-amber-400 font-bold">{money(item.price)}</p>
-                </div>
-              </button>
-            ))}
-            {visible.length === 0 && <p className="col-span-full text-slate-500">No items found.</p>}
+            {visible.map((item) => {
+              const options = sizeOptions(item);
+              const lowest = options.reduce((a, b) => (b.unit < a.unit ? b : a));
+              const discount = Number(item.discount_percent || 0);
+              const img = assetUrl(item.thumbnail || item.img);
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => pickProduct(item)}
+                  className="text-left bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:border-amber-500 hover:shadow-lg active:scale-[0.98] transition-all"
+                >
+                  <div className="relative">
+                    {img ? (
+                      <img src={img} alt={tr(item.name)} className="h-28 w-full object-cover" />
+                    ) : (
+                      <div className="h-28 w-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-xs text-slate-400">No image</div>
+                    )}
+                    {discount > 0 && (
+                      <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-rose-600 text-white text-[11px] font-bold">
+                        -{discount}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="font-semibold text-sm line-clamp-1">{tr(item.name)}</p>
+                    <p className="text-amber-600 dark:text-amber-400 font-bold">
+                      {options.length > 1 && <span className="text-xs font-medium text-slate-500">from </span>}
+                      {money(lowest.unit)}
+                      {discount > 0 && <span className="ml-1.5 text-xs font-normal line-through text-slate-400">{money(lowest.base)}</span>}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+            {!loading && !loadError && visible.length === 0 && <p className="col-span-full text-slate-500">No items found.</p>}
           </div>
         )}
       </div>
@@ -285,7 +413,12 @@ export default function POS() {
             <div key={l.id} className="flex items-center gap-2 text-sm">
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{l.title}</p>
-                <p className="text-xs text-slate-500">{money(l.price)}</p>
+                <p className="text-xs text-slate-500">
+                  {money(l.price)}
+                  {l.discountPercent > 0 && (
+                    <span className="ml-1.5 line-through text-slate-400">{money(l.basePrice)}</span>
+                  )}
+                </p>
               </div>
               <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg">
                 <button onClick={() => changeQty(l.id, -1)} className="p-1.5"><Minus className="w-3.5 h-3.5" /></button>
@@ -340,6 +473,44 @@ export default function POS() {
         </div>
         {isDelivery && !deliveryOk && <p className="text-xs text-rose-500">Delivery needs a phone number and address.</p>}
       </div>
+
+      {/* SIZE PICKER: shown when a product is sold in more than one way (Regular / Big / Small) */}
+      {sizePick && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setSizePick(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Choose a size"
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold truncate">{tr(sizePick.name)}</h3>
+              <button onClick={() => setSizePick(null)} aria-label="Close"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-2">
+              {sizeOptions(sizePick).map((o) => (
+                <button
+                  key={o.key}
+                  onClick={() => {
+                    addToCart(sizePick, o);
+                    setSizePick(null);
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 font-semibold transition-colors"
+                >
+                  <span>{o.label}</span>
+                  <span className="text-amber-600 dark:text-amber-400">
+                    {money(o.unit)}
+                    {Number(sizePick.discount_percent) > 0 && (
+                      <span className="ml-2 text-xs font-normal line-through text-slate-400">{money(o.base)}</span>
+                    )}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* PAYMENT MODAL */}
       {payOpen && (

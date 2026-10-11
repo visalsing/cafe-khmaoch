@@ -27,6 +27,7 @@ export const publicUser = (u) => ({
   lastLoginAt: u.last_login_at,
 });
 
+// must be signed in, otherwise 401
 export async function requireAuth(req, res, next) {
   const token = req.cookies?.[COOKIE];
   if (!token) return res.status(401).json({ error: "Not signed in." });
@@ -50,7 +51,32 @@ export async function requireAuth(req, res, next) {
   next();
 }
 
+// signed in OR guest: attaches req.user / req.permissions when there is a valid login, never rejects
+export async function optionalAuth(req, res, next) {
+  const token = req.cookies?.[COOKIE];
+  if (token) {
+    try {
+      const userId = jwt.verify(token, process.env.JWT_SECRET).sub;
+      const { rows } = await query("SELECT * FROM users WHERE id = $1 AND status = 'active'", [userId]);
+      if (rows[0]) {
+        req.user = rows[0];
+        req.permissions = await permissionsFor(rows[0].role);
+      }
+    } catch {
+      /* invalid or expired token: treat as a guest */
+    }
+  }
+  next();
+}
+
+// use AFTER requireAuth: needs this exact permission
 export const requirePermission = (key) => (req, res, next) =>
   req.permissions.includes(key)
+    ? next()
+    : res.status(403).json({ error: "You don't have permission to do that." });
+
+// use AFTER requireAuth: needs at least ONE of these permissions
+export const requireAnyPermission = (...keys) => (req, res, next) =>
+  keys.some((k) => req.permissions.includes(k))
     ? next()
     : res.status(403).json({ error: "You don't have permission to do that." });

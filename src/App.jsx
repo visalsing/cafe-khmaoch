@@ -45,9 +45,19 @@ import Reports from "./components/Dashboard/Report.jsx";
 import Checkout from "./components/Checkout/Checkout.jsx";
 import PagesOverview from "./components/Dashboard/Pages/PagesOverview.jsx";
 import HeroManager from "./components/Dashboard/Pages/HeroManager.jsx";
-import { RequireDashboard, Guard, HomeGuard } from "./components/Auth/AccessControl.jsx";
+import Map from "./components/Dashboard/Pages/Map.jsx";
+import {
+  RequireDashboard,
+  Guard,
+  HomeGuard,
+} from "./components/Auth/AccessControl.jsx";
 import Users from "./components/Dashboard/Users/Users.jsx";
 import RolesPermissions from "./components/Dashboard/Users/RolesPermissions.jsx";
+import CategoriesManager from "./components/Dashboard/CategoriesManager.jsx";
+import ProductsType from "./components/Dashboard/DrinksType.jsx";
+import DrinksType from "./components/Dashboard/DrinksType.jsx";
+import LookupManager from "./components/Dashboard/LookupManager.jsx";
+import AddMenu from "./components/Dashboard/AddMenu.jsx";
 
 function DashboardLayout() {
   const [sideBarCollapsed, setSideBarCollapsed] = useState(false);
@@ -101,11 +111,22 @@ function DashboardLayout() {
                     </Guard>
                   }
                 />
+                <Route path="/categories" element={<CategoriesManager />} />
+                <Route path="/drink-types" element={<DrinksType />} />
                 <Route
                   path="/menu"
                   element={
                     <Guard permission="menu">
                       <MenuManager />
+                    </Guard>
+                  }
+                />
+                <Route path="/add-menu" element={<AddMenu />} />
+                <Route
+                  path="/lookup"
+                  element={
+                    <Guard permission="lookup">
+                      <LookupManager />
                     </Guard>
                   }
                 />
@@ -131,6 +152,12 @@ function DashboardLayout() {
                     <Guard permission="pages">
                       <PagesOverview />
                     </Guard>
+                  }
+                />
+                <Route
+                  path="/pages/maps"
+                  element={
+                      <Map />
                   }
                 />
                 <Route
@@ -261,7 +288,14 @@ export default function App() {
 
       {/* Main Dashboard Layout (Handles all /dashboard/* routes) */}
       {/* <Route path="/dashboard/*" element={<DashboardLayout />} /> */}
-      <Route path="/dashboard/*" element={<RequireDashboard><DashboardLayout /></RequireDashboard>} />
+      <Route
+        path="/dashboard/*"
+        element={
+          <RequireDashboard>
+            <DashboardLayout />
+          </RequireDashboard>
+        }
+      />
     </Routes>
   );
 }

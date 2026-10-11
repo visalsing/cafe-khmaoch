@@ -5,6 +5,8 @@ import { DEFAULT_STAFF } from "./access.js";
 
 await pool.query(readFileSync(new URL("./schema.sql", import.meta.url), "utf8"));
 
+
+// Roles & Permissions
 const staff = await pool.query("SELECT 1 FROM role_permissions WHERE role = 'staff' LIMIT 1");
 if (!staff.rows.length) {
   for (const p of DEFAULT_STAFF)
@@ -25,6 +27,7 @@ if (!admins.rows.length) {
   );
   console.log(`Created admin: ${ADMIN_EMAIL}`);
 }
+
 
 console.log("Database ready");
 await pool.end();

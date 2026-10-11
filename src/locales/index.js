@@ -11,7 +11,9 @@ import en from "./lang/en.js";
 import km from "./lang/km.js";
 import zh from "./lang/zh.js";
 import lo from "./lang/lo.js";
+import ja from "./lang/ja.js";
+import vi from "./lang/vi.js";
 
-const translations = { en, km, zh, lo };
+const translations = { en, km, zh, lo, ja, vi };
 
 export default translations;

@@ -4,10 +4,12 @@ import translations from "../locales/index.js"; // adjust path if needed
 const LanguageContext = createContext();
 
 export const LANGUAGES = [
-  { code: "km", label: "Khmer", nativeLabel: "ខ្មែរ" },
+  { code: "km", label: "Khmer", nativeLabel: "ភាសាខ្មែរ" },
   { code: "en", label: "English", nativeLabel: "English" },
   { code: "zh", label: "Chinese", nativeLabel: "中文" },
-  { code: "lo", label: "Lao", nativeLabel: "ລາວ" },
+  { code: "lo", label: "Lao", nativeLabel: "ພາສາລາວ" },
+  { code: "ja", label: "Japanese", nativeLabel: "日本語"},
+  { code: "vi", label: "Vietnamese", nativeLabel: "Tiếng Việt"},
 ];
 
 export function LanguageProvider({ children }) {

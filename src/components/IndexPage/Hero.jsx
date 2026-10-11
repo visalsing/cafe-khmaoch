@@ -2,10 +2,26 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useHero } from "../../context/HeroContext";
+import { assetUrl } from "../../services/api";
+import { useLanguage } from "../../context/LanguageContext.jsx";
+
+// Text from a JSONB field like {"en": "...", "km": "..."} in the chosen language, falling back to English
+const getLangText = (field, lang = "en") => {
+  if (!field) return "";
+  if (typeof field === "string") {
+    try {
+      field = JSON.parse(field);
+    } catch {
+      return field; // plain text
+    }
+  }
+  return field[lang] || (lang === "tw" ? field.zh : "") || field.en || Object.values(field)[0] || "";
+};
 
 export default function Hero() {
   const navigate = useNavigate();
   const { visibleSlides: slides } = useHero();
+  const { language } = useLanguage();
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
   const touchStartX = useRef(null);
@@ -25,7 +41,7 @@ export default function Hero() {
     return () => clearInterval(timer);
   }, [paused, count]);
 
-  if (count === 0) return null; // all slides hidden
+  if (count === 0) return null; // all slides hidden (this must stay AFTER all the hooks above)
 
   const onTouchStart = (e) => (touchStartX.current = e.touches[0].clientX);
   const onTouchEnd = (e) => {
@@ -37,8 +53,12 @@ export default function Hero() {
 
   const goTo = (link) => {
     if (!link) return;
-    if (link.startsWith("/")) navigate(link);
-    else document.querySelector(link)?.scrollIntoView({ behavior: "smooth" });
+    if (link.startsWith("/")) return navigate(link);
+    try {
+      document.querySelector(link)?.scrollIntoView({ behavior: "smooth" });
+    } catch {
+      /* ignore a bad selector */
+    }
   };
 
   return (
@@ -54,33 +74,41 @@ export default function Hero() {
         className="flex h-full transition-transform duration-700 ease-in-out"
         style={{ transform: `translateX(-${current * 100}%)` }}
       >
-        {slides.map((s) => (
-          <div key={s.id} className="relative min-w-full h-full">
-            <img src={s.img} alt={s.title} className="absolute inset-0 w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-r from-stone-950/80 via-stone-900/50 to-transparent" />
-            <div className="relative z-10 h-full flex items-center px-8 sm:px-16">
-              <div className="max-w-xl space-y-5">
-                {s.tag && (
-                  <span className="inline-block px-3.5 py-1 text-xs font-semibold uppercase tracking-wider bg-amber-500/90 rounded-full">
-                    {s.tag}
-                  </span>
-                )}
-                <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">{s.title}</h1>
-                {s.text && <p className="text-amber-50/90 text-base sm:text-lg leading-relaxed">{s.text}</p>}
-                {s.cta && (
-                  <div className="pt-2">
-                    <button
-                      onClick={() => goTo(s.link)}
-                      className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl shadow-lg transition-all cursor-pointer"
-                    >
-                      {s.cta}
-                    </button>
-                  </div>
-                )}
+        {slides.map((s) => {
+          const tagText = getLangText(s.tag, language);
+          const titleText = getLangText(s.title, language);
+          const descText = getLangText(s.text, language);
+          const ctaText = getLangText(s.cta, language);
+          const imageUrl = assetUrl(s.img); // ← this line was commented out
+
+          return (
+            <div key={s.id} className="relative min-w-full h-full">
+              <img src={imageUrl} alt={titleText} className="absolute inset-0 w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-r from-stone-950/80 via-stone-900/50 to-transparent" />
+              <div className="relative z-10 h-full flex items-center px-8 sm:px-16">
+                <div className="max-w-xl space-y-5">
+                  {tagText && (
+                    <span className="inline-block px-3.5 py-1 text-xs font-semibold uppercase tracking-wider bg-amber-500/90 rounded-full">
+                      {tagText}
+                    </span>
+                  )}
+                  <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">{titleText}</h1>
+                  {descText && <p className="text-amber-50/90 text-base sm:text-lg leading-relaxed">{descText}</p>}
+                  {ctaText && (
+                    <div className="pt-2">
+                      <button
+                        onClick={() => goTo(s.link)}
+                        className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl shadow-lg transition-all cursor-pointer"
+                      >
+                        {ctaText}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {count > 1 && (

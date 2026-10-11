@@ -22,6 +22,7 @@ const flagImages = {
   fr: "https://flagcdn.com/w40/fr.png",
   de: "https://flagcdn.com/w40/de.png",
   ja: "https://flagcdn.com/w40/jp.png",
+  vi: "https://flagcdn.com/w40/vn.png",
 };
 
 export default function Settings() {

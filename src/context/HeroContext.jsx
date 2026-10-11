@@ -9,7 +9,10 @@ export function HeroProvider({ children }) {
 
   const refresh = useCallback(async () => {
     try {
-      setSlides(await heroService.list());
+      const data = await heroService.list();
+      setSlides(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to load hero slides:", err);
     } finally {
       setLoading(false);
     }
@@ -19,44 +22,11 @@ export function HeroProvider({ children }) {
     refresh();
   }, [refresh]);
 
-  // keep other tabs in sync (dashboard tab + storefront tab)
-  useEffect(() => {
-    const onStorage = (e) => e.key === "bb_hero_v1" && refresh();
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [refresh]);
-
-  const addSlide = async (data) => {
-    const slide = await heroService.create(data);
-    setSlides((prev) => [...prev, slide]);
-  };
-  const updateSlide = async (id, changes) => {
-    const updated = await heroService.update(id, changes);
-    setSlides((prev) => prev.map((s) => (s.id === id ? updated : s)));
-  };
-  const removeSlide = async (id) => {
-    await heroService.remove(id);
-    setSlides((prev) => prev.filter((s) => s.id !== id));
-  };
-  const moveSlide = async (id, dir) => {
-    const idx = slides.findIndex((s) => s.id === id);
-    const to = idx + dir;
-    if (idx === -1 || to < 0 || to >= slides.length) return;
-    const next = [...slides];
-    [next[idx], next[to]] = [next[to], next[idx]];
-    setSlides(next); // instant UI, then persist
-    await heroService.reorder(next.map((s) => s.id));
-  };
-  const resetSlides = async () => setSlides(await heroService.reset());
-
-  const visibleSlides = useMemo(() => slides.filter((s) => s.visible !== false), [slides]);
+  // status is 1 (shown) or 0 (hidden)
+  const visibleSlides = useMemo(() => slides.filter((s) => Number(s.status) === 1), [slides]);
 
   return (
-    <HeroContext.Provider
-      value={{ slides, visibleSlides, loading, addSlide, updateSlide, removeSlide, moveSlide, resetSlides }}
-    >
-      {children}
-    </HeroContext.Provider>
+    <HeroContext.Provider value={{ slides, visibleSlides, loading, refresh }}>{children}</HeroContext.Provider>
   );
 }
 

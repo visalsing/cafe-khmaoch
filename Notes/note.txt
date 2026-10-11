@@ -1,0 +1,48 @@
+
+categories: 
+- id
+- name
+- description
+- img
+- thumbnail
+- status
+- createdAt
+- updatedAt
+
+drinks_type:
+- id
+- name
+- description
+- img
+- thumbnail
+- status
+- createdAt
+- updatedAt
+
+order_items
+- id
+- name
+- description
+- img
+- thumbnail
+- price
+- bigSize_price
+- smallSize_price
+- category_id
+- type_id
+- status
+- sort_num
+- createdAt
+- updatedAt
+
+delivery, order, reciept ... more
+
+but name, description, ... the ones which are text, string, 
+I want it stores as json e.g. {"en":"Coffee","km":"កាហ្វេ"} so I have en, km, zh, lo, ja, vi
+English, Khmer, Chinese, Lao, Japanese, Vietnamese
+
+status is 1 = Active, 0 = Inactive 
+
+img and thumbnail, we input the single image but split into img and thumbnail? 
+
+sort_num used for sort which drinks/items need to come first? sort the order?

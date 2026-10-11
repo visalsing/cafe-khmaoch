@@ -21,3 +21,136 @@ CREATE TABLE IF NOT EXISTS role_permissions (
   permission TEXT NOT NULL,
   PRIMARY KEY (role, permission)
 );
+
+-- ============ shared helper: auto-update updated_at ============
+CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============ categories (Coffee, Tea, Smoothie...) ============
+CREATE TABLE IF NOT EXISTS categories (
+  id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name        JSONB NOT NULL,                       -- {"en":"Coffee","km":"កាហ្វេ","zh":"咖啡","lo":"..","ja":"..","vi":".."}
+  description JSONB NOT NULL DEFAULT '{}'::jsonb,
+  img         TEXT NOT NULL DEFAULT '',
+  thumbnail   TEXT NOT NULL DEFAULT '',
+  status      SMALLINT NOT NULL DEFAULT 1 CHECK (status IN (0, 1)),  -- 1 = Active, 0 = Inactive
+  sort_num    INTEGER NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT categories_name_has_en CHECK (name ? 'en' AND length(name->>'en') > 0)
+);
+
+-- ============ drinks_type (Hot, Iced, Blended...) ============
+CREATE TABLE IF NOT EXISTS drinks_type (
+  id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name        JSONB NOT NULL,
+  description JSONB NOT NULL DEFAULT '{}'::jsonb,
+  img         TEXT NOT NULL DEFAULT '',
+  thumbnail   TEXT NOT NULL DEFAULT '',
+  status      SMALLINT NOT NULL DEFAULT 1 CHECK (status IN (0, 1)),
+  sort_num    INTEGER NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT drinks_type_name_has_en CHECK (name ? 'en' AND length(name->>'en') > 0)
+);
+
+-- ============ products (the menu items you sell) ============
+-- NOT called order_items: that name is better kept for the lines inside a customer's order
+CREATE TABLE IF NOT EXISTS products (
+  id               INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name             JSONB NOT NULL,
+  description      JSONB NOT NULL DEFAULT '{}'::jsonb,
+  img              TEXT NOT NULL DEFAULT '',
+  thumbnail        TEXT NOT NULL DEFAULT '',
+  price            NUMERIC(10,2) CHECK (price >= 0),            -- standard price, NULL = sizes only
+  big_size_price   NUMERIC(10,2) CHECK (big_size_price >= 0),   -- NULL = size not offered
+  small_size_price NUMERIC(10,2) CHECK (small_size_price >= 0), -- NULL = size not offered
+  category_id      INTEGER NOT NULL REFERENCES categories(id)  ON DELETE RESTRICT,
+  type_id          INTEGER          REFERENCES drinks_type(id) ON DELETE SET NULL,
+  status           SMALLINT NOT NULL DEFAULT 1 CHECK (status IN (0, 1)),
+  sort_num         INTEGER NOT NULL DEFAULT 0,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT products_name_has_en CHECK (name ? 'en' AND length(name->>'en') > 0)
+);
+
+CREATE INDEX IF NOT EXISTS products_category_idx ON products (category_id, sort_num);
+CREATE INDEX IF NOT EXISTS products_type_idx     ON products (type_id);
+
+-- ============ hero_slides (homepage slider) ============
+CREATE TABLE IF NOT EXISTS hero_slides (
+  id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  tag        JSONB NOT NULL DEFAULT '{}'::jsonb,   -- badge, e.g. {"en":"Fresh Bakery"}
+  title      JSONB NOT NULL,
+  text       JSONB NOT NULL DEFAULT '{}'::jsonb,
+  img        TEXT NOT NULL DEFAULT '',
+  thumbnail  TEXT NOT NULL DEFAULT '',
+  cta        JSONB NOT NULL DEFAULT '{}'::jsonb,   -- button label
+  link       TEXT NOT NULL DEFAULT '',
+  status     SMALLINT NOT NULL DEFAULT 1 CHECK (status IN (0, 1)),  -- 1 = shown, 0 = hidden
+  sort_num   INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT hero_slides_title_has_en CHECK (title ? 'en' AND length(title->>'en') > 0)
+);
+
+CREATE INDEX IF NOT EXISTS hero_slides_sort_idx ON hero_slides (sort_num, id);
+
+-- ============ maps (maps in index page) ============
+CREATE TABLE IF NOT EXISTS maps (
+  id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  title       JSONB NOT NULL DEFAULT '{}'::jsonb,
+  subtitle    JSONB NOT NULL DEFAULT '{}'::jsonb,
+  description JSONB NOT NULL DEFAULT '{}'::jsonb,
+  img         TEXT NOT NULL DEFAULT '',
+  thumbnail   TEXT NOT NULL DEFAULT '',
+  name        TEXT NOT NULL,
+  slogan      JSONB NOT NULL DEFAULT '{}'::jsonb,
+  map         TEXT NOT NULL DEFAULT '',
+  location    TEXT NOT NULL DEFAULT '',
+  link        TEXT NOT NULL DEFAULT '',
+  status      SMALLINT NOT NULL DEFAULT 1 CHECK (status IN (0, 1)),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Automatically update updated_at
+DROP TRIGGER IF EXISTS maps_updated_at ON maps;
+
+CREATE TRIGGER maps_updated_at
+BEFORE UPDATE ON maps
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+
+-- ============ updated_at triggers ============
+DROP TRIGGER IF EXISTS categories_updated_at  ON categories;
+DROP TRIGGER IF EXISTS drinks_type_updated_at ON drinks_type;
+DROP TRIGGER IF EXISTS products_updated_at    ON products;
+DROP TRIGGER IF EXISTS hero_slides_updated_at ON hero_slides;
+CREATE TRIGGER categories_updated_at  BEFORE UPDATE ON categories  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER drinks_type_updated_at BEFORE UPDATE ON drinks_type FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER products_updated_at    BEFORE UPDATE ON products    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER hero_slides_updated_at BEFORE UPDATE ON hero_slides FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ============ migrations (safe to re-run; they also upgrade an EXISTING database) ============
+-- CREATE TABLE IF NOT EXISTS never changes a table that already exists, so changes go here.
+
+-- products: "price" is optional, but at least ONE of price / big_size_price / small_size_price is needed
+ALTER TABLE products ALTER COLUMN price DROP NOT NULL;
+ALTER TABLE products DROP CONSTRAINT IF EXISTS products_has_a_price;
+ALTER TABLE products ADD CONSTRAINT products_has_a_price
+  CHECK (price IS NOT NULL OR big_size_price IS NOT NULL OR small_size_price IS NOT NULL);
+
+-- products: discount (always a number, 0 = none) and tax (NULL = use the store default). Both are PERCENTAGES: 10 means 10%
+ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_percent NUMERIC(5,2) NOT NULL DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS tax_percent      NUMERIC(5,2);
+
+ALTER TABLE products DROP CONSTRAINT IF EXISTS products_discount_range;
+ALTER TABLE products ADD CONSTRAINT products_discount_range CHECK (discount_percent BETWEEN 0 AND 100);
+ALTER TABLE products DROP CONSTRAINT IF EXISTS products_tax_range;
+ALTER TABLE products ADD CONSTRAINT products_tax_range CHECK (tax_percent IS NULL OR tax_percent BETWEEN 0 AND 100);

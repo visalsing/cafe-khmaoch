@@ -5,11 +5,10 @@ import { products as seedProducts } from "../components/Data/menuData";
 const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
 
 /* =========================================================
-   Shared helpers (localStorage: menu, orders, hero)
+   Shared helpers (localStorage: menu, orders)
    ========================================================= */
 const MENU_KEY = "bb_menu_v1";
 const ORDERS_KEY = "bb_orders_v1";
-const HERO_KEY = "bb_hero_v1";
 const DEFAULT_IMG =
   "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&q=80";
 
@@ -133,150 +132,31 @@ export const orderService = {
 };
 
 /* =========================================================
-   HERO (still localStorage for now)
-   ========================================================= */
-const SEED_HERO = [
-  {
-    id: 1,
-    visible: true,
-    tag: "Café & Drinks",
-    title: "Bean & Blossom ☕",
-    text: "Freshly roasted coffee, handcrafted in a cozy corner of the city.",
-    img: "https://images.unsplash.com/photo-1445116572660-236099ec97a0?auto=format&fit=crop&w=1600&q=80",
-    cta: "Order Drinks",
-    link: "#shop",
-  },
-  {
-    id: 2,
-    visible: true,
-    tag: "Signature Latte",
-    title: "Sip Something Special",
-    text: "Silky espresso, steamed milk and house-made caramel in every cup.",
-    img: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1600&q=80",
-    cta: "View Coffee Menu",
-    link: "/shop",
-  },
-  {
-    id: 3,
-    visible: true,
-    tag: "Fresh Bakery",
-    title: "Baked Every Morning",
-    text: "Warm croissants and pastries, the perfect partner for your brew.",
-    img: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=1600&q=80",
-    cta: "See Pastries",
-    link: "/shop",
-  },
-  {
-    id: 4,
-    visible: true,
-    tag: "Visit Us",
-    title: "Gather. Relax. Enjoy.",
-    text: "A cozy place for meetups, study sessions or a quiet afternoon.",
-    img: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=1600&q=80",
-    cta: "Find Us",
-    link: "#contact",
-  },
-];
-
-const loadHero = () => {
-  const saved = read(HERO_KEY, null);
-  if (saved) return saved;
-  write(HERO_KEY, SEED_HERO);
-  return SEED_HERO;
-};
-
-export const heroService = {
-  async list() {
-    await wait();
-    return loadHero();
-  },
-  async create(data) {
-    await wait();
-    const slide = { visible: true, ...data, id: Date.now() };
-    write(HERO_KEY, [...loadHero(), slide]);
-    return slide;
-  },
-  async update(id, changes) {
-    await wait();
-    const slides = loadHero();
-    const idx = slides.findIndex((s) => s.id === id);
-    if (idx === -1) throw new Error("Slide not found");
-    slides[idx] = { ...slides[idx], ...changes, id };
-    write(HERO_KEY, slides);
-    return slides[idx];
-  },
-  async remove(id) {
-    await wait();
-    write(
-      HERO_KEY,
-      loadHero().filter((s) => s.id !== id),
-    );
-    return true;
-  },
-  async reorder(ids) {
-    await wait();
-    const map = new Map(loadHero().map((s) => [s.id, s]));
-    const next = ids.map((id) => map.get(id)).filter(Boolean);
-    write(HERO_KEY, next);
-    return next;
-  },
-  async reset() {
-    await wait();
-    localStorage.removeItem(HERO_KEY);
-    return loadHero();
-  },
-};
-
-/* =========================================================
    BACKEND API (Express + Neon PostgreSQL)
    Auth, users, roles & permissions
    ========================================================= */
 
 async function http(path, { method = "GET", body } = {}) {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const url = `${API_BASE}/api${normalizedPath}`;
-
+  const isForm = typeof FormData !== "undefined" && body instanceof FormData;
   let res;
-
   try {
-    res = await fetch(url, {
+    res = await fetch(`${API_BASE}/api${path}`, {
       method,
       credentials: "include",
-      headers:
-        body !== undefined ? { "Content-Type": "application/json" } : undefined,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      headers: body && !isForm ? { "Content-Type": "application/json" } : undefined,
+      body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
     });
-  } catch (error) {
-    console.error("API connection error:", error);
-
+  } catch {
     const err = new Error("Cannot reach the server. Please try again.");
     err.status = 0;
     throw err;
   }
-
-  // Detect HTML responses (e.g. a rewrite sending /api to index.html)
-  // instead of silently turning them into {}.
-  const contentType = res.headers.get("content-type") || "";
-  const isJson = contentType.includes("application/json");
-  const data = isJson ? await res.json().catch(() => ({})) : {};
-
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(
-      data?.error || data?.message || `Request failed (HTTP ${res.status}).`,
-    );
-    err.status = res.status;
-    err.data = data;
-    throw err;
-  }
-
-  if (!isJson) {
-    const err = new Error(
-      "The server returned an unexpected response. Check the API setup.",
-    );
+    const err = new Error(data.error || `Request failed (HTTP ${res.status}).`);
     err.status = res.status;
     throw err;
   }
-
   return data;
 }
 
@@ -301,4 +181,59 @@ export const accessService = {
   saveStaff: (permissions) =>
     http("/access/staff", { method: "PUT", body: { permissions } }),
   reset: () => http("/access/staff/reset", { method: "POST" }),
+};
+
+// "/api/uploads/images/x.webp" -> full URL (also works when the API is on another domain)
+export const assetUrl = (p) => (p && p.startsWith("/") ? `${API_BASE}${p}` : p || "");
+
+export const categoryService = {
+  list: () => http("/categories"),
+  create: (formData) => http("/categories", { method: "POST", body: formData }),
+  update: (id, formData) => http(`/categories/${id}`, { method: "PUT", body: formData }),
+  remove: (id) => http(`/categories/${id}`, { method: "DELETE" }),
+};
+
+export const drinksTypesService = {
+  list: () => http("/drinks-types"),
+  create: (formData) => http("/drinks-types", { method: "POST", body: formData }),
+  update: (id, formData) => http(`/drinks-types/${id}`, { method: "PUT", body: formData }),
+  remove: (id) => http(`/drinks-types/${id}`, { method: "DELETE" }),
+};
+
+export const productService = {
+  list: () => http("/products"),
+  create: (formData) => http("/products", { method: "POST", body: formData }),
+  update: (id, formData) => http(`/products/${id}`, { method: "PUT", body: formData }),
+  setStatus: (id, status) => http(`/products/${id}/status`, { method: "PATCH", body: { status } }),
+  remove: (id) => http(`/products/${id}`, { method: "DELETE" }),
+};
+
+// export const heroService = {
+//   list: () => http("/hero"),
+//   create: (formData) => http("/hero", { method: "POST", body: formData }),
+//   update: (id, formData) => http(`/hero/${id}`, { method: "PUT", body: formData }),
+//   setStatus: (id, status) => http(`/hero/${id}/status`, { method: "PATCH", body: { status } }),
+//   remove: (id) => http(`/hero/${id}`, { method: "DELETE" }),
+// };
+
+export const heroService = {
+  // staff with the "pages" permission also receive hidden slides; everyone else only gets the visible ones
+  list: () => http("/hero?all=1"),
+  create: (formData) => http("/hero", { method: "POST", body: formData }),
+  update: (id, formData) => http(`/hero/${id}`, { method: "PUT", body: formData }),
+  setStatus: (id, status) => http(`/hero/${id}/status`, { method: "PATCH", body: { status } }),
+  reorder: (ids) => http("/hero/reorder", { method: "PUT", body: { ids } }),
+  reset: () => http("/hero/reset", { method: "POST" }),
+  remove: (id) => http(`/hero/${id}`, { method: "DELETE" }),
+};
+
+export const mapService = {
+  // dashboard: every map with full { en, km } texts (needs login)
+  list: () => http("/maps?raw=1"),
+  // storefront: visible maps, already translated to one language (public)
+  listPublic: (lang = "en") => http(`/maps?lang=${lang}`),
+  create: (formData) => http("/maps", { method: "POST", body: formData }),
+  update: (id, formData) => http(`/maps/${id}`, { method: "PUT", body: formData }),
+  setStatus: (id, status) => http(`/maps/${id}/status`, { method: "PATCH", body: { status } }),
+  remove: (id) => http(`/maps/${id}`, { method: "DELETE" }),
 };

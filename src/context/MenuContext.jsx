@@ -3,10 +3,18 @@ import { menuService } from "../services/api";
 
 const MenuContext = createContext(null);
 
+const defaultCategories = [
+  { id: "cat_1", name: "Coffee", description: "Freshly brewed hot & iced coffee", img: "", thumbnail: "", status: "Active", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+  { id: "cat_2", name: "Bakery", description: "Fresh daily pastries and cakes", img: "", thumbnail: "", status: "Active", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+];
+
 export function MenuProvider({ children }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Categories state
+  const [categoriesList, setCategoriesList] = useState(defaultCategories);
 
   const refresh = useCallback(async () => {
     try {
@@ -46,16 +54,54 @@ export function MenuProvider({ children }) {
   };
   const resetMenu = async () => setItems(await menuService.reset());
 
+  // Category Actions
+  const addCategory = async (newCat) => {
+    setCategoriesList((prev) => [...prev, newCat]);
+    return newCat;
+  };
+
+  const updateCategory = async (id, data) => {
+    setCategoriesList((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...data, updatedAt: new Date().toISOString() } : c))
+    );
+  };
+
+  const removeCategory = async (id) => {
+    setCategoriesList((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const resetCategories = async () => {
+    setCategoriesList(defaultCategories);
+  };
+
   // What customers/POS can see and sell
   const availableItems = useMemo(() => items.filter((i) => i.available !== false), [items]);
+  
+  // Combine dynamic categories list with fallback
   const categories = useMemo(
-    () => ["All", ...Array.from(new Set(availableItems.map((i) => i.category)))],
-    [availableItems]
+    () => ["All", ...Array.from(new Set(categoriesList.map((c) => c.name)))],
+    [categoriesList]
   );
 
   return (
     <MenuContext.Provider
-      value={{ items, availableItems, categories, loading, error, addItem, updateItem, removeItem, resetMenu, refresh }}
+      value={{
+        items,
+        availableItems,
+        categories,
+        categoriesList,
+        loading,
+        error,
+        addItem,
+        updateItem,
+        removeItem,
+        resetMenu,
+        refresh,
+        addCategory,
+        updateCategory,
+        removeCategory,
+        resetCategories,
+      }}
     >
       {children}
     </MenuContext.Provider>

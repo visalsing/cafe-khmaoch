@@ -6,6 +6,7 @@ import Hero from "./IndexPage/Hero";
 import Stats from "./IndexPage/Stats";
 import Shop from "./IndexPage/Shop";
 import About from "./IndexPage/About";
+import Map from "./IndexPage/Map";
 import Footer from "./IndexPage/Footer";
 // import { categories, products } from "./Data/menuData";
 import { useCart } from "../context/CartContext";
@@ -153,6 +154,8 @@ const { cartCount, addItem } = useCart();
           onAddToCart={addItem}
         />
         <About />
+
+        <Map />
       </main>
 
       <Footer />
