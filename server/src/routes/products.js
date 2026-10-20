@@ -103,6 +103,7 @@ function readFields(body) {
   const name = parseI18n(body.name, 120);
   if (!name?.en) return { error: "The English name is required." };
   const description = parseI18n(body.description, 500) || {};
+  const badge = parseI18n(body.badge, 40) || {}; // ← new
 
   const price = parseMoney(body.price); // null = no standard price
   const big = parseMoney(body.big_size_price); // null = size not offered
@@ -132,6 +133,7 @@ function readFields(body) {
     v: {
       name,
       description,
+      badge,
       price,
       big,
       small,
@@ -184,8 +186,8 @@ router.post(
       const { rows } = await pool.query(
         `INSERT INTO products
            (name, description, img, thumbnail, price, big_size_price, small_size_price,
-            category_id, type_id, status, sort_num, discount_percent, tax_percent)
-         VALUES ($1::jsonb, $2::jsonb, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            category_id, type_id, status, sort_num, discount_percent, tax_percent, badge)
+         VALUES ($1::jsonb, $2::jsonb, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb)
          RETURNING *`,
         [
           JSON.stringify(v.name),
@@ -201,6 +203,7 @@ router.post(
           v.sortNum,
           v.discountPercent,
           v.taxPercent,
+          JSON.stringify(v.badge), // ← was v.badge
         ],
       );
       res.status(201).json(rows[0]);
@@ -270,8 +273,8 @@ router.put(
          SET name = $1::jsonb, description = $2::jsonb, img = $3, thumbnail = $4,
              price = $5, big_size_price = $6, small_size_price = $7,
              category_id = $8, type_id = $9, status = $10, sort_num = $11,
-             discount_percent = $12, tax_percent = $13
-         WHERE id = $14
+             discount_percent = $12, tax_percent = $13, badge = $14::jsonb
+         WHERE id = $15
          RETURNING *`,
         [
           JSON.stringify(v.name),
@@ -287,6 +290,7 @@ router.put(
           v.sortNum,
           v.discountPercent,
           v.taxPercent,
+          JSON.stringify(v.badge), // ← was v.badge
           id,
         ],
       );

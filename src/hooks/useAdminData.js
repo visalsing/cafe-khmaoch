@@ -1,30 +1,49 @@
 import { useEffect, useState } from "react";
 import { userService, accessService } from "../services/api";
 
-export function useUsers() {
+export function useUsers(showRemoved = false) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await userService.list({ removed: showRemoved });
+      setUsers(Array.isArray(data) ? data : []);
+      setError("");
+      return true;
+    } catch (err) {
+      setError(err.message || "Could not load the users.");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [showRemoved]);
 
   useEffect(() => {
-    userService.list().then(setUsers).catch((e) => alert(e.message)).finally(() => setLoading(false));
-  }, []);
+    reload();
+  }, [reload]);
 
-  const addUser = async (data) => {
-    const u = await userService.create(data);
-    setUsers((p) => [u, ...p]);
-    return u;
-  };
-  const updateUser = async (id, changes) => {
-    const u = await userService.update(id, changes);
-    setUsers((p) => p.map((x) => (x.id === id ? u : x)));
-    return u;
-  };
-  const removeUser = async (id) => {
-    await userService.remove(id);
-    setUsers((p) => p.filter((x) => x.id !== id));
+  // every action runs, then the list is loaded again, so the table always matches the database
+  const run = (fn) => async (...args) => {
+    const result = await fn(...args);
+    await reload();
+    return result;
   };
 
-  return { users, loading, addUser, updateUser, removeUser };
+  return {
+    users,
+    loading,
+    error,
+    reload,
+    addUser: run((formData) => userService.create(formData)),
+    updateUser: run((id, formData) => userService.update(id, formData)),
+    setBlocked: run((id, blocked) => userService.setBlocked(id, blocked)),
+    removeUser: run((id) => userService.remove(id)),     // soft remove
+    restoreUser: run((id) => userService.restore(id)),
+    deleteUser: run((id) => userService.delete(id)),     // permanent
+  };
 }
 
 export function useAccessMatrix() {

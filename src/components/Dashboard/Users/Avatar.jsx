@@ -1,30 +1,38 @@
-import React from "react";
-import { fullName } from "../../../utils/access";
+import React, { useEffect, useState } from "react";
+import { assetUrl } from "../../../services/api";
 
-const PALETTE = ["bg-amber-500", "bg-emerald-500", "bg-sky-500", "bg-violet-500", "bg-rose-500", "bg-teal-500"];
+const COLORS = ["bg-amber-500", "bg-emerald-500", "bg-sky-500", "bg-violet-500", "bg-rose-500", "bg-teal-500", "bg-orange-500", "bg-indigo-500"];
 
-export default function Avatar({ user, size = 40, className = "" }) {
-  const name = fullName(user) || "?";
-  const letters =
-    `${user.firstName?.[0] || ""}${user.lastName?.[0] || ""}`.toUpperCase() || name[0].toUpperCase();
-  const color = PALETTE[[...name].reduce((s, c) => s + c.charCodeAt(0), 0) % PALETTE.length];
+export default function Avatar({ user = {}, size = 40 }) {
+  const [broken, setBroken] = useState(false);
 
-  if (user.avatar) {
+  const raw = user.avatarThumbnail || user.avatar || "";
+  // blob: (a photo just chosen in the form) and data: (old base64 photos) are used as they are
+  const src = raw && (raw.startsWith("blob:") || raw.startsWith("data:") ? raw : assetUrl(raw));
+
+  useEffect(() => setBroken(false), [src]);
+
+  const initials =
+    (((user.firstName || "").trim()[0] || "") + ((user.lastName || "").trim()[0] || "")).toUpperCase() ||
+    (user.email || "?")[0].toUpperCase();
+  const color = COLORS[Math.abs(Number(user.id) || (user.email || "").length) % COLORS.length];
+
+  const style = { width: size, height: size, fontSize: Math.round(size * 0.38) };
+
+  if (src && !broken) {
     return (
       <img
-        src={user.avatar}
-        alt={name}
-        style={{ width: size, height: size }}
-        className={`rounded-full object-cover shrink-0 ${className}`}
+        src={src}
+        alt=""
+        onError={() => setBroken(true)}
+        style={style}
+        className="rounded-full object-cover shrink-0 bg-slate-200 dark:bg-slate-800"
       />
     );
   }
   return (
-    <div
-      style={{ width: size, height: size, fontSize: size * 0.4 }}
-      className={`rounded-full ${color} text-white font-bold flex items-center justify-center shrink-0 ${className}`}
-    >
-      {letters}
+    <div style={style} className={`rounded-full ${color} text-white font-bold flex items-center justify-center shrink-0`}>
+      {initials}
     </div>
   );
 }

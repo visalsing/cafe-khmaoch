@@ -1,3 +1,104 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Lao:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+/* @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap'); */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
 html {
   scroll-behavior: smooth;
+  line-height: 1.6;
+}
+
+/* Default font: English */
+:root {
+  font-family: 'Montserrat', sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+  line-height: 1.6;
+}
+
+
+/* English */
+html[lang="en"],
+html[lang="en"] body {
+  font-family: 'Montserrat', sans-serif;
+}
+
+/* Khmer */
+html[lang="km"],
+html[lang="km"] body {
+  font-family: 'Noto Sans Khmer', sans-serif;
+}
+
+/* Lao */
+html[lang="lo"],
+html[lang="lo"] body {
+  font-family: 'Noto Serif Lao', serif;
+}
+
+/* Chinese - Simplified */
+html[lang="zh"],
+html[lang="zh"] body {
+  font-family: 'Noto Sans SC', sans-serif;
+}
+
+/* Japanese */
+html[lang="ja"],
+html[lang="ja"] body {
+  font-family: 'Noto Sans JP', sans-serif;
+}
+
+/* Vietnamese */
+html[lang="vi"],
+html[lang="vi"] body {
+  font-family: 'Noto Sans', sans-serif;
+}
+
+
+
+
+/* Base text settings */
+/* html {
+  line-height: 1.6;
+} */
+
+/* body {
+  margin: 0;
+  line-height: 1.6;
+} */
+
+/* Form controls inherit the current language font */
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+/* Headings need extra vertical space for complex scripts */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  line-height: 1.7;
+  padding-top: 0.08em;
+  padding-bottom: 0.12em;
+}
+
+/* Multilingual text */
+p,
+span,
+a,
+label,
+li,
+div {
+  line-height: inherit;
 }

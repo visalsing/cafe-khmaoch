@@ -63,9 +63,10 @@ export function AuthProvider({ children }) {
 
   const can = useCallback((key) => permissions.includes(key), [permissions]);
   const canEnterDashboard = !!currentUser && permissions.length > 0;
+  const canEnterProfile = !!currentUser && permissions.length > 0;
 
   return (
-    <AuthContext.Provider value={{ currentUser, permissions, loading, can, canEnterDashboard, login, register, logout, refresh }}>
+    <AuthContext.Provider value={{ currentUser, permissions, loading, can, canEnterDashboard, canEnterProfile, login, register, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

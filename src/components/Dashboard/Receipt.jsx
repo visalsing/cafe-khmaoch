@@ -1,17 +1,37 @@
 import React, { useRef } from "react";
 import { Printer, X } from "lucide-react";
 
-const money = (n) => `$${Number(n).toFixed(2)}`;
-const Row = ({ l, r, bold }) => (
+const EXCHANGE_RATE = 4100; // 1$ = 4100៛
+
+const formatPriceWithUSD = (rielValue) => {
+  const numericVal = Number(rielValue) || 0;
+  const usd = numericVal / EXCHANGE_RATE;
+  const usdFormatted = usd % 1 === 0 ? `$${usd.toFixed(0)}` : `$${usd.toFixed(2)}`;
+  return {
+    riel: `${Math.round(numericVal).toLocaleString()}៛`,
+    usd: `≈ ${usdFormatted}`,
+  };
+};
+
+const Row = ({ l, rRiel, rUsd, bold }) => (
   <div
     style={{
       display: "flex",
       justifyContent: "space-between",
+      alignItems: "flex-start",
       fontWeight: bold ? 700 : 400,
+      marginBottom: 2,
     }}
   >
     <span>{l}</span>
-    <span>{r}</span>
+    <div style={{ textAlign: "right" }}>
+      <div>{rRiel}</div>
+      {rUsd && (
+        <div style={{ fontSize: 11, color: "#666", fontWeight: 400 }}>
+          {rUsd}
+        </div>
+      )}
+    </div>
   </div>
 );
 
@@ -29,6 +49,8 @@ export default function ReceiptModal({ order, onClose }) {
     w.onafterprint = () => w.close();
     w.print();
   };
+
+  const moneyFormatted = (val) => formatPriceWithUSD(val);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
@@ -65,13 +87,11 @@ export default function ReceiptModal({ order, onClose }) {
               <div>+1 (555) 839-2041</div>
             </div>
             <hr style={{ borderTop: "1px dashed #000" }} />
-            <Row l="Order" r={order.number} />
-            <Row l="Date" r={new Date(order.createdAt).toLocaleString()} />
-            {/* <Row l="Type" r={order.orderType === "dine-in" ? `Dine-in${order.table ? ` #${order.table}` : ""}` : "Takeaway"} /> */}
-            {/* // Type row: */}
+            <Row l="Order" rRiel={order.number} />
+            <Row l="Date" rRiel={new Date(order.createdAt).toLocaleString()} />
             <Row
               l="Type"
-              r={
+              rRiel={
                 order.orderType === "dine-in"
                   ? `Dine-in${order.table ? ` #${order.table}` : ""}`
                   : order.orderType === "delivery"
@@ -81,40 +101,66 @@ export default function ReceiptModal({ order, onClose }) {
                       : "Takeaway"
               }
             />
-            {/*  */}
             <hr style={{ borderTop: "1px dashed #000" }} />
-            {order.items.map((l) => (
-              <div key={l.id} style={{ marginBottom: 4 }}>
-                <div>{l.title}</div>
-                <Row
-                  l={`  ${l.qty} x ${money(l.price)}`}
-                  r={money(l.qty * l.price)}
-                />
-              </div>
-            ))}
+            {order.items.map((l) => {
+              const unitPrice = moneyFormatted(l.price);
+              const totalPrice = moneyFormatted(l.qty * l.price);
+              return (
+                <div key={l.id} style={{ marginBottom: 6 }}>
+                  <div>{l.title}</div>
+                  <Row
+                    l={`  ${l.qty} x ${unitPrice.riel}`}
+                    rRiel={totalPrice.riel}
+                    rUsd={totalPrice.usd}
+                  />
+                </div>
+              );
+            })}
             <hr style={{ borderTop: "1px dashed #000" }} />
-            <Row l="Subtotal" r={money(order.subtotal)} />
+            <Row
+              l="Subtotal"
+              rRiel={moneyFormatted(order.subtotal).riel}
+              rUsd={moneyFormatted(order.subtotal).usd}
+            />
             {order.discount > 0 && (
-              <Row l="Discount" r={`-${money(order.discount)}`} />
+              <Row
+                l="Discount"
+                rRiel={`-${moneyFormatted(order.discount).riel}`}
+                rUsd={`-${moneyFormatted(order.discount).usd}`}
+              />
             )}
             {order.shipping > 0 && (
-              <Row l="Delivery" r={money(order.shipping)} />
+              <Row
+                l="Delivery"
+                rRiel={moneyFormatted(order.shipping).riel}
+                rUsd={moneyFormatted(order.shipping).usd}
+              />
             )}
-            <Row l="Tax (8%)" r={money(order.tax)} />
-            <Row l="TOTAL" r={money(order.total)} bold />
+            <Row
+              l="Tax (8%)"
+              rRiel={moneyFormatted(order.tax).riel}
+              rUsd={moneyFormatted(order.tax).usd}
+            />
+            <Row
+              l="TOTAL"
+              rRiel={moneyFormatted(order.total).riel}
+              rUsd={moneyFormatted(order.total).usd}
+              bold
+            />
             <hr style={{ borderTop: "1px dashed #000" }} />
-            <Row l="Paid by" r={order.paymentMethod.toUpperCase()} />
-            {/* {order.paymentMethod === "cash" && (
-              <>
-                <Row l="Cash" r={money(order.cashReceived)} />
-                <Row l="Change" r={money(order.change)} />
-              </>
-            )} */}
-            {/* // cash block: only show when cash was actually received */}
+            <Row l="Paid by" rRiel={order.paymentMethod.toUpperCase()} />
             {order.paymentMethod === "cash" && order.cashReceived != null && (
               <>
-                <Row l="Cash" r={money(order.cashReceived)} />
-                <Row l="Change" r={money(order.change)} />
+                <Row
+                  l="Cash"
+                  rRiel={moneyFormatted(order.cashReceived).riel}
+                  rUsd={moneyFormatted(order.cashReceived).usd}
+                />
+                <Row
+                  l="Change"
+                  rRiel={moneyFormatted(order.change).riel}
+                  rUsd={moneyFormatted(order.change).usd}
+                />
               </>
             )}
             <div style={{ textAlign: "center", marginTop: 12 }}>

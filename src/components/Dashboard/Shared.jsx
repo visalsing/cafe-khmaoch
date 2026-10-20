@@ -36,7 +36,10 @@ export const asList = (d) =>
 export const fmtDate = (d) => (d ? new Date(d).toLocaleDateString() : "—");
 
 export const money = (n) =>
-  n === null || n === undefined || n === "" ? "—" : `$${Number(n).toFixed(2)}`;
+  // Dollar
+  // n === null || n === undefined || n === "" ? "—" : `$${Number(n).toFixed(2)}`;
+  // Riel
+  n === null || n === undefined || n === "" ? "—" : `${Number(n).toFixed(0)}៛`;
 
 export const bySort = (a, b) => a.sort_num - b.sort_num || a.id - b.id;
 
@@ -213,7 +216,11 @@ export function Pagination({
       </div>
 
       <nav className="flex items-center gap-1" aria-label="Pagination">
-        <PageButton label="First page" disabled={atStart} onClick={() => onPage(1)}>
+        <PageButton
+          label="First page"
+          disabled={atStart}
+          onClick={() => onPage(1)}
+        >
           <ChevronsLeft className="w-4 h-4" />
         </PageButton>
         <PageButton

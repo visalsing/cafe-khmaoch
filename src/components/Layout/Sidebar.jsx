@@ -28,12 +28,17 @@ import {
   LogOut,
   BoxesIcon,
   LucideBook,
-  ExternalLink
+  ExternalLink,
+  CoinsIcon,
+  FlagIcon,
+  PersonStanding,
+  Flag,
 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
 import Avatar from "../Dashboard/Users/Avatar";
 import { ROLE_INFO, fullName } from "../../utils/access";
+import logoImg from "../../assets/logo/cafe-khmaoch-rmbg.png"; // or your preferred logo path
 
 const PERMISSION_BY_ID = {
   dashboard: "dashboard",
@@ -68,17 +73,60 @@ const menuItems = [
   //   icon: LucideBook,
   //   label: "Lookup Manager",
   // },
-    {
+  {
     id: "categories",
     path: "/dashboard/categories",
     icon: BoxesIcon,
     label: "Categories",
   },
-      {
+  {
     id: "drink-types",
     path: "/dashboard/drink-types",
     icon: BoxesIcon,
     label: "Drink Types",
+  },
+  {
+    id: "levels-options",
+    icon: LayoutTemplate,
+    label: "Levels Options",
+    submenu: [
+      {
+        id: "levels-options-overview",
+        path: "/dashboard/levels-options",
+        label: "Levels Options",
+      },
+      {
+        id: "sugar-level",
+        path: "/dashboard/levels-options/sugar-level",
+        label: "Sugar Level",
+      },
+      { id: "ice-level", path: "/dashboard/ice-level", label: "Ice Level" },
+      {
+        id: "coffee-level",
+        path: "/dashboard/coffee-level",
+        label: "Coffee Level",
+      },
+    ],
+  },
+  //     {
+  //   id: "currencies-exchange-rate",
+  //   icon: LayoutTemplate,
+  //   label: "Currencies",
+  //   submenu: [
+  //     { id: "levels-options-overview", path: "/dashboard/levels-options", label: "Exchange Rate" },
+  //   ],
+  // },
+  {
+    id: "exchange-rate",
+    path: "/dashboard/exchange-rate",
+    icon: CoinsIcon,
+    label: "Exchange Rate",
+  },
+  {
+    id: "currencies",
+    path: "/dashboard/currencies",
+    icon: CoinsIcon,
+    label: "Currencies",
   },
   { id: "orders", path: "/dashboard/orders", icon: Receipt, label: "Orders" },
   {
@@ -98,6 +146,54 @@ const menuItems = [
     ],
   },
   {
+    id: "country-flags",
+    path: "/dashboard/country-flags",
+    icon: FlagIcon,
+    label: "Country Flags",
+  },
+    {
+    id: "roles",
+    path: "/dashboard/roles",
+    icon: PersonStanding,
+    label: "Roles",
+  },
+      {
+    id: "positions",
+    path: "/dashboard/positions",
+    icon: PersonStanding,
+    label: "Positions",
+  },
+        {
+    id: "permissions",
+    path: "/dashboard/permissions",
+    icon: PersonStanding,
+    label: "Permissions",
+  },
+  {
+    id: "genders",
+    path: "/dashboard/genders",
+    icon: PersonStanding,
+    label: "Genders",
+  },
+  {
+    id: "nationalities",
+    path: "/dashboard/nationalities",
+    icon: Flag,
+    label: "Nationalities",
+  },
+    {
+    id: "users",
+    path: "/dashboard/users",
+    icon: Users,
+    label: "Users",
+  },
+  {
+    id: "roles-permissions",
+    path: "/dashboard/roles-permissions",
+    icon: Users,
+    label: "Roles & Permissions",
+  },
+  {
     id: "homepage",
     path: "/dashboard/homepage",
     icon: HomeIcon,
@@ -110,14 +206,14 @@ const menuItems = [
     label: "Settings",
   },
   {
-    id: "users",
+    id: "users-stop",
     icon: Users,
     label: "Users",
     submenu: [
-      { id: "users-list", path: "/dashboard/users", label: "Users" },
+      { id: "users-list", path: "/dashboard/users-stop", label: "Users" },
       {
         id: "roles-permissions",
-        path: "/dashboard/roles-permissions",
+        path: "/dashboard/roles-permissions-stop",
         label: "Roles & Permissions",
       },
     ],
@@ -318,13 +414,13 @@ const menuItems = [
 function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
   const { currentUser, can, logout } = useAuth();
-  
+
   const [expandedItems, setExpandedItems] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState("");
 
   const isAdmin = currentUser?.role === "admin";
-  // const allowed = (id) => isAdmin || !PERMISSION_BY_ID[id] || can(PERMISSION_BY_ID[id]);
-     const allowed = (id) => isAdmin || (PERMISSION_BY_ID[id] && can(PERMISSION_BY_ID[id]));
+  const allowed = (id) =>
+    isAdmin || (PERMISSION_BY_ID[id] && can(PERMISSION_BY_ID[id]));
 
   // 1. First filter items based on user permissions
   const authorizedMenuItems = useMemo(() => {
@@ -418,7 +514,7 @@ function Sidebar({ collapsed, onToggle }) {
           className="w-full pl-9 pr-9 py-2.5 bg-slate-100
             dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl
             text-sm text-slate-800 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2
-            focus:ring-blue-500 focus:border-transparent transition-all"
+            focus:ring-amber-500 focus:border-transparent transition-all"
         />
         {isSearching && (
           <button
@@ -454,7 +550,7 @@ function Sidebar({ collapsed, onToggle }) {
                 <button
                   className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
                     isParentActive
-                      ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25"
+                      ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/25"
                       : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
                   }`}
                   onClick={() => toggleExpanded(item.id)}
@@ -481,7 +577,7 @@ function Sidebar({ collapsed, onToggle }) {
                   className={({ isActive }) =>
                     `w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
                       isActive
-                        ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/25"
+                        ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/25"
                         : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
                     }`
                   }
@@ -508,7 +604,7 @@ function Sidebar({ collapsed, onToggle }) {
                         className={({ isActive }) =>
                           `block w-full text-left p-2 text-sm rounded-lg transition-all ${
                             isActive
-                              ? "bg-blue-100 text-blue-700 font-medium dark:bg-blue-500/15 dark:text-blue-300"
+                              ? "bg-amber-100 text-amber-700 font-medium dark:bg-amber-500/15 dark:text-amber-300"
                               : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50"
                           }`
                         }
@@ -534,11 +630,11 @@ function Sidebar({ collapsed, onToggle }) {
       >
         <div className="p-6 border-b border-slate-200/50 dark:border-slate-700/50">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+            <div className="w-10 h-10 bg-gradient-to-tr from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden p-1.5">
               <img
-                src="https://scontent.fpnh18-2.fna.fbcdn.net/v/t39.30808-6/654322007_1356423336538566_7798828526873508250_n.jpg?stp=dst-jpg_tt6&cstp=mx828x828&ctp=s828x828&_nc_cat=102&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeHLG6cF5oyO4KIltffKzPkDg29pJuzyes6Db2km7PJ6zpXH9qffAs3khTNUihEpFRrsZFf3KZdhc7xw3M_AbuW0&_nc_ohc=J5bssy70AskQ7kNvwHPTAbX&_nc_oc=AdpWJ1T-7jOxXxsyrnSi2nU5NW7LqRBvVq-W-us9kyZgMzbrfPAn6TOqzu7g1wCzez0&_nc_zt=23&_nc_ht=scontent.fpnh18-2.fna&_nc_gid=3-Ys3WRWKOaqozE_9uImAw&_nc_ss=7b2a8&oh=00_AQM2yfXLaYir7lHFD79tfpyYIK_D0B35d290lbOfcx8KYA&oe=6AC3E969"
+                src={logoImg}
                 alt="Café Logo"
-                className="w-6 h-6 object-contain"
+                className="w-full h-full object-contain"
               />
             </div>
             {!collapsed && (
@@ -561,17 +657,25 @@ function Sidebar({ collapsed, onToggle }) {
         {!collapsed && (
           <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50">
             <div className="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-              <Avatar user={currentUser} className="w-10 h-10 rounded-full ring-2 ring-blue-500 flex-shrink-0" />
+              <Avatar
+                user={currentUser}
+                className="w-10 h-10 rounded-full ring-2 ring-amber-500 flex-shrink-0"
+              />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
                   {fullName(currentUser) || "User"}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {ROLE_INFO[currentUser?.role]?.label || currentUser?.role || "Member"}
+                  {ROLE_INFO[currentUser?.role]?.label ||
+                    currentUser?.role ||
+                    "Member"}
                 </p>
               </div>
               {/* Optional logout button */}
-              <button onClick={logout} className="text-slate-400 hover:text-red-500 transition-colors">
+              <button
+                onClick={logout}
+                className="text-slate-400 hover:text-red-500 transition-colors"
+              >
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
@@ -583,8 +687,12 @@ function Sidebar({ collapsed, onToggle }) {
         <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900 md:hidden transition-all duration-300 ease-in-out transform animate-in slide-in-from-top fade-in">
           <div className="flex items-center justify-between p-6 border-b border-slate-200/50 dark:border-slate-700/50">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
-                <Zap className="w-6 h-6 text-white" />
+              <div className="w-10 h-10 bg-gradient-to-tr from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden p-1.5">
+                <img
+                  src={logoImg}
+                  alt="Café Logo"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">
@@ -609,13 +717,18 @@ function Sidebar({ collapsed, onToggle }) {
 
           <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50">
             <div className="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-              <Avatar user={currentUser} className="w-10 h-10 rounded-full ring-2 ring-blue-500 flex-shrink-0" />
+              <Avatar
+                user={currentUser}
+                className="w-10 h-10 rounded-full ring-2 ring-amber-500 flex-shrink-0"
+              />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
                   {fullName(currentUser) || "User"}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {ROLE_INFO[currentUser?.role]?.label || currentUser?.role || "Member"}
+                  {ROLE_INFO[currentUser?.role]?.label ||
+                    currentUser?.role ||
+                    "Member"}
                 </p>
               </div>
             </div>

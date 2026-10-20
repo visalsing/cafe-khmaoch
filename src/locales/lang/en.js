@@ -126,6 +126,39 @@ const en = {
   fresh_sales_return_below24h: "Fresh Sales Return (Below 24h)",
   fresh_sales_return_below24h_overview:
     "Fresh Sales Return (Below 24h) Overview",
+
+  // IndexPage/Shop.jsx
+  all: "All",
+  add_to_order: "Add to card",
+  cafe_khmaoch_menu: "Café Khmaoch Menu",
+  show_more_options: "Show more options",
+  see_full_menu: "See full menu",
+
+  // IndexPage/About.jsx | About Us, Our Story
+  about_us: "About Us",
+  about_us_subtitle:
+    "Discover our passion for crafting exceptional coffee and warm experiences.",
+  our_story: "Our Story",
+  about_us_text1: "Ethically Sourced Beans, Roasted with Love",
+  about_us_text2:
+    "Every cup at Bean & Blossom starts with single-origin beans from small farms, roasted in small batches and brewed by baristas who care. Pair it with a pastry baked fresh each morning.",
+  about_us_text3: "Fresh Pastries Daily",
+
+  // IndexPage/Map.jsx | Contact Us, Map
+  contact_us: "Contact Us",
+  contact_subtitle:
+    "Get in touch with us or drop by our café for a great cup of coffee!",
+  find_us: "Find Us",
+  location: "Location",
+  opening_hours: "Opening Hours",
+  phone: "Phone",
+  email: "Email",
+  follow_connect: "Follow & Connect",
+  get_directions: "Get Directions",
+  map_coming_soon: "Map coming soon",
+
+  // IndexPage/Contact.jsx | Contact Us, Map
+  send_us_a_message: "Send us a Messag",
 };
 
 export default en;

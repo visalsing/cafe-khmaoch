@@ -1,4 +1,5 @@
-export const TAX_RATE = 0.08;
+// export const TAX_RATE = 0.08;
+export const TAX_RATE = 0.00;
 export const PROMO_CODES = { BLOSSOM10: 10 }; // code -> % off
 export const DELIVERY_FEES = { standard: 0, express: 3.5, freight: 8 }; // standard = pickup / dine-in
 

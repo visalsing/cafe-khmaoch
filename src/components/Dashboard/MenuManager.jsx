@@ -156,6 +156,7 @@ function Field({ label, children }) {
 const emptyForm = {
   name: {},
   description: {},
+  badge: {},
   price: "",
   big_size_price: "",
   small_size_price: "",
@@ -194,7 +195,9 @@ const priceBreakdown = (p) => {
     p.tax_percent === null ||
     p.tax_percent === undefined ||
     p.tax_percent === "";
-  const taxPct = taxIsDefault ? STORE_DEFAULT_TAX_PERCENT : Number(p.tax_percent);
+  const taxPct = taxIsDefault
+    ? STORE_DEFAULT_TAX_PERCENT
+    : Number(p.tax_percent);
   const rows = [
     ["Regular", p.price],
     ["Big", p.big_size_price],
@@ -233,6 +236,7 @@ function PercentInput({ value, onChange, placeholder }) {
 const formFromProduct = (p) => ({
   name: p.name || {},
   description: p.description || {},
+  badge: p.badge || {},
   price: p.price ?? "",
   big_size_price: p.big_size_price ?? "",
   small_size_price: p.small_size_price ?? "",
@@ -259,6 +263,7 @@ const fingerprint = (f) =>
   JSON.stringify({
     name: stableTexts(f.name),
     description: stableTexts(f.description),
+    badge: stableTexts(f.badge || {}),
     price: numOrNull(f.price),
     big: numOrNull(f.big_size_price),
     small: numOrNull(f.small_size_price),
@@ -450,6 +455,7 @@ export default function MenuManager() {
       const fd = new FormData();
       fd.append("name", JSON.stringify(cleanI18n(form.name)));
       fd.append("description", JSON.stringify(cleanI18n(form.description)));
+      fd.append("badge", JSON.stringify(cleanI18n(form.badge)));
       fd.append("price", String(form.price));
       fd.append("big_size_price", String(form.big_size_price));
       fd.append("small_size_price", String(form.small_size_price));
@@ -575,6 +581,10 @@ export default function MenuManager() {
     (currentPage - 1) * pageSize,
     currentPage * pageSize,
   );
+  const paginatedShown =
+    pageSize === "all"
+      ? shown
+      : shown.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // prices of the product shown in the View modal (new price after discount, price with tax)
   const pb = viewing ? priceBreakdown(viewing) : null;
@@ -850,7 +860,7 @@ export default function MenuManager() {
               </tr>
             )}
             {!loading &&
-              pageItems.map((p) => {
+              paginatedShown.map((p) => {
                 const thumb = assetUrl(p.thumbnail || p.img);
                 return (
                   <tr
@@ -1041,6 +1051,15 @@ export default function MenuManager() {
                   <TextByLang value={viewing.description} />
                 </section>
 
+                {Object.keys(viewing.badge || {}).length > 0 && (
+                  <section className="space-y-2">
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                      Badge
+                    </h5>
+                    <TextByLang value={viewing.badge} />
+                  </section>
+                )}
+
                 {/* Details */}
                 <section className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <Field label="Category">
@@ -1068,8 +1087,9 @@ export default function MenuManager() {
                       )}
                     </Field>
                     <Field label="Tax">
+                      {/* {pb.taxIsDefault ? `0 (${pb.taxPct}%)` : `${pb.taxPct}%`} */}
                       {pb.taxIsDefault
-                        ? `0 (${pb.taxPct}%)`
+                        ? `Store default: 0 (${pb.taxPct}%)`
                         : `${pb.taxPct}%`}
                     </Field>
                   </div>
@@ -1082,7 +1102,9 @@ export default function MenuManager() {
                           <th className="px-3 py-2 font-semibold">Price</th>
                           <th className="px-3 py-2 font-semibold">
                             New price{" "}
-                            <span className="font-normal">(after discount)</span>
+                            <span className="font-normal">
+                              (after discount)
+                            </span>
                           </th>
                           <th className="px-3 py-2 font-semibold">With tax</th>
                         </tr>
@@ -1218,6 +1240,15 @@ export default function MenuManager() {
                       label="Description"
                       value={form.description}
                       onChange={(v) => setField("description", v)}
+                    />
+                  </div>
+                  <div className="w-full">
+                    <I18nInput
+                      expanded
+                      label="Badge"
+                      value={form.badge}
+                      onChange={(v) => setField("badge", v)}
+                      placeholder="e.g. Best Sale"
                     />
                   </div>
                 </div>

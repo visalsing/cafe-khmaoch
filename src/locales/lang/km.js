@@ -50,9 +50,10 @@ const km = {
 
   sa_cap_4: "Stock Allocation | រូបភាពទី៤",
   sa_title_4: "Confirm Order Reserve",
-  sa_des4_txt1: 'ប្រសិនបើវា allocated នោះពួកយើងឃើញវានៅក្នុងតារាងនៃtab “Allocated”។',
+  sa_des4_txt1:
+    "ប្រសិនបើវា allocated នោះពួកយើងឃើញវានៅក្នុងតារាងនៃtab “Allocated”។",
   sa_des4_txt2:
-    'ប្រសិនបើវា unallocated នោះពួកយើងឃើញវានៅក្នុងតារាងនៃtab “Unallocated”។',
+    "ប្រសិនបើវា unallocated នោះពួកយើងឃើញវានៅក្នុងតារាងនៃtab “Unallocated”។",
 
   tab_allocate_text: "បង្ហាញអំពី sale orders ដែលមានស្ដុកគ្រប់ចំនួន។",
   attached_photos: "រូបភាពដែលភ្ជាប់ជាមួយ",
@@ -96,8 +97,7 @@ const km = {
     "ធាតុរបស់វាមានដូចជា PJP, Selling Category, Section, Outlet Name, Date From, Date To and SKU។",
   oe_des2_txt3:
     'មាន តារាង (table) បង្ហាញទិន្នន័យ (data) នៅខាងក្រោម Order Editing Header។ ធាតុរបស់វាមានដូចជា Document No, Document Date, Delivery Date, Outlet, Gross Amount, Discount, Tax, Net Amount, Received Amount, Balance Amout និង Demand Channel។ មាន "Show filter" នៅខាងក្រោម table ដែលប្រើសម្រាប់ស្វែងរក data តាម column នីមួយៗ។',
-  oe_des2_txt4:
-    "នៅលើ table ពួកយើងចុចទៅលើ row មួយហើយវានឹងហាយឡាយពណ៌ខៀវ។",
+  oe_des2_txt4: "នៅលើ table ពួកយើងចុចទៅលើ row មួយហើយវានឹងហាយឡាយពណ៌ខៀវ។",
 
   oe_title_3: "Edit Order",
   oe_cap_3: "Order Editing | រូបភាពទី៣",
@@ -120,11 +120,46 @@ const km = {
 
   order_editing: "Order Editing",
   order_editing_overview: "Order Editing Overview",
-  order_editing_txt: "Order Editing គឺជាកន្លែងដែលពួកយើងធ្វើការ edit ទៅលើ sale order។",
+  order_editing_txt:
+    "Order Editing គឺជាកន្លែងដែលពួកយើងធ្វើការ edit ទៅលើ sale order។",
 
   // Fresh Sales Order (Below 24h)
   fresh_sales_return_below24h: "Fresh Sales Return (ក្រោម 24h)",
-fresh_sales_return_below24h_overview: "Fresh Sales Return (Below 24h) Overview",
+  fresh_sales_return_below24h_overview:
+    "Fresh Sales Return (Below 24h) Overview",
+
+  // IndexPage/Shop.jsx | Shop, Menu
+  all: "ទាំងអស់",
+  add_to_order: "បន្ថែមចូលការកម្មង់",
+  cafe_khmaoch_menu: "ម៉ឺនុយកាហ្វេខ្មោច",
+  show_more_options: "បង្ហាញជម្រើសបន្ថែម",
+  see_full_menu: "មើលម៉ឺនុយពេញ",
+
+  // IndexPage/About.jsx | About Us, Our Story
+  about_us: "អំពីយើងខ្ញុំ",
+  about_us_subtitle:
+    "ស្វែងយល់ពីចំណង់ចំណូលចិត្តរបស់យើង ក្នុងការបង្កើតកាហ្វេដ៏វិសេសវិសាល និងបទពិសោធន៍ដ៏កក់ក្តៅ។",
+  our_story: "រឿងរ៉ាវរបស់យើង",
+  about_us_text1: "គ្រាប់កាហ្វេដែលទទួលបានតាមគោលការណ៍សីលធម៌ លីងដោយក្តីស្រឡាញ់",
+  about_us_text2:
+    "គ្រប់ពែងនៅ Bean & Blossom ចាប់ផ្តើមចេញពីគ្រាប់កាហ្វេប្រភពតែមួយមកពីកសិដ្ឋានតូចៗ ដែលបានលីងជាបាច់តូចៗ និងឆុងដោយអ្នកឆុងកាហ្វេដែលមានការយកចិត្តទុកដាក់។ ទទួលទានអមជាមួយនំដុតថ្មីៗរៀងរាល់ព្រឹក។",
+  about_us_text3: "នំដុតថ្មីៗរៀងរាល់ថ្ងៃ",
+
+  // IndexPage/Map.jsx | Contact Us, Map
+  contact_us: "ទំនាក់ទំនង",
+  contact_subtitle:
+    "ទាក់ទងមកយើងខ្ញុំ ឬឆៀងចូលមកហាងកាហ្វេរបស់យើងខ្ញុំ ដើម្បីពិសាកាហ្វេដ៏ឆ្ងាញ់មួយពែង!",
+  find_us: "ស្វែងរកពួកយើង",
+  location: "ទីតាំង",
+  opening_hours: "ម៉ោងបើកលក់",
+  phone: "ទូរសព្ទ",
+  email: "អ៊ីមែល",
+  follow_connect: "តាមដាន & ភ្ជាប់ទំនាក់ទំនង",
+  get_directions: "ទទួលយកទិសដៅ",
+  map_coming_soon: "ផេនទីនឹងមានឆាប់ៗនេះ",
+
+  // IndexPage/Contact.jsx | Contact Us, Map
+  send_us_a_message: "ផ្ញើសារទៅកាន់ពួកយើង",
 };
 
 export default km;

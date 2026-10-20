@@ -53,6 +53,7 @@ export function AuthProvider({ children }) {
     [currentUser, permissionsFor]
   );
   const canEnterDashboard = !!currentUser && permissionsFor(currentUser.role).length > 0;
+  const canEnterProfile = !!currentUser && permissionsFor(currentUser.role).length > 0;
 
   // ---- session ----
   const login = async (email) => {
@@ -101,7 +102,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider
       value={{
-        users, loading, currentUser, can, canEnterDashboard, permissionsFor,
+        users, loading, currentUser, can, canEnterDashboard, canEnterProfile, permissionsFor,
         login, logout, addUser, updateUser, removeUser, setRolePermission, resetAccess,
       }}
     >

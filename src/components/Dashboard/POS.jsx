@@ -1,12 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Minus, X, Banknote, CreditCard, QrCode, Pause, Play, Bell, RotateCcw } from "lucide-react";
-import { categoryService, productService, orderService, assetUrl } from "../../services/api";
+import { Search, Plus, Minus, X, Banknote, CreditCard, QrCode, Pause, Play, Bell, RotateCcw, ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react";
+import { categoryService, drinksTypesService, productService, orderService, sugarLevelService, iceLevelService, coffeeLevelService, levelsOptionsService, assetUrl } from "../../services/api";
 import { calcTotals, promoPercent, round2, money } from "../../utils/orderCalc";
 import { tr, asList, bySort } from "./Shared.jsx";
 import ReceiptModal from "./Receipt";
 
 const HELD_KEY = "bb_held_v1";
+const CURRENT_ORDER_KEY = "bb_pos_current_order_v1";
+const readCurrentOrder = () => {
+  try { return JSON.parse(localStorage.getItem(CURRENT_ORDER_KEY)) || {}; } catch { return {}; }
+};
 const readHeld = () => {
   try { return JSON.parse(localStorage.getItem(HELD_KEY)) || []; } catch { return []; }
 };
@@ -21,6 +25,19 @@ const DELIVERY_OPTIONS = [
   { id: "freight", label: "Catering Delivery · $8.00" },
 ];
 const emptyCustomer = { name: "", phone: "", address: "" };
+
+// Display Khmer Riel as the main price and an approximate USD amount underneath.
+// Keep POS order calculations unchanged; this helper only formats the product-card display.
+const EXCHANGE_RATE = 4100; // 1 USD ≈ 4100 KHR
+const formatPriceWithUSD = (rielValue) => {
+  const value = Number(rielValue) || 0;
+  const usd = value / EXCHANGE_RATE;
+  const usdFormatted = usd % 1 === 0 ? `$${usd.toFixed(0)}` : `$${usd.toFixed(2)}`;
+  return {
+    riel: `${Math.round(value).toLocaleString()}៛`,
+    usd: `≈ ${usdFormatted}`,
+  };
+};
 
 /* ---------- products from the database ----------
    A product can be sold in up to 3 ways: its standard price, a Big size and a Small size.
@@ -42,31 +59,96 @@ const sizeOptions = (p) =>
     unit: unitPrice(p[s.field], p.discount_percent),
   }));
 
+const STATIC_RATING = 4.5;
+const STATIC_REVIEWS = 120;
+
+function Stars({ value = 0 }) {
+  const rating = Math.max(0, Math.min(5, Number(value) || 0));
+  return (
+    <div className="flex items-center gap-0.5" role="img" aria-label={`${rating.toFixed(1)} out of 5 stars`}>
+      {[0, 1, 2, 3, 4].map((star) => (
+        <span key={star} className={rating >= star + 1 ? "text-amber-400" : rating > star ? "text-amber-300" : "text-stone-300 dark:text-stone-600"}>★</span>
+      ))}
+    </div>
+  );
+}
+
+function SizeChips({ options, active, onPick }) {
+  return (
+    <div className="flex flex-wrap gap-1.5 pt-1">
+      {options.map((option) => (
+        <button
+          key={option.key}
+          type="button"
+          onClick={() => onPick(option.key)}
+          className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-colors ${
+            active === option.key
+              ? "bg-amber-600 border-amber-600 text-white"
+              : "bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:border-amber-500"
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+
+function FilterChip({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+        active
+          ? "bg-amber-600 border-amber-600 text-white"
+          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-500"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function POS() {
   const navigate = useNavigate();
 
   // menu from the database
   const [products, setProducts] = useState([]);
   const [cats, setCats] = useState([]);
+  const [types, setTypes] = useState([]);
+  const [sugarLevels, setSugarLevels] = useState([]);
+  const [iceLevels, setIceLevels] = useState([]);
+  const [coffeeLevels, setCoffeeLevels] = useState([]);
+  const [levelsOptions, setLevelsOptions] = useState([]);
+  const [picked, setPicked] = useState({});
+  const [showOptionsId, setShowOptionsId] = useState(null);
+  const [customizations, setCustomizations] = useState({});
+  const [addedId, setAddedId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
   // menu browsing
-  const [category, setCategory] = useState("all"); // "all" | category id
+  const [catFilter, setCatFilter] = useState("all"); // "all" | category id
+  const [typeFilter, setTypeFilter] = useState("all"); // "all" | drinks type id
+  const [showFilters, setShowFilters] = useState(false);
   const [search, setSearch] = useState("");
   const [sizePick, setSizePick] = useState(null); // product waiting for a size choice
 
   // current order
-  const [cart, setCart] = useState([]);
-  const [orderType, setOrderType] = useState("dine-in");
-  const [table, setTable] = useState("");
-  const [deliveryId, setDeliveryId] = useState("express");
-  const [customer, setCustomer] = useState(emptyCustomer);
-  const [note, setNote] = useState("");
-  const [promoCode, setPromoCode] = useState("");
-  const [promoApplied, setPromoApplied] = useState(false);
+  const [initialOrder] = useState(readCurrentOrder);
+  const [cart, setCart] = useState(() => Array.isArray(initialOrder.cart) ? initialOrder.cart : []);
+  const [expandedDetails, setExpandedDetails] = useState({});
+  const [orderType, setOrderType] = useState(() => initialOrder.orderType || "dine-in");
+  const [table, setTable] = useState(() => initialOrder.table || "");
+  const [deliveryId, setDeliveryId] = useState(() => initialOrder.deliveryId || "express");
+  const [customer, setCustomer] = useState(() => initialOrder.customer || emptyCustomer);
+  const [note, setNote] = useState(() => initialOrder.note || "");
+  const [promoCode, setPromoCode] = useState(() => initialOrder.promoCode || "");
+  const [promoApplied, setPromoApplied] = useState(() => Boolean(initialOrder.promoApplied));
   const [promoMsg, setPromoMsg] = useState("");
-  const [manualPct, setManualPct] = useState(0);
+  const [manualPct, setManualPct] = useState(() => Number(initialOrder.manualPct) || 0);
 
   // held orders + online orders waiting
   const [held, setHeld] = useState(readHeld);
@@ -79,13 +161,36 @@ export default function POS() {
   const [paying, setPaying] = useState(false);
   const [receipt, setReceipt] = useState(null);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(CURRENT_ORDER_KEY, JSON.stringify({
+        cart, orderType, table, deliveryId, customer, note, promoCode, promoApplied, manualPct,
+      }));
+    } catch (error) {
+      console.error("Could not save current POS order", error);
+    }
+  }, [cart, orderType, table, deliveryId, customer, note, promoCode, promoApplied, manualPct]);
+
   const loadMenu = useCallback(async () => {
     setLoading(true);
     setLoadError("");
     try {
-      const [prods, cs] = await Promise.all([productService.list(), categoryService.list()]);
+      const [prods, cs, ts, sugars, ices, coffees, levelOptions] = await Promise.all([
+        productService.list(),
+        categoryService.list(),
+        drinksTypesService.list(),
+        sugarLevelService.list(),
+        iceLevelService.list(),
+        coffeeLevelService.list(),
+        levelsOptionsService.list(),
+      ]);
       setProducts(asList(prods));
       setCats(asList(cs));
+      setTypes(asList(ts));
+      setLevelsOptions(asList(levelOptions).filter((item) => Number(item.status) === 1).sort(bySort));
+      setSugarLevels(asList(sugars).filter((item) => Number(item.status) === 1).sort(bySort));
+      setIceLevels(asList(ices).filter((item) => Number(item.status) === 1).sort(bySort));
+      setCoffeeLevels(asList(coffees).filter((item) => Number(item.status) === 1).sort(bySort));
     } catch (err) {
       console.error("Failed to load the menu:", err);
       setLoadError(err.message || "Could not load the menu.");
@@ -118,38 +223,125 @@ export default function POS() {
     [products]
   );
 
-  // category tabs: only active categories that have something to sell
-  const categoryTabs = useMemo(() => {
-    const used = new Set(availableItems.map((p) => p.category_id));
-    return cats.filter((c) => Number(c.status) === 1 && used.has(c.id)).sort(bySort);
+  // Filter panel uses Menu Manager's Categories and Drinks Types filters.
+  // POS intentionally shows only available products; there is no Status filter.
+  const filterCategories = useMemo(() => {
+    const used = new Set(availableItems.map((p) => Number(p.category_id)));
+    return cats.filter((c) => Number(c.status) === 1 && used.has(Number(c.id))).sort(bySort);
   }, [cats, availableItems]);
 
-  // the chosen category disappeared (hidden / emptied) -> back to All
+  const filterTypes = useMemo(() => {
+    const used = new Set(availableItems.map((p) => Number(p.type_id)).filter(Number.isFinite));
+    return types.filter((t) => Number(t.status) === 1 && used.has(Number(t.id))).sort(bySort);
+  }, [types, availableItems]);
+
   useEffect(() => {
-    if (category !== "all" && !categoryTabs.some((c) => c.id === category)) setCategory("all");
-  }, [categoryTabs, category]);
+    if (catFilter !== "all" && !filterCategories.some((c) => Number(c.id) === Number(catFilter))) {
+      setCatFilter("all");
+    }
+  }, [filterCategories, catFilter]);
+
+  useEffect(() => {
+    if (typeFilter !== "all" && !filterTypes.some((t) => Number(t.id) === Number(typeFilter))) {
+      setTypeFilter("all");
+    }
+  }, [filterTypes, typeFilter]);
 
   const visible = useMemo(
     () =>
-      availableItems.filter(
-        (p) =>
-          (category === "all" || p.category_id === category) &&
-          Object.values(p.name || {}).join(" ").toLowerCase().includes(search.toLowerCase())
+      availableItems.filter((p) =>
+        (catFilter === "all" || Number(p.category_id) === Number(catFilter)) &&
+        (typeFilter === "all" || Number(p.type_id) === Number(typeFilter)) &&
+        Object.values(p.name || {}).join(" ").toLowerCase().includes(search.toLowerCase())
       ),
-    [availableItems, category, search]
+    [availableItems, catFilter, typeFilter, search]
   );
+
+  const activeFilters = Number(catFilter !== "all") + Number(typeFilter !== "all");
+  const clearFilters = () => {
+    setCatFilter("all");
+    setTypeFilter("all");
+  };
+  const countBy = (fn) => availableItems.filter(fn).length;
+
+  const chosenOption = (product) => {
+    const options = sizeOptions(product);
+    return options.find((option) => option.key === picked[product.id]) || options[0];
+  };
+
+  // Empty category/type arrays mean a level is available for all products.
+  const filterLevels = (levels, product) =>
+    levels.filter((level) => {
+      const categories = Array.isArray(level.array_categories) ? level.array_categories : [];
+      const drinkTypes = Array.isArray(level.array_drinkstypes) ? level.array_drinkstypes : [];
+      const categoryMatches = categories.length === 0 || categories.map(Number).includes(Number(product.category_id));
+      const typeMatches = drinkTypes.length === 0 || drinkTypes.map(Number).includes(Number(product.type_id));
+      return categoryMatches && typeMatches;
+    });
+
+  const matchesProduct = (option, product) => {
+    const categories = option.array_categories;
+    const drinkTypes = option.array_drinkstypes;
+    const categoryMatches = !Array.isArray(categories) || categories.length === 0 || categories.map(Number).includes(Number(product.category_id));
+    const typeMatches = !Array.isArray(drinkTypes) || drinkTypes.length === 0 || drinkTypes.map(Number).includes(Number(product.type_id));
+    return categoryMatches && typeMatches;
+  };
+
+  const hasOptionGroup = (groupId, product) =>
+    levelsOptions.some((option) =>
+      Number(option.id) === groupId &&
+      Number(option.status) === 1 &&
+      matchesProduct(option, product)
+    );
+
+  const availableLevels = (groupId, levels, product) =>
+    hasOptionGroup(groupId, product) ? filterLevels(levels, product) : [];
+
+  const handleCustomizationChange = (productId, field, value) => {
+    setCustomizations((previous) => ({
+      ...previous,
+      [productId]: { ...(previous[productId] || {}), [field]: value },
+    }));
+  };
+
+  const isCompleteCustomization = (product) => {
+    const sugar = availableLevels(1, sugarLevels, product);
+    const ice = availableLevels(2, iceLevels, product);
+    const coffee = availableLevels(3, coffeeLevels, product);
+    const customization = customizations[product.id] || {};
+    return (!sugar.length || Boolean(customization.sugar)) &&
+      (!ice.length || Boolean(customization.ice)) &&
+      (!coffee.length || Boolean(customization.coffee));
+  };
 
   // ---- cart actions ----
   // one cart line per product + size, so "Iced Latte (Big)" and "Iced Latte (Small)" stay separate
-  const addToCart = (product, option) => {
-    const lineId = `${product.id}:${option.key}`;
+  const addToCart = (product, option, customization = {}) => {
+    const sugar = customization.sugar;
+    const ice = customization.ice;
+    const coffee = customization.coffee;
+    const extraCoffeePrice = Number(coffee?.price || 0);
+    const finalPrice = round2(option.unit + extraCoffeePrice);
+    const basePrice = round2(option.base + extraCoffeePrice);
+    const lineId = `${product.id}:${option.key}:${sugar?.id || 0}:${ice?.id || 0}:${coffee?.id || 0}`;
     const options = sizeOptions(product);
     const showSize = options.length > 1 || option.key !== "price";
-    const title = showSize ? `${tr(product.name)} (${option.label})` : tr(product.name);
+    const labels = [
+      showSize ? option.label : null,
+      sugar ? tr(sugar.name) : null,
+      ice ? tr(ice.name) : null,
+      coffee ? tr(coffee.name) : null,
+    ].filter(Boolean);
+    const productTitle = tr(product.name);
+    const detailTitle = labels.length ? `(${labels.join(", ")})` : "";
+    // Keep the combined title for the order payload, while the Current Order UI
+    // displays the product and its customizations on separate lines.
+    const title = `${productTitle}${detailTitle ? ` ${detailTitle}` : ""}`;
+
     setCart((prev) => {
-      const found = prev.find((l) => l.id === lineId);
+      const found = prev.find((line) => line.id === lineId);
       return found
-        ? prev.map((l) => (l.id === lineId ? { ...l, qty: l.qty + 1 } : l))
+        ? prev.map((line) => (line.id === lineId ? { ...line, qty: line.qty + 1 } : line))
         : [
             ...prev,
             {
@@ -157,26 +349,40 @@ export default function POS() {
               productId: product.id,
               size: option.key,
               title,
-              price: option.unit, // price after the product discount: totals below use this
-              basePrice: option.base,
+              productTitle,
+              detailTitle,
+              price: finalPrice,
+              basePrice,
               discountPercent: Number(product.discount_percent || 0),
               taxPercent: hasValue(product.tax_percent) ? Number(product.tax_percent) : null,
               qty: 1,
+              img: assetUrl(product.img || product.thumbnail),
+              sugarLevelId: sugar?.id || null,
+              iceLevelId: ice?.id || null,
+              coffeeLevelId: coffee?.id || null,
             },
           ];
     });
+    setAddedId(product.id);
+    window.setTimeout(() => setAddedId(null), 1000);
   };
-  // tap on a product: one way to sell it -> add it, several sizes -> ask which one
+  // Product cards select size directly; this handler preserves the existing modal flow if invoked.
   const pickProduct = (product) => {
     const options = sizeOptions(product);
-    if (options.length === 1) addToCart(product, options[0]);
-    else setSizePick(product);
+    if (options.length === 1) {
+      const customization = customizations[product.id] || {};
+      if (isCompleteCustomization(product)) addToCart(product, options[0], customization);
+      else setShowOptionsId(product.id);
+    } else {
+      setSizePick(product);
+    }
   };
   const changeQty = (id, d) =>
     setCart((prev) => prev.map((l) => (l.id === id ? { ...l, qty: l.qty + d } : l)).filter((l) => l.qty > 0));
   const removeLine = (id) => setCart((prev) => prev.filter((l) => l.id !== id));
 
   const resetOrder = () => {
+    try { localStorage.removeItem(CURRENT_ORDER_KEY); } catch {}
     setCart([]); setOrderType("dine-in"); setTable(""); setDeliveryId("express");
     setCustomer(emptyCustomer); setNote(""); setPromoCode(""); setPromoApplied(false);
     setPromoMsg(""); setManualPct(0); setCashReceived(""); setMethod("cash");
@@ -200,7 +406,7 @@ export default function POS() {
       { id: Date.now(), heldAt: new Date().toISOString(), cart, orderType, table, deliveryId, customer, note, promoCode, promoApplied, manualPct },
       ...held,
     ]);
-    resetOrder();
+    // Keep the current order visible; it is only cleared by Clear all or successful payment.
   };
   const recallOrder = (h) => {
     if (cart.length && !window.confirm("Replace the current order with the held one?")) return;
@@ -282,19 +488,82 @@ export default function POS() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {[{ id: "all", name: { en: "All" } }, ...categoryTabs].map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setCategory(c.id)}
-              className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${
-                category === c.id ? "bg-amber-600 text-white shadow" : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-amber-500"
-              }`}
-            >
-              {tr(c.name)}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowFilters((value) => !value)}
+            aria-expanded={showFilters}
+            className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center gap-2 hover:border-amber-500 transition-colors"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            {showFilters ? "Hide Filters" : "Show Filters"}
+            {activeFilters > 0 && (
+              <span className="px-1.5 rounded-full bg-amber-600 text-white text-xs leading-5">
+                {activeFilters}
+              </span>
+            )}
+          </button>
+          {catFilter !== "all" && (
+            <span className="px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 text-xs font-medium">
+              Category: {tr(cats.find((c) => Number(c.id) === Number(catFilter))?.name) || "Selected"}
+            </span>
+          )}
+          {typeFilter !== "all" && (
+            <span className="px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 text-xs font-medium">
+              Type: {tr(types.find((t) => Number(t.id) === Number(typeFilter))?.name) || "Selected"}
+            </span>
+          )}
         </div>
+
+        {showFilters && (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-4 shadow-sm">
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-slate-500">Categories</div>
+              <div className="flex flex-wrap gap-2">
+                <FilterChip active={catFilter === "all"} onClick={() => setCatFilter("all")}>
+                  All ({availableItems.length})
+                </FilterChip>
+                {filterCategories.map((c) => (
+                  <FilterChip
+                    key={c.id}
+                    active={Number(catFilter) === Number(c.id)}
+                    onClick={() => setCatFilter(String(c.id))}
+                  >
+                    {tr(c.name)} ({countBy((p) => Number(p.category_id) === Number(c.id))})
+                  </FilterChip>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-slate-500">Drinks Types</div>
+              <div className="flex flex-wrap gap-2">
+                <FilterChip active={typeFilter === "all"} onClick={() => setTypeFilter("all")}>
+                  All ({availableItems.length})
+                </FilterChip>
+                {filterTypes.map((t) => (
+                  <FilterChip
+                    key={t.id}
+                    active={Number(typeFilter) === Number(t.id)}
+                    onClick={() => setTypeFilter(String(t.id))}
+                  >
+                    {tr(t.name)} ({countBy((p) => Number(p.type_id) === Number(t.id))})
+                  </FilterChip>
+                ))}
+              </div>
+            </div>
+
+            {activeFilters > 0 && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-sm text-amber-600 font-medium underline"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        )}
 
         {loadError && (
           <div className="p-3 rounded-xl bg-rose-50 text-rose-700 text-sm flex items-center justify-between">
@@ -306,48 +575,154 @@ export default function POS() {
         {loading && products.length === 0 ? (
           <p className="text-slate-500">Loading menu...</p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {visible.map((item) => {
               const options = sizeOptions(item);
-              const lowest = options.reduce((a, b) => (b.unit < a.unit ? b : a));
+              const option = chosenOption(item);
               const discount = Number(item.discount_percent || 0);
-              const img = assetUrl(item.thumbnail || item.img);
+              const rating = Number(item.rating) > 0 ? Number(item.rating) : STATIC_RATING;
+              const reviews = hasValue(item.reviews) ? Number(item.reviews) : STATIC_REVIEWS;
+              const img = assetUrl(item.img || item.thumbnail);
+              const isExpanded = showOptionsId === item.id;
+              const canAdd = isCompleteCustomization(item);
+              const customization = customizations[item.id] || {};
+              const availSugar = availableLevels(1, sugarLevels, item);
+              const availIce = availableLevels(2, iceLevels, item);
+              const availCoffee = availableLevels(3, coffeeLevels, item);
+              const hasAnyOptions = availSugar.length > 0 || availIce.length > 0 || availCoffee.length > 0;
+              const extraCoffeePrice = Number(customization.coffee?.price || 0);
+              const currentPrice = round2(option.unit + extraCoffeePrice);
+              const currentBasePrice = round2(option.base + extraCoffeePrice);
+
               return (
-                <button
+                <div
                   key={item.id}
-                  onClick={() => pickProduct(item)}
-                  className="text-left bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:border-amber-500 hover:shadow-lg active:scale-[0.98] transition-all"
+                  className="group relative bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 hover:shadow-xl hover:border-amber-500/50 transition-all duration-300 flex flex-col justify-between overflow-hidden"
                 >
-                  <div className="relative">
-                    {img ? (
-                      <img src={img} alt={tr(item.name)} className="h-28 w-full object-cover" />
-                    ) : (
-                      <div className="h-28 w-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-xs text-slate-400">No image</div>
-                    )}
-                    {discount > 0 && (
-                      <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-rose-600 text-white text-[11px] font-bold">
-                        -{discount}%
+                  <div>
+                    <div className="relative h-56 overflow-hidden bg-stone-100 dark:bg-stone-800">
+                      {img ? (
+                        <img src={img} alt={tr(item.name)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-5xl">☕</div>
+                      )}
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                        {discount > 0 && <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider bg-rose-600/90 text-white rounded-lg">-{discount}%</span>}
+                        {tr(item.badge).trim() && <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider bg-black/60 text-white rounded-lg">{tr(item.badge)}</span>}
+                      </div>
+                    </div>
+
+                    <div className="p-5 space-y-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                        {tr(cats.find((cat) => cat.id === item.category_id)?.name)}
                       </span>
-                    )}
+                      <h3 className="font-semibold text-stone-900 dark:text-white line-clamp-1">{tr(item.name)}</h3>
+                      <div className="flex items-center gap-2 text-xs text-stone-500">
+                        <Stars value={rating} />
+                        <span className="font-semibold text-stone-700 dark:text-stone-300">{rating.toFixed(1)}</span>
+                        <span>({reviews} {reviews === 1 ? "review" : "reviews"})</span>
+                      </div>
+
+                      {options.length > 1 && (
+                        <SizeChips
+                          options={options}
+                          active={option.key}
+                          onPick={(key) => setPicked((previous) => ({ ...previous, [item.id]: key }))}
+                        />
+                      )}
+
+                      {hasAnyOptions && (
+                        <div className="pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowOptionsId(isExpanded ? null : item.id)}
+                            className="w-full flex items-center justify-between text-xs font-semibold text-amber-600 dark:text-amber-400 py-1.5 px-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 transition-colors"
+                          >
+                            <span>Show more options</span>
+                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
+
+                          {isExpanded && (
+                            <div className="mt-3 p-3 bg-stone-50 dark:bg-stone-800/50 rounded-xl space-y-3 text-xs border border-stone-200 dark:border-stone-700">
+                              {[
+                                { key: "sugar", label: "Sugar Level", levels: availSugar },
+                                { key: "ice", label: "Ice Level", levels: availIce },
+                                { key: "coffee", label: "Coffee Level", levels: availCoffee },
+                              ].map((group) => group.levels.length > 0 && (
+                                <div key={group.key}>
+                                  <span className="font-bold text-stone-700 dark:text-stone-300 block mb-1.5">{group.label} <span className="text-rose-500">*</span></span>
+                                  <div className="space-y-1.5">
+                                    {group.levels.map((level) => (
+                                      <label key={level.id} className="flex items-center gap-2 cursor-pointer text-stone-700 dark:text-stone-300 hover:text-amber-600">
+                                        <input
+                                          type="radio"
+                                          name={`${group.key}-${item.id}`}
+                                          checked={customization[group.key]?.id === level.id}
+                                          onChange={() => handleCustomizationChange(item.id, group.key, level)}
+                                          className="accent-amber-600 cursor-pointer"
+                                        />
+                                        <span>
+                                          {tr(level.name)}
+                                          {group.key === "coffee" && Number(level.price || 0) > 0 ? ` (+${money(Number(level.price))})` : ""}
+                                        </span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="p-3">
-                    <p className="font-semibold text-sm line-clamp-1">{tr(item.name)}</p>
-                    <p className="text-amber-600 dark:text-amber-400 font-bold">
-                      {options.length > 1 && <span className="text-xs font-medium text-slate-500">from </span>}
-                      {money(lowest.unit)}
-                      {discount > 0 && <span className="ml-1.5 text-xs font-normal line-through text-slate-400">{money(lowest.base)}</span>}
-                    </p>
+
+                  <div className="p-5 pt-0 flex items-center justify-between mt-auto gap-3">
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="text-xl font-extrabold text-stone-900 dark:text-white">{formatPriceWithUSD(currentPrice).riel}</span>
+                        {discount > 0 && <span className="text-sm line-through text-stone-400">{formatPriceWithUSD(currentBasePrice).riel}</span>}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs font-medium text-stone-400 dark:text-stone-500">
+                        <span>{formatPriceWithUSD(currentPrice).usd}</span>
+                        {discount > 0 && <span className="line-through">{formatPriceWithUSD(currentBasePrice).usd}</span>}
+                      </div>
+                      {options.length > 1 && <span className="text-xs text-stone-400">Selected: {option.label}</span>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!canAdd) {
+                          setShowOptionsId(item.id);
+                          return;
+                        }
+                        addToCart(item, option, customization);
+                      }}
+                      disabled={!canAdd}
+                      className={`shrink-0 px-4 py-2 text-white font-semibold text-xs rounded-xl shadow-sm transition-all ${
+                        !canAdd ? "bg-stone-300 dark:bg-stone-700 text-stone-500 cursor-not-allowed opacity-60" : addedId === item.id ? "bg-emerald-600" : "bg-amber-600 hover:bg-amber-700"
+                      }`}
+                      title={!canAdd ? "Please complete all required level selections first" : ""}
+                    >
+                      {addedId === item.id ? "Added ✓" : "Add to Order"}
+                    </button>
                   </div>
-                </button>
+                </div>
               );
             })}
-            {!loading && !loadError && visible.length === 0 && <p className="col-span-full text-slate-500">No items found.</p>}
+            {!loading && !loadError && visible.length === 0 && (
+              <div className="col-span-full text-center py-16 text-stone-500 dark:text-stone-400">
+                <div className="text-5xl mb-3">☕</div>
+                <p className="font-semibold">No items match your search.</p>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* RIGHT: current order */}
-      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-5 space-y-4 xl:sticky xl:top-0 xl:max-h-[calc(100vh-7rem)] overflow-y-auto">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-5 space-y-4 xl:sticky xl:top-0 xl:max-h-[calc(100vh-7rem)] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] dark:[scrollbar-color:#475569_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:my-2 [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-amber-500">
+      {/* <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-5 space-y-4 xl:sticky xl:top-0 xl:max-h-[calc(100vh-7rem)] overflow-y-auto"> */}
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">Current Order</h2>
           {cart.length > 0 && (
@@ -408,27 +783,43 @@ export default function POS() {
 
         {/* lines */}
         <div className="space-y-2 max-h-60 overflow-y-auto">
-          {cart.length === 0 && <p className="text-sm text-slate-500 py-6 text-center">Tap an item to add it.</p>}
-          {cart.map((l) => (
+          {cart.length === 0 && <p className="text-sm text-slate-500 py-6 text-center">Choose the size and options, then tap Add to Order.</p>}
+          {cart.map((l) => {
+            const fullDetails = l.detailTitle || (l.title.includes(" (") ? `(${l.title.split(" (").slice(1).join(" (")}` : "");
+            const isExpanded = Boolean(expandedDetails[l.id]);
+            // Keep size + first customization visible; expand the remaining details on demand.
+            const detailParts = fullDetails.replace(/^\(|\)$/g, "").split(",").map((part) => part.trim()).filter(Boolean);
+            const hasMoreDetails = detailParts.length > 2;
+            const shortDetails = hasMoreDetails ? `(${detailParts.slice(0, 2).join(", ")}, ` : fullDetails;
+            const expandedDetailsText = hasMoreDetails ? `(${detailParts.join(", ")})` : fullDetails;
+            return (
             <div key={l.id} className="flex items-center gap-2 text-sm">
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{l.title}</p>
-                <p className="text-xs text-slate-500">
-                  {money(l.price)}
-                  {l.discountPercent > 0 && (
-                    <span className="ml-1.5 line-through text-slate-400">{money(l.basePrice)}</span>
-                  )}
+                <p className="font-semibold whitespace-normal break-words leading-snug">
+                  {l.productTitle || l.title.split(" (")[0]}
+                  {fullDetails && <span className="font-normal text-slate-500 dark:text-slate-400"> {hasMoreDetails ? (isExpanded ? expandedDetailsText : shortDetails) : fullDetails}{hasMoreDetails && <button type="button" onClick={() => setExpandedDetails((prev) => ({ ...prev, [l.id]: !prev[l.id] }))} className="ml-1 text-amber-600 dark:text-amber-400 font-medium whitespace-nowrap">{isExpanded ? "see less" : "see more...)"}</button>}</span>}
                 </p>
+                <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
+                  <span className="text-base font-bold text-slate-800 dark:text-slate-100">{formatPriceWithUSD(l.price).riel}</span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">{formatPriceWithUSD(l.price).usd}</span>
+                  {l.discountPercent > 0 && (
+                    <span className="text-[10px] text-slate-400 line-through">{formatPriceWithUSD(l.basePrice).riel} · {formatPriceWithUSD(l.basePrice).usd}</span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg">
                 <button onClick={() => changeQty(l.id, -1)} className="p-1.5"><Minus className="w-3.5 h-3.5" /></button>
                 <span className="px-2 font-semibold">{l.qty}</span>
                 <button onClick={() => changeQty(l.id, 1)} className="p-1.5"><Plus className="w-3.5 h-3.5" /></button>
               </div>
-              <span className="w-14 text-right font-semibold">{money(l.price * l.qty)}</span>
+              <span className="w-24 shrink-0 text-right whitespace-nowrap">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-100">{formatPriceWithUSD(l.price * l.qty).riel}</span>{" "}
+                <span className="text-[10px] font-normal text-slate-400 dark:text-slate-500">{formatPriceWithUSD(l.price * l.qty).usd}</span>
+              </span>
               <button onClick={() => removeLine(l.id)} className="p-1 text-rose-500" title="Remove"><X className="w-4 h-4" /></button>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Order note (less sugar, no ice...)" className={inputCls} />
@@ -448,11 +839,11 @@ export default function POS() {
 
         {/* totals */}
         <div className="space-y-1.5 text-sm border-t border-slate-200 dark:border-slate-700 pt-3">
-          <div className="flex justify-between text-slate-500"><span>Subtotal</span><span>{money(subtotal)}</span></div>
-          {discount > 0 && <div className="flex justify-between text-emerald-600"><span>Discount ({discountPct}%)</span><span>-{money(discount)}</span></div>}
-          {shipping > 0 && <div className="flex justify-between text-slate-500"><span>Delivery</span><span>{money(shipping)}</span></div>}
-          <div className="flex justify-between text-slate-500"><span>Tax (8%)</span><span>{money(tax)}</span></div>
-          <div className="flex justify-between text-lg font-extrabold pt-1"><span>Total</span><span className="text-amber-600 dark:text-amber-400">{money(total)}</span></div>
+          <div className="flex justify-between gap-3 text-slate-500"><span>Subtotal</span><span className="text-right"><span className="block text-slate-700 dark:text-slate-200">{formatPriceWithUSD(subtotal).riel}</span><span className="block text-[10px] text-slate-400">{formatPriceWithUSD(subtotal).usd}</span></span></div>
+          {discount > 0 && <div className="flex justify-between gap-3 text-emerald-600"><span>Discount ({discountPct}%)</span><span className="text-right"><span className="block">-{formatPriceWithUSD(discount).riel}</span><span className="block text-[10px] text-emerald-500/70">-{formatPriceWithUSD(discount).usd}</span></span></div>}
+          {shipping > 0 && <div className="flex justify-between gap-3 text-slate-500"><span>Delivery</span><span className="text-right"><span className="block">{formatPriceWithUSD(shipping).riel}</span><span className="block text-[10px] text-slate-400">{formatPriceWithUSD(shipping).usd}</span></span></div>}
+          <div className="flex justify-between gap-3 text-slate-500"><span>Tax (8%)</span><span className="text-right"><span className="block">{formatPriceWithUSD(tax).riel}</span><span className="block text-[10px] text-slate-400">{formatPriceWithUSD(tax).usd}</span></span></div>
+          <div className="flex justify-between gap-3 text-lg font-extrabold pt-1"><span>Total</span><span className="text-right text-amber-600 dark:text-amber-400"><span className="block">{formatPriceWithUSD(total).riel}</span><span className="block text-xs font-medium text-amber-500/70">{formatPriceWithUSD(total).usd}</span></span></div>
         </div>
 
         <div className="flex gap-2">
@@ -468,7 +859,7 @@ export default function POS() {
             onClick={() => setPayOpen(true)}
             className="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-lg transition-all"
           >
-            Charge {money(total)}
+            Charge {formatPriceWithUSD(total).riel} ({formatPriceWithUSD(total).usd})
           </button>
         </div>
         {isDelivery && !deliveryOk && <p className="text-xs text-rose-500">Delivery needs a phone number and address.</p>}
@@ -493,7 +884,7 @@ export default function POS() {
                 <button
                   key={o.key}
                   onClick={() => {
-                    addToCart(sizePick, o);
+                    addToCart(sizePick, o, customizations[sizePick.id] || {});
                     setSizePick(null);
                   }}
                   className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 font-semibold transition-colors"

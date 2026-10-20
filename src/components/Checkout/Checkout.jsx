@@ -3,7 +3,19 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { orderService } from "../../services/api";
 import ReceiptModal from "../Dashboard/Receipt";
-import { calcTotals, promoPercent, money } from "../../utils/orderCalc";
+import { calcTotals, promoPercent } from "../../utils/orderCalc";
+
+const EXCHANGE_RATE = 4100; // 1$ = 4100៛
+
+const formatPriceWithUSD = (rielValue) => {
+  const numericVal = Number(rielValue) || 0;
+  const usd = numericVal / EXCHANGE_RATE;
+  const usdFormatted = usd % 1 === 0 ? `$${usd.toFixed(0)}` : `$${usd.toFixed(2)}`;
+  return {
+    riel: `${Math.round(numericVal).toLocaleString()}៛`,
+    usd: `≈ ${usdFormatted}`,
+  };
+};
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -27,6 +39,16 @@ export default function Checkout() {
     discountPct,
     deliveryId: shippingMethod,
   });
+
+  const renderPrice = (rielValue) => {
+    const formatted = formatPriceWithUSD(rielValue);
+    return (
+      <div className="flex flex-col text-right">
+        <span className="font-bold">{formatted.riel}</span>
+        <span className="text-xs text-stone-400 font-medium">{formatted.usd}</span>
+      </div>
+    );
+  };
 
   const inputCls =
     "w-full px-4 py-2.5 text-sm rounded-xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 focus:outline-none focus:border-amber-500";
@@ -196,45 +218,54 @@ export default function Checkout() {
 
           <aside className="bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 p-6 space-y-4 lg:sticky lg:top-24">
             <h2 className="text-lg font-bold">Order summary</h2>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
+            <div className="space-y-3 max-h-60 overflow-y-auto">
               {items.map((i) => (
-                <div key={i.id} className="flex justify-between text-sm gap-3">
+                <div key={i.id} className="flex justify-between items-center text-sm gap-3">
                   <span className="truncate">
                     {i.quantity} × {i.title}
                   </span>
-                  <span className="font-medium">{money(i.price * i.quantity)}</span>
+                  {renderPrice(i.price * i.quantity)}
                 </div>
               ))}
             </div>
-            <div className="space-y-2 text-sm border-t border-stone-200 dark:border-stone-800 pt-4">
-              <div className="flex justify-between text-stone-500">
+            <div className="space-y-3 text-sm border-t border-stone-200 dark:border-stone-800 pt-4">
+              <div className="flex justify-between text-stone-500 items-center">
                 <span>Subtotal</span>
-                <span>{money(subtotal)}</span>
+                {renderPrice(subtotal)}
               </div>
               {discount > 0 && (
-                <div className="flex justify-between text-emerald-600">
+                <div className="flex justify-between text-emerald-600 items-center">
                   <span>Discount ({discountPct}%)</span>
-                  <span>-{money(discount)}</span>
+                  <div className="text-right flex items-center gap-1">
+                    <span>-</span>
+                    {renderPrice(discount)}
+                  </div>
                 </div>
               )}
-              <div className="flex justify-between text-stone-500">
+              <div className="flex justify-between text-stone-500 items-center">
                 <span>{isDelivery ? "Delivery" : "Pickup"}</span>
-                <span>{shipping ? money(shipping) : "Free"}</span>
+                {shipping ? renderPrice(shipping) : <span className="font-medium text-stone-900 dark:text-white">Free</span>}
               </div>
-              <div className="flex justify-between text-stone-500">
+              <div className="flex justify-between text-stone-500 items-center">
                 <span>Tax (8%)</span>
-                <span>{money(tax)}</span>
+                {renderPrice(tax)}
               </div>
-              <div className="flex justify-between text-base font-extrabold pt-2 border-t border-stone-200 dark:border-stone-800">
+              <div className="flex justify-between text-base font-extrabold pt-2 border-t border-stone-200 dark:border-stone-800 items-center">
                 <span>Total</span>
-                <span className="text-amber-600">{money(total)}</span>
+                <div className="text-amber-600">{renderPrice(total)}</div>
               </div>
             </div>
             <button
               disabled={placing}
-              className="w-full py-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold shadow-lg cursor-pointer"
+              className="w-full py-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold shadow-lg cursor-pointer flex items-center justify-center gap-2"
             >
-              {placing ? "Placing order..." : `Place order · ${money(total)}`}
+              <span>{placing ? "Placing order..." : "Place order ·"}</span>
+              {!placing && (
+                <div className="text-left leading-tight">
+                  <span className="block font-bold">{formatPriceWithUSD(total).riel}</span>
+                  <span className="block text-[10px] text-amber-200 font-normal">{formatPriceWithUSD(total).usd}</span>
+                </div>
+              )}
             </button>
           </aside>
         </form>

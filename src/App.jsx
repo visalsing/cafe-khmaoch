@@ -58,6 +58,22 @@ import ProductsType from "./components/Dashboard/DrinksType.jsx";
 import DrinksType from "./components/Dashboard/DrinksType.jsx";
 import LookupManager from "./components/Dashboard/LookupManager.jsx";
 import AddMenu from "./components/Dashboard/AddMenu.jsx";
+import Profile from "./Profile/Profile.jsx";
+// import LevelsOptions from "./components/LevelsOptions/LevelsOptions.jsx";
+import LevelsOptions from "./components/Dashboard/LevelsOptions.jsx";
+import SugarLevel from "./components/Dashboard/SugarLevel.jsx";
+import CoffeeLevelManager from "./components/Dashboard/CoffeeLevel.jsx";
+import IceLevelManager from "./components/Dashboard/IceLevel.jsx";
+import CountryFlags from "./components/Dashboard/CountryFlags.jsx";
+import Currencies from "./components/Dashboard/Currencies.jsx";
+import ExchangeRate from "./components/Dashboard/ExchangeRate.jsx";
+import GendersManager from "./components/Dashboard/Genders.jsx";
+import NationalitiesManager from "./components/Dashboard/Nationalities.jsx";
+import RolesManager from "./components/Dashboard/Roles.jsx";
+import PositionsManager from "./components/Dashboard/Positions.jsx";
+import PermissionsManager from "./components/Dashboard/Permissions.jsx";
+import UsersManager from "./components/Dashboard/Users.jsx";
+import RolePermissions from "./components/Dashboard/RolePermissions.jsx";
 
 function DashboardLayout() {
   const [sideBarCollapsed, setSideBarCollapsed] = useState(false);
@@ -122,14 +138,28 @@ function DashboardLayout() {
                   }
                 />
                 <Route path="/add-menu" element={<AddMenu />} />
-                <Route
+                <Route path="/levels-options" element={<LevelsOptions />} />
+                <Route path="levels-options/sugar-level" element={<SugarLevel />} />
+                <Route path="/coffee-level" element={<CoffeeLevelManager />} />
+                <Route path="/ice-level" element={<IceLevelManager />} />
+                <Route path="/country-flags" element={<CountryFlags />} />
+                <Route path="/currencies" element={<Currencies />} />
+                <Route path="/exchange-rate" element={<ExchangeRate />} />
+                <Route path="/roles" element={<RolesManager />} />
+                <Route path="/positions" element={<PositionsManager />} />
+                <Route path="/permissions" element={<PermissionsManager />} />
+                <Route path="/genders" element={<GendersManager />} />
+                <Route path="/nationalities" element={<NationalitiesManager />} />
+                <Route path="/users" element={<UsersManager />} />
+                <Route path="/roles-permissions" element={<RolePermissions />} />
+                {/* <Route
                   path="/lookup"
                   element={
                     <Guard permission="lookup">
                       <LookupManager />
                     </Guard>
                   }
-                />
+                /> */}
                 <Route
                   path="/orders"
                   element={
@@ -154,12 +184,7 @@ function DashboardLayout() {
                     </Guard>
                   }
                 />
-                <Route
-                  path="/pages/maps"
-                  element={
-                      <Map />
-                  }
-                />
+                <Route path="/pages/maps" element={<Map />} />
                 <Route
                   path="/pages/hero"
                   element={
@@ -169,7 +194,7 @@ function DashboardLayout() {
                   }
                 />
                 <Route
-                  path="/users"
+                  path="/users-stop"
                   element={
                     <Guard permission="users">
                       <Users />
@@ -177,7 +202,7 @@ function DashboardLayout() {
                   }
                 />
                 <Route
-                  path="/roles-permissions"
+                  path="/roles-permissions-stop"
                   element={
                     <Guard permission="roles">
                       <RolesPermissions />
@@ -277,6 +302,7 @@ export default function App() {
       <Route path="/cart" element={<CartPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/settings-page" element={<SettingsPage />} />
+      <Route path="/profile" element={<Profile />} />
       <Route path="/shop" element={<ShopAll />} />
       <Route path="/checkout" element={<Checkout />} />
 

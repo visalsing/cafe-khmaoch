@@ -15,9 +15,34 @@ export default function PagesOverview() {
       desc: `${visibleSlides.length} of ${slides.length} slides visible on the homepage`,
       path: "/dashboard/pages/hero",
     },
-    { id: "stats", emoji: "📈", title: "Highlights", desc: "Numbers shown under the hero", soon: true },
-    { id: "about", emoji: "☕", title: "Our Story", desc: "About section text and photo", soon: true },
-    { id: "footer", emoji: "📍", title: "Footer & Contact", desc: "Address, phone, opening hours", soon: true },
+    {
+      id: "map",
+      emoji: "🖼️",
+      title: "Maps",
+      desc: `${visibleSlides.length} of ${slides.length} mpas visible on the homepage`,
+      path: "/dashboard/pages/maps",
+    },
+    {
+      id: "stats",
+      emoji: "📈",
+      title: "Highlights",
+      desc: "Numbers shown under the hero",
+      soon: true,
+    },
+    {
+      id: "about",
+      emoji: "☕",
+      title: "Our Story",
+      desc: "About section text and photo",
+      soon: true,
+    },
+    {
+      id: "footer",
+      emoji: "📍",
+      title: "Footer & Contact",
+      desc: "Address, phone, opening hours",
+      soon: true,
+    },
   ];
 
   return (
@@ -25,7 +50,9 @@ export default function PagesOverview() {
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
         <div>
           <h1 className="text-2xl font-extrabold">Pages</h1>
-          <p className="text-sm text-slate-500">Edit the content shown on your public website.</p>
+          <p className="text-sm text-slate-500">
+            Edit the content shown on your public website.
+          </p>
         </div>
         <a
           href="/"
@@ -44,13 +71,19 @@ export default function PagesOverview() {
             disabled={s.soon}
             onClick={() => navigate(s.path)}
             className={`text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-2 transition-all ${
-              s.soon ? "opacity-60 cursor-not-allowed" : "hover:border-amber-500 hover:shadow-lg cursor-pointer"
+              s.soon
+                ? "opacity-60 cursor-not-allowed"
+                : "hover:border-amber-500 hover:shadow-lg cursor-pointer"
             }`}
           >
             <div className="text-3xl">{s.emoji}</div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold">{s.title}</h3>
-              {s.soon && <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700">Soon</span>}
+              {s.soon && (
+                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700">
+                  Soon
+                </span>
+              )}
             </div>
             <p className="text-sm text-slate-500">{s.desc}</p>
           </button>

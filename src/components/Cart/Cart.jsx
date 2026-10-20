@@ -1,12 +1,24 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
-import { calcTotals, promoPercent, money } from "../../utils/orderCalc";
+import { calcTotals, promoPercent } from "../../utils/orderCalc";
+
+const EXCHANGE_RATE = 4100; // 1$ = 4100៛
+
+const formatPriceWithUSD = (rielValue) => {
+  const numericVal = Number(rielValue) || 0;
+  const usd = numericVal / EXCHANGE_RATE;
+  const usdFormatted = usd % 1 === 0 ? `$${usd.toFixed(0)}` : `$${usd.toFixed(2)}`;
+  return {
+    riel: `${Math.round(numericVal).toLocaleString()}៛`,
+    usd: `≈ ${usdFormatted}`,
+  };
+};
 
 const SHIPPING_OPTIONS = [
-  { id: "standard", label: "Store Pickup", price: "Free", sub: "Ready in 10 mins" },
-  { id: "express", label: "Local Delivery", price: "$3.50", sub: "20-30 minutes" },
-  { id: "freight", label: "Catering Delivery", price: "$8.00", sub: "Scheduled, bulk orders" },
+  { id: "standard", label: "Store Pickup", price: 0, sub: "Ready in 10 mins" },
+  { id: "express", label: "Local Delivery", price: 14350, sub: "20-30 minutes" }, // approx $3.50 * 4100
+  { id: "freight", label: "Catering Delivery", price: 32800, sub: "Scheduled, bulk orders" }, // approx $8.00 * 4100
 ];
 
 export default function CartPage() {
@@ -33,6 +45,16 @@ export default function CartPage() {
       setPromoApplied(false);
       setPromoMsg("Invalid promo code. Try 'BLOSSOM10'");
     }
+  };
+
+  const renderPrice = (rielValue) => {
+    const formatted = formatPriceWithUSD(rielValue);
+    return (
+      <div className="flex flex-col">
+        <span className="font-bold">{formatted.riel}</span>
+        <span className="text-xs text-stone-400 font-medium">{formatted.usd}</span>
+      </div>
+    );
   };
 
   return (
@@ -70,43 +92,59 @@ export default function CartPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             <div className="lg:col-span-2 space-y-4">
-              {cartItems.map((item) => (
-                <div key={item.id} className="bg-white dark:bg-stone-900 p-5 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row items-center gap-5">
-                  <img src={item.img} alt={item.title} className="w-24 h-24 sm:w-28 sm:h-28 object-cover rounded-xl bg-stone-100 dark:bg-stone-800 shrink-0" />
-                  <div className="flex-1 space-y-1 text-center sm:text-left">
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{item.category}</span>
-                    <h3 className="font-semibold">{item.title}</h3>
-                    <p className="text-lg font-bold">{money(item.price)}</p>
-                  </div>
-                  <div className="flex flex-col sm:items-end justify-between h-full gap-4">
-                    <button onClick={() => removeItem(item.id)} className="text-xs text-rose-500 hover:text-rose-700 font-semibold cursor-pointer">Remove ✕</button>
-                    <div className="flex items-center border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden bg-stone-50 dark:bg-stone-950">
-                      <button onClick={() => updateQuantity(item.id, -1)} className="px-3 py-1 hover:bg-stone-200 dark:hover:bg-stone-800 cursor-pointer">-</button>
-                      <span className="px-3 py-1 text-sm font-semibold">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.id, 1)} className="px-3 py-1 hover:bg-stone-200 dark:hover:bg-stone-800 cursor-pointer">+</button>
+              {cartItems.map((item) => {
+                const itemFormatted = formatPriceWithUSD(item.price);
+                return (
+                  <div key={item.id} className="bg-white dark:bg-stone-900 p-5 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row items-center gap-5">
+                    <img src={item.img} alt={item.title} className="w-24 h-24 sm:w-28 sm:h-28 object-cover rounded-xl bg-stone-100 dark:bg-stone-800 shrink-0" />
+                    <div className="flex-1 space-y-1 text-center sm:text-left">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{item.category}</span>
+                      <h3 className="font-semibold">{item.title}</h3>
+                      <div className="flex flex-col sm:items-start">
+                        <span className="text-lg font-bold">{itemFormatted.riel}</span>
+                        <span className="text-xs text-stone-400 font-medium">{itemFormatted.usd}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:items-end justify-between h-full gap-4">
+                      <button onClick={() => removeItem(item.id)} className="text-xs text-rose-500 hover:text-rose-700 font-semibold cursor-pointer">Remove ✕</button>
+                      <div className="flex items-center border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden bg-stone-50 dark:bg-stone-950">
+                        <button onClick={() => updateQuantity(item.id, -1)} className="px-3 py-1 hover:bg-stone-200 dark:hover:bg-stone-800 cursor-pointer">-</button>
+                        <span className="px-3 py-1 text-sm font-semibold">{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.id, 1)} className="px-3 py-1 hover:bg-stone-200 dark:hover:bg-stone-800 cursor-pointer">+</button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               <div className="bg-white dark:bg-stone-900 p-6 rounded-2xl border border-stone-200 dark:border-stone-800 space-y-4">
                 <h4 className="font-semibold text-sm">Pickup or Delivery</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {SHIPPING_OPTIONS.map((m) => (
-                    <div
-                      key={m.id}
-                      onClick={() => setShippingMethod(m.id)}
-                      className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                        shippingMethod === m.id ? "border-amber-600 bg-amber-50/50 dark:bg-amber-950/30" : "border-stone-200 dark:border-stone-800 hover:border-amber-400"
-                      }`}
-                    >
-                      <div className="flex justify-between items-center font-semibold text-sm">
-                        <span>{m.label}</span>
-                        <span className="text-amber-600 dark:text-amber-400">{m.price}</span>
+                  {SHIPPING_OPTIONS.map((m) => {
+                    const shippingFormatted = m.price === 0 ? { riel: "Free", usd: "" } : formatPriceWithUSD(m.price);
+                    return (
+                      <div
+                        key={m.id}
+                        onClick={() => setShippingMethod(m.id)}
+                        className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                          shippingMethod === m.id ? "border-amber-600 bg-amber-50/50 dark:bg-amber-950/30" : "border-stone-200 dark:border-stone-800 hover:border-amber-400"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center font-semibold text-sm">
+                          <span>{m.label}</span>
+                          <span className="text-amber-600 dark:text-amber-400">
+                            {m.price === 0 ? "Free" : shippingFormatted.riel}
+                          </span>
+                        </div>
+                        {m.price > 0 && (
+                          <div className="text-right text-xs text-stone-400 font-medium">
+                            {shippingFormatted.usd}
+                          </div>
+                        )}
+                        <p className="text-xs text-stone-500 mt-1">{m.sub}</p>
                       </div>
-                      <p className="text-xs text-stone-500 mt-1">{m.sub}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -129,11 +167,30 @@ export default function CartPage() {
               </div>
 
               <div className="space-y-3 text-sm border-t border-stone-200 dark:border-stone-800 pt-4">
-                <div className="flex justify-between text-stone-500"><span>Subtotal</span><span className="text-stone-900 dark:text-white font-medium">{money(subtotal)}</span></div>
-                {discount > 0 && <div className="flex justify-between text-emerald-600"><span>Discount ({discountPct}%)</span><span>-{money(discount)}</span></div>}
-                <div className="flex justify-between text-stone-500"><span>{shippingMethod === "standard" ? "Pickup" : "Delivery"}</span><span className="text-stone-900 dark:text-white font-medium">{shippingCost === 0 ? "Free" : money(shippingCost)}</span></div>
-                <div className="flex justify-between text-stone-500"><span>Estimated Tax (8%)</span><span className="text-stone-900 dark:text-white font-medium">{money(tax)}</span></div>
-                <div className="border-t border-stone-200 dark:border-stone-800 pt-3 flex justify-between text-base font-extrabold"><span>Total Amount</span><span className="text-amber-600 dark:text-amber-400">{money(total)}</span></div>
+                <div className="flex justify-between text-stone-500 items-center">
+                  <span>Subtotal</span>
+                  <div className="text-right">{renderPrice(subtotal)}</div>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-emerald-600 items-center">
+                    <span>Discount ({discountPct}%)</span>
+                    <div className="text-right">-{renderPrice(discount)}</div>
+                  </div>
+                )}
+                <div className="flex justify-between text-stone-500 items-center">
+                  <span>{shippingMethod === "standard" ? "Pickup" : "Delivery"}</span>
+                  <div className="text-right">
+                    {shippingCost === 0 ? <span className="font-medium text-stone-900 dark:text-white">Free</span> : renderPrice(shippingCost)}
+                  </div>
+                </div>
+                <div className="flex justify-between text-stone-500 items-center">
+                  <span>Estimated Tax (8%)</span>
+                  <div className="text-right">{renderPrice(tax)}</div>
+                </div>
+                <div className="border-t border-stone-200 dark:border-stone-800 pt-3 flex justify-between text-base font-extrabold items-center">
+                  <span>Total Amount</span>
+                  <div className="text-right text-amber-600 dark:text-amber-400">{renderPrice(total)}</div>
+                </div>
               </div>
 
               <button

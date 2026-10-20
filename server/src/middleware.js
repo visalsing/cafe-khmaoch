@@ -13,17 +13,43 @@ export const cookieOptions = {
 
 export const signToken = (userId) => jwt.sign({ sub: userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
-// never send password_hash to the browser
+// ONE place that loads a user together with its role. Add a WHERE after it.
+export const USER_SELECT = `
+  SELECT u.*, r.code AS role_code, r.role_title AS role_title
+    FROM users u
+    JOIN roles r ON r.id = u.role_id`;
+
+// may this account use the system right now?
+export const canSignIn = (u) => u.status === 1 && u.is_blocked === 0 && u.is_removed === 0;
+
+// never send password_hash to the browser. `role` stays the role CODE so the dashboard keeps working
 export const publicUser = (u) => ({
   id: u.id,
   firstName: u.first_name,
   lastName: u.last_name,
+  firstNameNative: u.first_name_native,
+  lastNameNative: u.last_name_native,
+  genderId: u.gender_id,
+  nationalityId: u.nationality_id,
+  address: u.address,
+  region: u.region,
+  country: u.country,
+  description: u.description,
   email: u.email,
   phone: u.phone,
-  role: u.role,
+  role: u.role_code,
+  roleId: u.role_id,
+  roleTitle: u.role_title,
+  positionId: u.position_id,
+  permissionId: u.permission_id,
   status: u.status,
+  isBlocked: u.is_blocked,
+  isRemoved: u.is_removed,
   avatar: u.avatar,
+  avatarThumbnail: u.avatar_thumbnail,
   createdAt: u.created_at,
+  updatedAt: u.updated_at,
+  removedAt: u.removed_at,
   lastLoginAt: u.last_login_at,
 });
 
@@ -39,15 +65,16 @@ export async function requireAuth(req, res, next) {
     return res.status(401).json({ error: "Not signed in." });
   }
 
-  // load the user on every request, so blocking someone or changing a role takes effect immediately
-  const { rows } = await query("SELECT * FROM users WHERE id = $1", [userId]);
+  // loaded on EVERY request, so blocking / removing someone or changing a role takes effect immediately
+  const { rows } = await query(`${USER_SELECT} WHERE u.id = $1`, [userId]);
   const user = rows[0];
-  if (!user || user.status !== "active") {
+  if (!user || !canSignIn(user)) {
     res.clearCookie(COOKIE, { path: "/" });
     return res.status(401).json({ error: "Not signed in." });
   }
   req.user = user;
-  req.permissions = await permissionsFor(user.role);
+  // FIX: Pass user.role_code instead of the full user object
+  req.permissions = await permissionsFor(user.role_code);
   next();
 }
 
@@ -57,10 +84,11 @@ export async function optionalAuth(req, res, next) {
   if (token) {
     try {
       const userId = jwt.verify(token, process.env.JWT_SECRET).sub;
-      const { rows } = await query("SELECT * FROM users WHERE id = $1 AND status = 'active'", [userId]);
-      if (rows[0]) {
+      const { rows } = await query(`${USER_SELECT} WHERE u.id = $1`, [userId]);
+      if (rows[0] && canSignIn(rows[0])) {
         req.user = rows[0];
-        req.permissions = await permissionsFor(rows[0].role);
+        // FIX: Pass rows[0].role_code instead of the full user object
+        req.permissions = await permissionsFor(rows[0].role_code);
       }
     } catch {
       /* invalid or expired token: treat as a guest */
