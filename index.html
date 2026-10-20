@@ -1,7 +1,8 @@
 <!doctype html>
-<html lang="en">
+<html lang="km">
   <head>
     <meta charset="UTF-8" />
+    
     <!-- Favicon / Logo -->
     <link
       rel="icon"
@@ -12,39 +13,66 @@
     <link href="/src/index.css" rel="stylesheet" />
     <link href="/src/App.css" rel="stylesheet" />
 
-    <!-- Page Title -->
-    <title>Café ខ្មោច - Coffee, Relaxed & Thrilled</title>
+    <!-- Search Engine Indexing Instructions -->
+    <meta name="robots" content="index, follow" />
+    <meta name="googlebot" content="index, follow" />
+    <link rel="canonical" href="https://cafe-khmaoch.vercel.app/" />
 
-    <!-- Meta Description -->
+    <!-- Page Title (Includes both Khmer & English for maximum SEO match) -->
+    <title>Café ខ្មោច (Cafe Khmaoch / Cafe Khmoch) - កាហ្វេខ្មោច | Coffee, Relaxed & Thrilled</title>
+
+    <!-- Meta Description (Rich in all potential search terms) -->
     <meta
       name="description"
-      content="Welcome to Café ខ្មោច! Enjoy delicious coffee, fresh beverages, and delicious treats in a uniquely chilled atmosphere. Coffee, Relaxed & Thrilled."
+      content="Welcome to Café ខ្មោច (Cafe Khmaoch / Cafe Khmoch / កាហ្វេខ្មោច)! Enjoy delicious coffee, fresh beverages, and treats in a uniquely chilled, thrilling atmosphere. Coffee, Relaxed & Thrilled."
     />
 
-    <!-- Open Graph / Facebook / Telegram Sharing -->
-    <meta property="og:title" content="Café ខ្មោច - Coffee, Relaxed & Thrilled" />
+    <!-- Keywords for Search Engines -->
+    <meta
+      name="keywords"
+      content="Café ខ្មោច, Cafe ខ្មោច, កាហ្វេខ្មោច, Cafe Khmoch, Cafe Khmaoch, Café Khmoch, Café Khmaoch, cafe khmoch cambodia, cafe khmaoch phnom penh, coffee shop"
+    />
+
+    <!-- Language & Region -->
+    <meta http-equiv="content-language" content="km, en" />
+
+    <!-- Open Graph / Facebook / Telegram / Social Sharing -->
+    <meta property="og:site_name" content="Café ខ្មោច" />
+    <meta property="og:title" content="Café ខ្មោច (Cafe Khmaoch / កាហ្វេខ្មោច) - Coffee, Relaxed & Thrilled" />
     <meta
       property="og:description"
-      content="Welcome to Café ខ្មោច! Enjoy delicious coffee, fresh beverages, and delicious treats in a uniquely chilled atmosphere."
+      content="Welcome to Café ខ្មោច! Enjoy delicious coffee, fresh beverages, and treats in a uniquely chilled atmosphere."
     />
-    <meta
-      property="og:image"
-      content="/src/assets/logo/cafe-khmaoch.jpg"
-    />
+    <meta property="og:image" content="https://cafe-khmaoch.vercel.app/src/assets/logo/cafe-khmaoch.jpg" />
     <meta property="og:url" content="https://cafe-khmaoch.vercel.app/" />
     <meta property="og:type" content="website" />
+    <meta property="og:locale" content="km_KH" />
+    <meta property="og:locale:alternate" content="en_US" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Café ខ្មោច - Coffee, Relaxed & Thrilled" />
+    <meta name="twitter:title" content="Café ខ្មោច (Cafe Khmaoch / កាហ្វេខ្មោច)" />
     <meta
       name="twitter:description"
-      content="Welcome to Café ខ្មោច! Enjoy delicious coffee, fresh beverages, and delicious treats in a uniquely chilled atmosphere."
+      content="Welcome to Café ខ្មោច! Enjoy delicious coffee, fresh beverages, and treats in a uniquely chilled atmosphere."
     />
-    <meta
-      name="twitter:image"
-      content="/src/assets/logo/cafe-khmaoch.jpg"
-    />
+    <meta name="twitter:image" content="https://cafe-khmaoch.vercel.app/src/assets/logo/cafe-khmaoch.jpg" />
+
+    <!-- Structured Data (Schema.org / JSON-LD) for Search Engine Rich Snippets -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "CafeOrCoffeeShop",
+        "name": "Café ខ្មោច",
+        "alternateName": ["Cafe Khmoch", "Cafe Khmaoch", "Café Khmoch", "Café Khmaoch", "Cafe ខ្មោច", "កាហ្វេខ្មោច"],
+        "url": "https://cafe-khmaoch.vercel.app/",
+        "logo": "https://cafe-khmaoch.vercel.app/src/assets/logo/cafe-khmaoch.jpg",
+        "image": "https://cafe-khmaoch.vercel.app/src/assets/logo/cafe-khmaoch.jpg",
+        "description": "Welcome to Café ខ្មោច (Cafe Khmaoch / Cafe Khmoch / កាហ្វេខ្មោច)! Enjoy delicious coffee, fresh beverages, and delicious treats in a uniquely chilled atmosphere.",
+        "slogan": "Coffee, Relaxed & Thrilled",
+        "servesCuisine": "Coffee, Drinks, Bakery, Snacks"
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
