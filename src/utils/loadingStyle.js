@@ -12,6 +12,10 @@ export const LOADING_STYLES = [
   { value: "coffee", label: "Coffee Cup" },
   { value: "progress", label: "Progress Bar" },
   { value: "text", label: "Classic Text" },
+  { value: "bat", label: "Flying Bat" },
+  { value: "ghost", label: "Floating Ghost" },
+  { value: "ghostCoffee", label: "Ghost + Coffee" },
+  { value: "lightning", label: "Lightning Bolt" },
 ];
 export const DEFAULT_LOADING_STYLE = "dots"; // used until someone picks another one
 
@@ -52,6 +56,10 @@ function subscribe(callback) {
 
 // const [style, setStyle] = useLoadingStyle();
 export function useLoadingStyle() {
-  const style = useSyncExternalStore(subscribe, getLoadingStyle, () => DEFAULT_LOADING_STYLE);
+  const style = useSyncExternalStore(
+    subscribe,
+    getLoadingStyle,
+    () => DEFAULT_LOADING_STYLE,
+  );
   return [style, setLoadingStyle];
 }

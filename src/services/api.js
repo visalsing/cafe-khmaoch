@@ -16,3 +16,7 @@ export * from "./api/positions.js";
 export * from "./api/permissions.js";
 export * from "./api/users.js";
 export * from "./api/role_permissions.js";
+export * from "./api/reset_password.js";
+export * from "./api/orders.js";
+export * from "./api/profile.js";
+export * from "./api/impersonation.js";

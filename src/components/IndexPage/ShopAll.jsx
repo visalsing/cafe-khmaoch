@@ -4,6 +4,7 @@ import MobileMenu from "./MobileMenu";
 import Footer from "./Footer";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useCart } from "../../context/CartContext";
+import { useAuth } from "../../context/AuthContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import {
   categoryService,
@@ -136,6 +137,7 @@ const formatPriceWithUSD = (rielValue) => {
 
 export default function ShopAll() {
   const { addItem } = useCart();
+  const { currentUser } = useAuth();
   const { language, t } = useLanguage();
   const activeLanguage = language || "en";
 
@@ -353,6 +355,21 @@ export default function ShopAll() {
       coffeeObj ? translateJson(coffeeObj.name) : null,
     ].filter(Boolean);
 
+    // addItem({
+    //   id: `${product.id}:${option.key}:${sugarObj?.id || 0}:${iceObj?.id || 0}:${coffeeObj?.id || 0}`,
+    //   productId: product.id,
+    //   size: option.key,
+    //   title: `${translateJson(product.name)} (${chosenLabels.join(", ")})`,
+    //   price: finalUnitPrice,
+    //   basePrice: option.base + extraCoffeePrice,
+    //   discountPercent: Number(product.discount_percent || 0),
+    //   taxPercent: hasValue(product.tax_percent)
+    //     ? Number(product.tax_percent)
+    //     : null,
+    //   img: assetUrl(product.img || product.thumbnail),
+    //   category: catName.get(product.category_id) || "",
+    // });
+
     addItem({
       id: `${product.id}:${option.key}:${sugarObj?.id || 0}:${iceObj?.id || 0}:${coffeeObj?.id || 0}`,
       productId: product.id,
@@ -366,11 +383,37 @@ export default function ShopAll() {
         : null,
       img: assetUrl(product.img || product.thumbnail),
       category: catName.get(product.category_id) || "",
+
+      sugarLevelId: sugarObj?.id || null, // ← new
+      iceLevelId: iceObj?.id || null, // ← new
+      coffeeLevelId: coffeeObj?.id || null, // ← new
     });
 
     setAddedId(product.id);
     setTimeout(() => setAddedId(null), 1000);
   };
+
+  // ------------------ Item Modal ----------------------
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  useEffect(() => {
+    if (!selectedProduct) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setSelectedProduct(null);
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedProduct]);
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 transition-colors duration-300">
@@ -426,7 +469,9 @@ export default function ShopAll() {
 
           {loadError && (
             <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 text-sm flex items-center justify-between">
-              {loadError === "could_not_load_menu_options" ? t("could_not_load_menu_options") : loadError}
+              {loadError === "could_not_load_menu_options"
+                ? t("could_not_load_menu_options")
+                : loadError}
               <button
                 onClick={loadMenu}
                 className="font-semibold underline cursor-pointer"
@@ -483,7 +528,20 @@ export default function ShopAll() {
                     className="group relative bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 hover:shadow-xl hover:border-amber-500/50 transition-all duration-300 flex flex-col justify-between overflow-hidden"
                   >
                     <div>
-                      <div className="relative h-56 overflow-hidden bg-stone-100 dark:bg-stone-800">
+                      {/* <div className="relative h-56 overflow-hidden bg-stone-100 dark:bg-stone-800"> */}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`View ${translateJson(product.name)} details`}
+                        onClick={() => setSelectedProduct(product)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setSelectedProduct(product);
+                          }
+                        }}
+                        className="relative h-56 overflow-hidden bg-stone-100 dark:bg-stone-800 cursor-zoom-in"
+                      >
                         {img ? (
                           <img
                             src={img}
@@ -523,7 +581,8 @@ export default function ShopAll() {
                             {rating.toFixed(1)}
                           </span>
                           <span>
-                            ({reviews} {reviews === 1 ? t("review") : t("reviews")})
+                            ({reviews}{" "}
+                            {reviews === 1 ? t("review") : t("reviews")})
                           </span>
                         </div>
                         {options.length > 1 && (
@@ -663,8 +722,9 @@ export default function ShopAll() {
                                             />
                                             <span>
                                               {translateJson(cof.name)}
-                                              {extra > 0 &&
-                                                ` (+$${extra.toFixed(2)})`}
+                                              {/* {extra > 0 &&
+                                                ` (+$${extra.toFixed(2)})`} */}
+                                                {extra > 0 && ` (+${formatPriceWithUSD(extra).riel})`}
                                             </span>
                                           </label>
                                         );
@@ -712,7 +772,7 @@ export default function ShopAll() {
                           )}
                         </div>
                       </div>
-                      <button
+                      {/* <button
                         onClick={() => handleAdd(product)}
                         disabled={!canAdd}
                         className={`px-4 py-2 text-white font-semibold text-xs rounded-xl shadow-sm transition-all cursor-pointer ${
@@ -729,7 +789,26 @@ export default function ShopAll() {
                         }
                       >
                         {addedId === product.id ? t("added") : t("add_to_order")}
-                      </button>
+                      </button> */}
+                      {currentUser && (
+                        <button
+                          type="button"
+                          onClick={() => handleAdd(product)}
+                          disabled={!canAdd}
+                          className={`px-4 py-2 text-white font-semibold text-xs rounded-xl shadow-sm transition-all cursor-pointer ${
+                            !canAdd
+                              ? "bg-stone-300 dark:bg-stone-700 text-stone-500 cursor-not-allowed opacity-60"
+                              : addedId === product.id
+                                ? "bg-emerald-600"
+                                : "bg-amber-600 hover:bg-amber-700"
+                          }`}
+                          title={!canAdd ? t("complete_required_levels") : ""}
+                        >
+                          {addedId === product.id
+                            ? t("added")
+                            : t("add_to_order")}
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -737,6 +816,288 @@ export default function ShopAll() {
             </div>
           )}
         </section>
+
+        {/* ================= PRODUCT DETAIL MODAL ================= */}
+        {selectedProduct &&
+          (() => {
+            const product = selectedProduct;
+            const options = sizeOptions(product);
+            const option = chosenOption(product);
+            const discount = Number(product.discount_percent || 0);
+            const img = assetUrl(product.img || product.thumbnail);
+            const cust = customizations[product.id] || {};
+
+            const availSugar = availableLevels(1, sugarLevels, product);
+            const availIce = availableLevels(2, iceLevels, product);
+            const availCoffee = availableLevels(3, coffeeLevels, product);
+
+            const extraCoffeePrice = Number(cust.coffee?.price || 0);
+            const displayPrice = option.unit + extraCoffeePrice;
+            const basePrice = option.base + extraCoffeePrice;
+            const canAdd = isCompleteCustomization(product);
+
+            const renderLevels = (titleKey, field, levels) => {
+              if (!levels.length) return null;
+
+              return (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-stone-800 dark:text-stone-200">
+                    {t(titleKey)}
+                    <span className="ml-1 text-rose-500">*</span>
+                  </h4>
+
+                  <div className="space-y-2">
+                    {levels.map((level) => {
+                      const extra =
+                        field === "coffee" ? Number(level.price || 0) : 0;
+
+                      return (
+                        <label
+                          key={level.id}
+                          className="flex items-center gap-3 p-3 rounded-xl border border-stone-200 dark:border-stone-700 hover:border-amber-500 transition-colors cursor-pointer"
+                        >
+                          <input
+                            type="radio"
+                            name={`modal-${field}-${product.id}`}
+                            checked={cust[field]?.id === level.id}
+                            onChange={() =>
+                              handleCustomizationChange(
+                                product.id,
+                                field,
+                                level,
+                              )
+                            }
+                            className="accent-amber-600"
+                          />
+
+                          <span className="flex-1 text-sm text-stone-700 dark:text-stone-300">
+                            {translateJson(level.name)}
+                          </span>
+
+                          {extra > 0 && (
+                            <span className="text-xs font-semibold text-amber-600">
+                              +{formatPriceWithUSD(extra).riel}
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            };
+
+            return (
+              <div
+                className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6"
+                onMouseDown={(event) => {
+                  if (event.target === event.currentTarget) {
+                    setSelectedProduct(null);
+                  }
+                }}
+              >
+                {/* Backdrop */}
+                <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+
+                {/* Modal window */}
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label={translateJson(product.name)}
+                  onMouseDown={(event) => event.stopPropagation()}
+                  className="relative z-10 flex flex-col md:flex-row w-full max-w-6xl h-[90dvh] max-h-[850px] overflow-hidden rounded-2xl sm:rounded-3xl bg-white dark:bg-stone-900 shadow-2xl"
+                >
+                  {/* LEFT: PRODUCT IMAGE */}
+                  <div className="relative shrink-0 w-full h-[35%] min-h-[180px] md:min-h-0 md:w-1/2 md:h-full flex items-center justify-center bg-stone-100 dark:bg-stone-950">
+                    {img ? (
+                      <img
+                        src={img}
+                        alt={translateJson(product.name)}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="text-7xl">☕</div>
+                    )}
+
+                    {discount > 0 && (
+                      <span className="absolute top-4 left-4 px-3 py-1.5 rounded-lg bg-rose-600 text-white text-sm font-bold">
+                        -{discount}%
+                      </span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProduct(null)}
+                      aria-label="Close product details"
+                      className="absolute top-3 right-3 md:hidden flex items-center justify-center w-10 h-10 rounded-full bg-white/90 dark:bg-stone-900/90 text-stone-800 dark:text-white shadow-md"
+                    >
+                      <span className="text-2xl leading-none">&times;</span>
+                    </button>
+                  </div>
+
+                  {/* RIGHT: PRODUCT INFORMATION */}
+                  <div className="flex flex-col flex-1 min-w-0 min-h-0">
+                    {/* Header */}
+                    <div className="shrink-0 flex items-center justify-between gap-3 p-5 sm:p-6 border-b border-stone-200 dark:border-stone-800">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                        {catName.get(product.category_id) || ""}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => setSelectedProduct(null)}
+                        aria-label="Close product details"
+                        className="hidden md:flex items-center justify-center w-9 h-9 rounded-full text-stone-500 hover:text-white hover:bg-rose-500 transition-colors"
+                      >
+                        <span className="text-2xl leading-none">&times;</span>
+                      </button>
+                    </div>
+
+                    {/* Scrollable details */}
+                    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-5 sm:p-6 space-y-6">
+                      <div className="space-y-3">
+                        <h2 className="text-2xl sm:text-3xl font-extrabold break-words text-stone-900 dark:text-white">
+                          {translateJson(product.name)}
+                        </h2>
+
+                        {translateJson(product.badge).trim() && (
+                          <span className="inline-flex px-3 py-1 rounded-lg bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 text-xs font-bold">
+                            {translateJson(product.badge)}
+                          </span>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
+                          <Stars
+                            value={
+                              Number(product.rating) > 0
+                                ? Number(product.rating)
+                                : STATIC_RATING
+                            }
+                            t={t}
+                          />
+
+                          <span className="font-semibold text-stone-800 dark:text-stone-200">
+                            {(Number(product.rating) > 0
+                              ? Number(product.rating)
+                              : STATIC_RATING
+                            ).toFixed(1)}
+                          </span>
+
+                          <span>
+                            (
+                            {hasValue(product.reviews)
+                              ? Number(product.reviews)
+                              : STATIC_REVIEWS}{" "}
+                            {Number(
+                              hasValue(product.reviews)
+                                ? product.reviews
+                                : STATIC_REVIEWS,
+                            ) === 1
+                              ? t("review")
+                              : t("reviews")}
+                            )
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Optional product description */}
+                      {translateJson(product.description).trim() && (
+                        <p className="text-sm leading-7 whitespace-pre-line text-stone-600 dark:text-stone-300">
+                          {translateJson(product.description)}
+                        </p>
+                      )}
+
+                      {/* Price */}
+                      <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50">
+                        <div className="flex flex-wrap items-baseline gap-3">
+                          <span className="text-2xl font-extrabold text-stone-900 dark:text-white">
+                            {formatPriceWithUSD(displayPrice).riel}
+                          </span>
+
+                          {discount > 0 && (
+                            <span className="text-sm line-through text-stone-400">
+                              {formatPriceWithUSD(basePrice).riel}
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+                          {formatPriceWithUSD(displayPrice).usd}
+                        </p>
+                      </div>
+
+                      {/* Size choices */}
+                      {options.length > 1 && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-semibold text-stone-800 dark:text-stone-200">
+                            {t("size") || "Size"}
+                          </h4>
+
+                          <SizeChips
+                            options={options}
+                            active={option.key}
+                            t={t}
+                            onPick={(key) =>
+                              setPicked((prev) => ({
+                                ...prev,
+                                [product.id]: key,
+                              }))
+                            }
+                          />
+                        </div>
+                      )}
+
+                      {/* Drink customizations */}
+                      {(availSugar.length > 0 ||
+                        availIce.length > 0 ||
+                        availCoffee.length > 0) && (
+                        <div className="space-y-5">
+                          <h3 className="text-lg font-bold text-stone-900 dark:text-white">
+                            {t("show_more_options")}
+                          </h3>
+
+                          {renderLevels("sugar_level", "sugar", availSugar)}
+                          {renderLevels("ice_level", "ice", availIce)}
+                          {renderLevels("coffee_level", "coffee", availCoffee)}
+                        </div>
+                      )}
+
+                      <div className="h-1" />
+                    </div>
+
+                    {/* Fixed bottom action */}
+                    <div className="shrink-0 p-4 sm:p-6 border-t border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900">
+                      {currentUser ? (
+                        <button
+                          type="button"
+                          disabled={!canAdd}
+                          onClick={() => {
+                            if (!isCompleteCustomization(product)) return;
+
+                            handleAdd(product);
+                            setSelectedProduct(null);
+                          }}
+                          className={`w-full py-3.5 px-5 rounded-xl text-sm font-bold text-white transition-colors ${
+                            !canAdd
+                              ? "bg-stone-300 dark:bg-stone-700 text-stone-500 cursor-not-allowed"
+                              : "bg-amber-600 hover:bg-amber-700"
+                          }`}
+                          title={!canAdd ? t("complete_required_levels") : ""}
+                        >
+                          {t("add_to_order")}
+                        </button>
+                      ) : (
+                        <p className="text-center text-sm text-stone-500 dark:text-stone-400">
+                          {t("login_to_order") ||
+                            "Please log in to add items to your order."}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
       </main>
 
       <Footer />

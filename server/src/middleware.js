@@ -4,23 +4,38 @@ import { permissionsFor } from "./access.js";
 
 export const COOKIE = "bb_token";
 export const cookieOptions = {
-  httpOnly: true,                                   // JavaScript in the page cannot read it
+  httpOnly: true, // JavaScript in the page cannot read it
   sameSite: "lax",
-  secure: process.env.NODE_ENV === "production",    // HTTPS only when deployed
+  secure: process.env.NODE_ENV === "production", // HTTPS only when deployed
   maxAge: 7 * 24 * 60 * 60 * 1000,
   path: "/",
 };
 
-export const signToken = (userId) => jwt.sign({ sub: userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
+// export const signToken = (userId) =>
+//   jwt.sign({ sub: userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
-// ONE place that loads a user together with its role. Add a WHERE after it.
+export function signToken(userId) {
+  return jwt.sign(
+    { sub: String(userId) },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+}
+
+// ONE place that loads a user together with its role and email-verification state.
+// Add a WHERE after it. (Only the two verification columns are selected, so uv.updated_at
+// can never clash with u.updated_at.)
 export const USER_SELECT = `
-  SELECT u.*, r.code AS role_code, r.role_title AS role_title
+  SELECT u.*, r.code AS role_code, r.role_title AS role_title,
+         COALESCE(uv.is_verified_email, false) AS is_verified_email,
+         uv.email_verified_at AS email_verified_at
     FROM users u
-    JOIN roles r ON r.id = u.role_id`;
+    JOIN roles r ON r.id = u.role_id
+    LEFT JOIN user_verifications uv ON uv.user_id = u.id`;
 
 // may this account use the system right now?
-export const canSignIn = (u) => u.status === 1 && u.is_blocked === 0 && u.is_removed === 0;
+export const canSignIn = (u) =>
+  u.status === 1 && u.is_blocked === 0 && u.is_removed === 0;
 
 // never send password_hash to the browser. `role` stays the role CODE so the dashboard keeps working
 export const publicUser = (u) => ({
@@ -45,6 +60,8 @@ export const publicUser = (u) => ({
   status: u.status,
   isBlocked: u.is_blocked,
   isRemoved: u.is_removed,
+  isVerifiedEmail: u.is_verified_email === true,
+  emailVerifiedAt: u.email_verified_at ?? null,
   avatar: u.avatar,
   avatarThumbnail: u.avatar_thumbnail,
   createdAt: u.created_at,
@@ -73,7 +90,6 @@ export async function requireAuth(req, res, next) {
     return res.status(401).json({ error: "Not signed in." });
   }
   req.user = user;
-  // FIX: Pass user.role_code instead of the full user object
   req.permissions = await permissionsFor(user.role_code);
   next();
 }
@@ -87,7 +103,6 @@ export async function optionalAuth(req, res, next) {
       const { rows } = await query(`${USER_SELECT} WHERE u.id = $1`, [userId]);
       if (rows[0] && canSignIn(rows[0])) {
         req.user = rows[0];
-        // FIX: Pass rows[0].role_code instead of the full user object
         req.permissions = await permissionsFor(rows[0].role_code);
       }
     } catch {
@@ -97,6 +112,12 @@ export async function optionalAuth(req, res, next) {
   next();
 }
 
+// use AFTER requireAuth: only the Admin role (role_id = 1)
+export const requireAdmin = (req, res, next) =>
+  req.user?.role_id === 1
+    ? next()
+    : res.status(403).json({ error: "Only admins can do that." });
+
 // use AFTER requireAuth: needs this exact permission
 export const requirePermission = (key) => (req, res, next) =>
   req.permissions.includes(key)
@@ -104,7 +125,11 @@ export const requirePermission = (key) => (req, res, next) =>
     : res.status(403).json({ error: "You don't have permission to do that." });
 
 // use AFTER requireAuth: needs at least ONE of these permissions
-export const requireAnyPermission = (...keys) => (req, res, next) =>
-  keys.some((k) => req.permissions.includes(k))
-    ? next()
-    : res.status(403).json({ error: "You don't have permission to do that." });
+export const requireAnyPermission =
+  (...keys) =>
+  (req, res, next) =>
+    keys.some((k) => req.permissions.includes(k))
+      ? next()
+      : res
+          .status(403)
+          .json({ error: "You don't have permission to do that." });

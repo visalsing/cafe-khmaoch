@@ -65,6 +65,7 @@ export default function Hero() {
     <section
       id="hero"
       className="relative overflow-hidden rounded-3xl shadow-2xl h-[420px] sm:h-[520px] text-white"
+      // className="relative overflow-hidden rounded-3xl shadow-2xl h-[380px] sm:h-[480px] lg:h-[580px] text-white"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={onTouchStart}

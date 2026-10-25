@@ -19,6 +19,7 @@ const digitOptions = [
   { value: "khmer", label: "ខ្មែរ (Khmer)", sample: "១២៣៤៥" },
   { value: "lao", label: "ລາວ (Lao)", sample: "໑໒໓໔໕" },
   { value: "burmese", label: "မြန်မာ (Burmese)", sample: "၁၂၃၄၅" },
+  // { value: "chinese", label: "(Chinese)", sample: "〡〢〣〤〥"}
 ];
 
 // Flag image mapping

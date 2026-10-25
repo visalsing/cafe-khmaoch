@@ -33,6 +33,7 @@ import {
   FlagIcon,
   PersonStanding,
   Flag,
+  User,
 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
@@ -56,39 +57,52 @@ const PERMISSION_BY_ID = {
 const menuItems = [
   {
     id: "dashboard",
+    path: "/dashboard/profile",
+    icon: User,
+    label: "Profile",
+  },
+    {
+    id: "profile",
     path: "/dashboard",
     icon: LayoutDashboard,
     label: "Dashboard",
   },
-  { id: "pos", path: "/dashboard/pos", icon: ShoppingCart, label: "POS" },
   {
-    id: "menu-manager",
-    path: "/dashboard/menu",
-    icon: Coffee,
-    label: "Menu Manager",
+    id: "pos",
+    path: "/dashboard/pos",
+    icon: ShoppingCart,
+    label: "Post of Sales (POS)",
   },
-  //   {
-  //   id: "lookup-manager",
-  //   path: "/dashboard/lookup",
-  //   icon: LucideBook,
-  //   label: "Lookup Manager",
-  // },
+  { id: "orders", path: "/dashboard/orders", icon: Receipt, label: "Orders" },
   {
-    id: "categories",
-    path: "/dashboard/categories",
-    icon: BoxesIcon,
-    label: "Categories",
-  },
-  {
-    id: "drink-types",
-    path: "/dashboard/drink-types",
-    icon: BoxesIcon,
-    label: "Drink Types",
-  },
-  {
-    id: "levels-options",
+    id: "menu-management",
     icon: LayoutTemplate,
-    label: "Levels Options",
+    label: "Menu Management",
+    submenu: [
+      {
+        id: "menu",
+        path: "/dashboard/menu",
+        icon: Coffee,
+        label: "Menu Items",
+      },
+      {
+        id: "categories",
+        path: "/dashboard/categories",
+        icon: BoxesIcon,
+        label: "Categories",
+      },
+      {
+        id: "drink-types",
+        path: "/dashboard/drink-types",
+        icon: BoxesIcon,
+        label: "Drink Types",
+      },
+    ],
+  },
+  {
+    id: "levels-customization",
+    icon: LayoutTemplate,
+    label: "Level Customization",
     submenu: [
       {
         id: "levels-options-overview",
@@ -108,27 +122,6 @@ const menuItems = [
       },
     ],
   },
-  //     {
-  //   id: "currencies-exchange-rate",
-  //   icon: LayoutTemplate,
-  //   label: "Currencies",
-  //   submenu: [
-  //     { id: "levels-options-overview", path: "/dashboard/levels-options", label: "Exchange Rate" },
-  //   ],
-  // },
-  {
-    id: "exchange-rate",
-    path: "/dashboard/exchange-rate",
-    icon: CoinsIcon,
-    label: "Exchange Rate",
-  },
-  {
-    id: "currencies",
-    path: "/dashboard/currencies",
-    icon: CoinsIcon,
-    label: "Currencies",
-  },
-  { id: "orders", path: "/dashboard/orders", icon: Receipt, label: "Orders" },
   {
     id: "reports",
     path: "/dashboard/reports",
@@ -146,52 +139,78 @@ const menuItems = [
     ],
   },
   {
-    id: "country-flags",
-    path: "/dashboard/country-flags",
-    icon: FlagIcon,
-    label: "Country Flags",
-  },
-    {
-    id: "roles",
-    path: "/dashboard/roles",
-    icon: PersonStanding,
-    label: "Roles",
-  },
+    id: "user-management",
+    icon: LayoutTemplate,
+    label: "User Management",
+    submenu: [
       {
-    id: "positions",
-    path: "/dashboard/positions",
-    icon: PersonStanding,
-    label: "Positions",
-  },
-        {
-    id: "permissions",
-    path: "/dashboard/permissions",
-    icon: PersonStanding,
-    label: "Permissions",
+        id: "users",
+        path: "/dashboard/users",
+        icon: Users,
+        label: "Users",
+      },
+      {
+        id: "positions",
+        path: "/dashboard/positions",
+        icon: PersonStanding,
+        label: "Positions",
+      },
+      {
+        id: "roles",
+        path: "/dashboard/roles",
+        icon: PersonStanding,
+        label: "Roles",
+      },
+      {
+        id: "roles-permissions",
+        path: "/dashboard/roles-permissions",
+        icon: Users,
+        label: "Roles & Permissions",
+      },
+      {
+        id: "permissions",
+        path: "/dashboard/permissions",
+        icon: PersonStanding,
+        label: "Permission Lists",
+      },
+    ],
   },
   {
-    id: "genders",
-    path: "/dashboard/genders",
-    icon: PersonStanding,
-    label: "Genders",
-  },
-  {
-    id: "nationalities",
-    path: "/dashboard/nationalities",
-    icon: Flag,
-    label: "Nationalities",
-  },
-    {
-    id: "users",
-    path: "/dashboard/users",
-    icon: Users,
-    label: "Users",
-  },
-  {
-    id: "roles-permissions",
-    path: "/dashboard/roles-permissions",
-    icon: Users,
-    label: "Roles & Permissions",
+    id: "system-settings",
+    icon: LayoutTemplate,
+    label: "Customization",
+    submenu: [
+      {
+        id: "exchange-rate",
+        path: "/dashboard/exchange-rate",
+        icon: CoinsIcon,
+        label: "Exchange Rate",
+      },
+      {
+        id: "currencies",
+        path: "/dashboard/currencies",
+        icon: CoinsIcon,
+        label: "Currencies",
+      },
+      {
+        id: "country-flags",
+        path: "/dashboard/country-flags",
+        icon: FlagIcon,
+        label: "Country Flags",
+      },
+      {
+        id: "genders",
+        path: "/dashboard/genders",
+        icon: PersonStanding,
+        label: "Genders",
+      },
+      {
+        id: "nationalities",
+        path: "/dashboard/nationalities",
+        icon: Flag,
+        label: "Nationalities",
+      },
+    ],
   },
   {
     id: "homepage",
@@ -205,19 +224,19 @@ const menuItems = [
     icon: Settings,
     label: "Settings",
   },
-  {
-    id: "users-stop",
-    icon: Users,
-    label: "Users",
-    submenu: [
-      { id: "users-list", path: "/dashboard/users-stop", label: "Users" },
-      {
-        id: "roles-permissions",
-        path: "/dashboard/roles-permissions-stop",
-        label: "Roles & Permissions",
-      },
-    ],
-  },
+  // {
+  //   id: "users-stop",
+  //   icon: Users,
+  //   label: "Users",
+  //   submenu: [
+  //     { id: "users-list", path: "/dashboard/users-stop", label: "Users" },
+  //     {
+  //       id: "roles-permissions",
+  //       path: "/dashboard/roles-permissions-stop",
+  //       label: "Roles & Permissions",
+  //     },
+  //   ],
+  // },
   // {
   //   id: "orderbooking",
   //   icon: ListOrderedIcon,
@@ -408,6 +427,13 @@ const menuItems = [
   //       label: "Check SKU Price from Unilever",
   //     },
   //   ],
+  // },
+
+  //   {
+  //   id: "lookup-manager",
+  //   path: "/dashboard/lookup",
+  //   icon: LucideBook,
+  //   label: "Lookup Manager",
   // },
 ];
 

@@ -19,6 +19,79 @@ const CSS = `
 .ld-steam  { animation: ld-steam 1.8s ease-in-out infinite; transform-origin: bottom center; }
 .ld-slide  { animation: ld-slide 1.3s ease-in-out infinite; }
 .ld-blink  { animation: ld-blink 1.2s ease-in-out infinite; }
+/* Flying bat */
+@keyframes ld-flap {
+  0%, 100% {
+    transform: translateY(0) rotate(-8deg) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) rotate(8deg) scale(1.12);
+  }
+}
+
+/* Floating ghost */
+@keyframes ld-ghost {
+  0%, 100% {
+    transform: translateY(3px) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(-9px) rotate(3deg);
+  }
+}
+
+/* Ghost + coffee */
+@keyframes ld-ghost-coffee {
+  0%, 100% {
+    transform: translateY(2px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* Lightning bolt */
+@keyframes ld-lightning {
+  0%, 100% {
+    opacity: .65;
+    transform: scale(.92) rotate(-4deg);
+    filter: drop-shadow(0 0 2px #f59e0b);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.12) rotate(4deg);
+    filter: drop-shadow(0 0 12px #fbbf24);
+  }
+}
+
+.ld-bat {
+  display: inline-block;
+  animation: ld-flap .65s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.ld-ghost {
+  display: inline-block;
+  animation: ld-ghost 1.6s ease-in-out infinite;
+}
+
+.ld-ghost-coffee {
+  display: inline-block;
+  animation: ld-ghost-coffee 1.5s ease-in-out infinite;
+}
+
+.ld-lightning {
+  display: inline-block;
+  animation: ld-lightning .8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ld-bat,
+  .ld-ghost,
+  .ld-ghost-coffee,
+  .ld-lightning {
+    animation: ld-fade 2s ease-in-out infinite !important;
+  }
+}
 /* people who asked their system for less motion get a gentle fade instead */
 @media (prefers-reduced-motion: reduce) {
   .ld-bounce, .ld-ring, .ld-spin, .ld-orbit, .ld-wave, .ld-steam, .ld-slide, .ld-blink {
@@ -40,7 +113,11 @@ function Dots() {
   return (
     <div className="flex items-center gap-2 h-10">
       {[0, 0.15, 0.3].map((d) => (
-        <span key={d} className="ld-bounce w-3 h-3 rounded-full bg-amber-500" style={{ animationDelay: `${d}s` }} />
+        <span
+          key={d}
+          className="ld-bounce w-3 h-3 rounded-full bg-amber-500"
+          style={{ animationDelay: `${d}s` }}
+        />
       ))}
     </div>
   );
@@ -50,14 +127,19 @@ function Pulse() {
   return (
     <div className="relative w-14 h-14 flex items-center justify-center">
       <span className="ld-ring absolute inset-0 rounded-full border-2 border-amber-500" />
-      <span className="ld-ring absolute inset-0 rounded-full border-2 border-amber-400" style={{ animationDelay: "0.8s" }} />
+      <span
+        className="ld-ring absolute inset-0 rounded-full border-2 border-amber-400"
+        style={{ animationDelay: "0.8s" }}
+      />
       <span className="w-3.5 h-3.5 rounded-full bg-amber-600" />
     </div>
   );
 }
 
 function Spinner() {
-  return <div className="ld-spin w-11 h-11 rounded-full border-4 border-amber-500/20 border-t-amber-500" />;
+  return (
+    <div className="ld-spin w-11 h-11 rounded-full border-4 border-amber-500/20 border-t-amber-500" />
+  );
 }
 
 function Orbit() {
@@ -76,7 +158,11 @@ function Bars() {
   return (
     <div className="flex items-center gap-1.5 h-10">
       {[0, 0.12, 0.24, 0.36, 0.48].map((d) => (
-        <span key={d} className="ld-wave w-1.5 h-9 rounded-full bg-amber-500" style={{ animationDelay: `${d}s` }} />
+        <span
+          key={d}
+          className="ld-wave w-1.5 h-9 rounded-full bg-amber-500"
+          style={{ animationDelay: `${d}s` }}
+        />
       ))}
     </div>
   );
@@ -87,7 +173,11 @@ function Coffee() {
     <div className="flex flex-col items-center">
       <div className="flex gap-2 h-6 items-end mb-1">
         {[0, 0.35, 0.7].map((d) => (
-          <span key={d} className="ld-steam w-1.5 h-5 rounded-full bg-amber-400/70" style={{ animationDelay: `${d}s` }} />
+          <span
+            key={d}
+            className="ld-steam w-1.5 h-5 rounded-full bg-amber-400/70"
+            style={{ animationDelay: `${d}s` }}
+          />
         ))}
       </div>
       <div className="relative">
@@ -120,7 +210,71 @@ function TextLoader({ label }) {
   );
 }
 
-const LOADERS = { dots: Dots, pulse: Pulse, spinner: Spinner, orbit: Orbit, bars: Bars, coffee: Coffee, progress: Progress };
+function Bat() {
+  return (
+    <div className="flex items-center justify-center w-16 h-16">
+      <span className="ld-bat text-5xl" role="img" aria-label="Flying bat">
+        🦇
+      </span>
+    </div>
+  );
+}
+
+function Ghost() {
+  return (
+    <div className="flex items-center justify-center w-16 h-16">
+      <span
+        className="ld-ghost text-5xl"
+        role="img"
+        aria-label="Floating ghost"
+      >
+        👻
+      </span>
+    </div>
+  );
+}
+
+function GhostCoffee() {
+  return (
+    <div className="flex items-center justify-center gap-1 w-28 h-16">
+      <span className="ld-ghost-coffee text-4xl" role="img" aria-label="Ghost">
+        👻
+      </span>
+
+      <span className="text-3xl" role="img" aria-label="Coffee">
+        ☕
+      </span>
+    </div>
+  );
+}
+
+function Lightning() {
+  return (
+    <div className="flex items-center justify-center w-16 h-16">
+      <span
+        className="ld-lightning text-5xl text-amber-500"
+        role="img"
+        aria-label="Lightning bolt"
+      >
+        ⚡
+      </span>
+    </div>
+  );
+}
+
+const LOADERS = {
+  dots: Dots,
+  pulse: Pulse,
+  spinner: Spinner,
+  orbit: Orbit,
+  bars: Bars,
+  coffee: Coffee,
+  progress: Progress,
+  bat: Bat,
+  ghost: Ghost,
+  ghostCoffee: GhostCoffee,
+  lightning: Lightning,
+};
 
 /**
  * The animation only (no full-screen box). Use it anywhere:  <Loader />  <Loader type="bars" className="scale-75" />
@@ -128,14 +282,24 @@ const LOADERS = { dots: Dots, pulse: Pulse, spinner: Spinner, orbit: Orbit, bars
  *   label      read by screen readers (and shown by the "Classic Text" style)
  *   decorative true = hidden from screen readers (used for the previews in Settings)
  */
-export function Loader({ type, label = "Loading...", decorative = false, className = "" }) {
+export function Loader({
+  type,
+  label = "Loading...",
+  decorative = false,
+  className = "",
+}) {
   const [saved] = useLoadingStyle();
   const kind = type || saved;
   const Visual = LOADERS[kind];
-  const a11y = decorative ? { "aria-hidden": true } : { role: "status", "aria-live": "polite" };
+  const a11y = decorative
+    ? { "aria-hidden": true }
+    : { role: "status", "aria-live": "polite" };
 
   return (
-    <div className={`inline-flex flex-col items-center justify-center ${className}`} {...a11y}>
+    <div
+      className={`inline-flex flex-col items-center justify-center ${className}`}
+      {...a11y}
+    >
       {Visual ? <Visual /> : <TextLoader label={label} />}
       {!decorative && <span className="sr-only">{label}</span>}
     </div>
@@ -143,7 +307,12 @@ export function Loader({ type, label = "Loading...", decorative = false, classNa
 }
 
 /** A whole-page loading state: <LoadingScreen />  (set fullScreen={false} for a smaller area) */
-export default function LoadingScreen({ label = "Loading...", type, fullScreen = true, showLabel = true }) {
+export default function LoadingScreen({
+  label = "Loading...",
+  type,
+  fullScreen = true,
+  showLabel = true,
+}) {
   const [saved] = useLoadingStyle();
   const kind = type || saved;
 
@@ -155,7 +324,10 @@ export default function LoadingScreen({ label = "Loading...", type, fullScreen =
     >
       <Loader type={kind} label={label} />
       {showLabel && kind !== "text" && (
-        <p className="text-sm text-stone-500 dark:text-stone-400" aria-hidden="true">
+        <p
+          className="text-sm text-stone-500 dark:text-stone-400"
+          aria-hidden="true"
+        >
           {label}
         </p>
       )}

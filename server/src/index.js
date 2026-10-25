@@ -21,6 +21,11 @@ import countryFlagsRouter from "./routes/countryFlag.js";
 import currenciesRouter from "./routes/currencies.js";
 import exchangeRateRouter from "./routes/exchangeRate.js";
 import rolesPermissionsRouter from "./routes/role_permissions.js";
+import passwordResetRoutes from "./routes/passwordReset.js";
+import loginVerificationRoutes from "./routes/loginVerification.js";
+import ordersRoutes from "./routes/orders.js";
+import profileRoutes from "./routes/profile.js";
+import impersonationRoutes from "./routes/impersonation.js";
 import { UPLOADS_ROOT } from "./storage.js";
 
 if (!process.env.DATABASE_URL || !process.env.JWT_SECRET) {
@@ -87,6 +92,14 @@ app.use("/api/currencies", currenciesRouter);
 // app.use("/api/exchange-rate", exchangeRateRouter);
 app.use("/api/exchange-rates", exchangeRateRouter);
 app.use("/api/role-permissions", rolesPermissionsRouter);
+
+app.use("/api/password-reset", passwordResetRoutes); // next to the other app.use("/api/...") lines
+app.use("/api/login-verification", loginVerificationRoutes);
+
+app.use("/api/profile", profileRoutes);
+app.use("/api/impersonation", impersonationRoutes);
+
+app.use("/api/orders", ordersRoutes);
 
 app.use((req, res) => res.status(404).json({ error: "Not found." }));
 

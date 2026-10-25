@@ -12,6 +12,10 @@ import {
   Archive,
   ArchiveRestore,
   Users as UsersIcon,
+  Mail,
+  MailCheck,
+  MailWarning,
+  UserRoundCog,
 } from "lucide-react";
 import {
   userService,
@@ -22,11 +26,18 @@ import {
   permissionsService,
   assetUrl,
 } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 import ImageUpload from "./ImageUpload";
 import ImageLightbox from "./ImageLightbox";
 import CustomSelect from "./CustomSelect";
 import Pagination from "./Pagination";
 import { inputCls, asList, tr, fmtDate } from "./Shared.jsx";
+
+// same base as services/api.js: empty = the same domain (Vite proxy locally, vercel.json rewrite online)
+const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+
+// how messages are shown: "modal" = a pop-up with an OK button, "banner" = the bar above the table
+const SHOW_NOTICE_AS = "modal";
 
 /* ---------- Alert: left accent border + close (X) button ---------- */
 const ALERT_STYLES = {
@@ -117,6 +128,118 @@ function Field({ label, children }) {
   );
 }
 
+// "Verified" / "Unverified" pill shown under the email
+function VerifiedBadge({ verified }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${
+        verified
+          ? "bg-emerald-100 text-emerald-700"
+          : "bg-yellow-100 text-yellow-800"
+      }`}
+    >
+      {verified ? (
+        <MailCheck className="w-3 h-3" />
+      ) : (
+        <MailWarning className="w-3 h-3" />
+      )}
+      {verified ? "Verified" : "Unverified"}
+    </span>
+  );
+}
+
+// pop-up version of a message (used when SHOW_NOTICE_AS is "modal")
+function NoticeModal({ notice, onClose, onBackToForm }) {
+  if (!notice) return null;
+
+  const styles = {
+    success: {
+      icon: CheckCircle,
+      color: "text-emerald-600 bg-emerald-100",
+      heading: "Completed successfully",
+    },
+    error: {
+      icon: Ban,
+      color: "text-rose-600 bg-rose-100",
+      heading: "Something went wrong",
+    },
+    warning: {
+      icon: MailWarning,
+      color: "text-amber-600 bg-amber-100",
+      heading: "Please review",
+    },
+  };
+
+  const style = styles[notice.type] || styles.success;
+  const Icon = style.icon;
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="notice-title"
+        className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900"
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+          <h3 id="notice-title" className="text-lg font-bold">
+            {notice.title || "Notification"}
+          </h3>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close notification"
+            className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex items-start gap-4 p-6">
+          <div
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${style.color}`}
+          >
+            <Icon className="h-5 w-5" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">{style.heading}</p>
+            <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600 dark:text-slate-300">
+              {notice.message}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col-reverse gap-3 border-t border-slate-100 px-6 py-4 dark:border-slate-800 sm:flex-row sm:justify-end">
+          {notice.returnToForm && (
+            <button
+              type="button"
+              onClick={onBackToForm}
+              className="rounded-xl border border-slate-300 px-5 py-2.5 font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+            >
+              Back to the form
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl bg-amber-600 px-5 py-2.5 font-semibold text-white shadow-sm transition-colors hover:bg-amber-700"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const fmtDateTime = (v) => (v ? new Date(v).toLocaleString() : "—");
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 
@@ -163,6 +286,8 @@ const normalizeUser = (u) => ({
   status: toBit(pick(u, "status"), 1),
   isBlocked: toBit(pick(u, "isBlocked", "is_blocked"), 0),
   isRemoved: toBit(pick(u, "isRemoved", "is_removed"), 0),
+  isVerifiedEmail: toBit(pick(u, "isVerifiedEmail", "is_verified_email"), 0),
+  emailVerifiedAt: pick(u, "emailVerifiedAt", "email_verified_at"),
   avatar: pick(u, "avatar") ?? "",
   avatarThumbnail: pick(u, "avatarThumbnail", "avatar_thumbnail") ?? "",
   createdAt: pick(u, "createdAt", "created_at"),
@@ -170,9 +295,6 @@ const normalizeUser = (u) => ({
   lastLoginAt: pick(u, "lastLoginAt", "last_login_at"),
   removedAt: pick(u, "removedAt", "removed_at"),
 });
-
-// const fullName = (u) => `${u.firstName} ${u.lastName}`.trim();
-// const nativeName = (u) => `${u.firstNameNative} ${u.lastNameNative}`.trim();
 
 const fullName = (u) => `${u.lastName} ${u.firstName}`.trim();
 const nativeName = (u) => `${u.lastNameNative} ${u.firstNameNative}`.trim();
@@ -270,6 +392,12 @@ const loadLookup = (service, setter) =>
     .catch(() => {});
 
 export default function UsersManager() {
+  const { currentUser } = useAuth();
+  const currentUserId = currentUser?.id;
+  // only an administrator may switch into another account
+  const canImpersonate = String(currentUser?.role || "").toLowerCase() === "admin";
+  const [impersonationTarget, setImpersonationTarget] = useState(null);
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -293,22 +421,28 @@ export default function UsersManager() {
   const [roleFilter, setRoleFilter] = useState("all"); // "all" | role code
   const [statusFilter, setStatusFilter] = useState("all"); // "all" | 1 | 0
   const [accessFilter, setAccessFilter] = useState("all"); // "all" | 0 (allowed) | 1 (blocked)
+  const [verifyFilter, setVerifyFilter] = useState("all"); // "all" | 1 (verified) | 0 (unverified)
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10); // 10 | 20 | 30 | 40 | 50 | 100 | "all"
   const [busyId, setBusyId] = useState(null); // user whose switch / button is saving
 
-  // ALL alerts are shown on the page, between the search/filters and the table
+  // ALL messages go through here (shown as a pop-up or as a bar, see SHOW_NOTICE_AS)
   const [notice, setNotice] = useState(null); // { id, type, title, message, returnToForm }
-  const [modalHidden, setModalHidden] = useState(false); // form is hidden (not lost) while its alert is shown
+  const [modalHidden, setModalHidden] = useState(false); // form is hidden (not lost) while its message is shown
   const noticeRef = useRef(null);
 
   const notify = (type, title, message, { returnToForm = false } = {}) =>
     setNotice({ id: Date.now(), type, title, message, returnToForm });
 
-  // closing an alert that came from the form brings the form back
+  // closing a message that came from the form brings the form back
   const dismissNotice = () => {
     if (notice?.returnToForm) setModalHidden(false);
+    setNotice(null);
+  };
+
+  const handleBackToForm = () => {
+    setModalHidden(false);
     setNotice(null);
   };
 
@@ -334,9 +468,10 @@ export default function UsersManager() {
         return true;
       } catch (err) {
         console.error("Failed to load users:", err);
-        setError(err.message || "Failed to load users.");
+        setError(err.message || "Failed to load users."); // shown in the red bar with a Retry link
         return false;
       } finally {
+        // IMPORTANT: always switch "Loading..." off, otherwise the table never shows the users
         if (!silent) setLoading(false);
       }
     },
@@ -360,16 +495,16 @@ export default function UsersManager() {
     loadLookups();
   }, []);
 
-  // green + yellow alerts disappear by themselves; red ones and "back to the form" ones stay
+  // green + yellow messages disappear by themselves; red ones and "back to the form" ones stay
   useEffect(() => {
     if (!notice || notice.type === "error" || notice.returnToForm) return;
     const timer = setTimeout(() => setNotice(null), 5000);
     return () => clearTimeout(timer);
   }, [notice]);
 
-  // make sure the alert is visible (the page may be scrolled)
+  // bar mode: make sure the message is visible (the page may be scrolled)
   useEffect(() => {
-    if (notice)
+    if (notice && SHOW_NOTICE_AS === "banner")
       noticeRef.current?.scrollIntoView({
         behavior: "smooth",
         block: "nearest",
@@ -391,7 +526,15 @@ export default function UsersManager() {
   // search / filters / page size / list changed -> start again from page 1
   useEffect(() => {
     setPage(1);
-  }, [query, roleFilter, statusFilter, accessFilter, pageSize, showRemoved]);
+  }, [
+    query,
+    roleFilter,
+    statusFilter,
+    accessFilter,
+    verifyFilter,
+    pageSize,
+    showRemoved,
+  ]);
 
   const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -490,7 +633,6 @@ export default function UsersManager() {
       fd.append("email", form.email.trim());
       fd.append("phone", form.phone.trim());
       if (form.password) fd.append("password", form.password);
-      // only admins can set the role; the server ignores it for everyone else
       if (form.roleId !== "" && form.roleId !== null)
         fd.append(rolesList.length ? "roleId" : "role", String(form.roleId));
       fd.append("genderId", String(form.genderId ?? ""));
@@ -507,17 +649,22 @@ export default function UsersManager() {
         fd.append("image", imageChange.file); // field name must be "image"
       else if (imageChange.remove) fd.append("removeAvatar", "1");
 
-      if (isNew) await userService.create(fd);
-      else await userService.update(editing.id, fd);
+      // the server tells us whether it emailed a verification code
+      const saved = isNew
+        ? await userService.create(fd)
+        : await userService.update(editing.id, fd);
 
       close();
       await load({ silent: true });
       notify(
         "success",
         isNew ? "User added" : "User updated",
-        isNew
+        (isNew
           ? `"${itemName}" was added successfully.`
-          : `"${itemName}" was updated successfully.`,
+          : `"${itemName}" was updated successfully.`) +
+          (saved?.verificationSent
+            ? " A verification code was sent to the email address."
+            : ""),
       );
     } catch (err) {
       console.error("Error saving user:", err);
@@ -576,6 +723,56 @@ export default function UsersManager() {
       notify(
         "error",
         "Failed to update the user",
+        err.message || "Something went wrong. Please try again.",
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // email a verification code to the user (the OWNER types it after signing in)
+  const handleSendCode = async (u) => {
+    setBusyId(u.id);
+    try {
+      await userService.sendVerification(u.id);
+      await load({ silent: true });
+      notify(
+        "success",
+        "Code sent",
+        `A verification code was sent to ${u.email}. The user enters it after signing in.`,
+      );
+    } catch (err) {
+      notify(
+        "error",
+        "Failed to send the code",
+        err.message || "Something went wrong. Please try again.",
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // admin override, e.g. you confirmed the person yourself (logged on the server)
+  const handleMarkVerified = async (u) => {
+    if (
+      !window.confirm(
+        `Mark ${u.email} as verified without a code?\n\nOnly do this if you confirmed the person yourself. This action is logged.`,
+      )
+    )
+      return;
+    setBusyId(u.id);
+    try {
+      await userService.markVerified(u.id);
+      await load({ silent: true });
+      notify(
+        "success",
+        "Email verified",
+        `"${fullName(u)}" is now marked as verified.`,
+      );
+    } catch (err) {
+      notify(
+        "error",
+        "Failed to verify the email",
         err.message || "Something went wrong. Please try again.",
       );
     } finally {
@@ -675,14 +872,60 @@ export default function UsersManager() {
     }
   };
 
+  // IMPERSONATE: step 1 = ask for confirmation, step 2 = ask the server to switch the session
+  const handleImpersonate = (u) => setImpersonationTarget(u);
+
+  const confirmImpersonate = async () => {
+    if (!impersonationTarget) return;
+
+    const u = impersonationTarget;
+
+    setBusyId(u.id);
+    setImpersonationTarget(null);
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/impersonation/start/${encodeURIComponent(u.id)}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        },
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || "Failed to start impersonation.",
+        );
+      }
+
+      // Reload so AuthContext can read the new session.
+      window.location.assign("/");
+    } catch (err) {
+      console.error("Impersonation error:", err);
+
+      notify(
+        "error",
+        "Impersonation failed",
+        err.message || "Something went wrong. Please try again.",
+      );
+
+      setBusyId(null);
+    }
+  };
+
   const activeFilters =
     (roleFilter !== "all") +
     (statusFilter !== "all") +
-    (accessFilter !== "all");
+    (accessFilter !== "all") +
+    (verifyFilter !== "all");
   const clearFilters = () => {
     setRoleFilter("all");
     setStatusFilter("all");
     setAccessFilter("all");
+    setVerifyFilter("all");
   };
   const countBy = (fn) => users.filter(fn).length;
 
@@ -690,6 +933,8 @@ export default function UsersManager() {
     if (roleFilter !== "all" && u.role !== roleFilter) return false;
     if (statusFilter !== "all" && u.status !== statusFilter) return false;
     if (accessFilter !== "all" && u.isBlocked !== accessFilter) return false;
+    if (verifyFilter !== "all" && u.isVerifiedEmail !== verifyFilter)
+      return false;
     const haystack = [
       u.firstName,
       u.lastName,
@@ -915,6 +1160,32 @@ export default function UsersManager() {
             </div>
           </div>
 
+          <div className="space-y-2">
+            <div className="text-xs font-semibold text-slate-500">
+              Email verification
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Chip
+                active={verifyFilter === "all"}
+                onClick={() => setVerifyFilter("all")}
+              >
+                All
+              </Chip>
+              <Chip
+                active={verifyFilter === 1}
+                onClick={() => setVerifyFilter(1)}
+              >
+                Verified ({countBy((u) => u.isVerifiedEmail === 1)})
+              </Chip>
+              <Chip
+                active={verifyFilter === 0}
+                onClick={() => setVerifyFilter(0)}
+              >
+                Unverified ({countBy((u) => u.isVerifiedEmail === 0)})
+              </Chip>
+            </div>
+          </div>
+
           {activeFilters > 0 && (
             <button
               type="button"
@@ -927,8 +1198,8 @@ export default function UsersManager() {
         </div>
       )}
 
-      {/* ===== ALERTS: between the search/filters and the table ===== */}
-      {notice && (
+      {/* ===== MESSAGES as a bar: between the search/filters and the table ===== */}
+      {SHOW_NOTICE_AS === "banner" && notice && (
         <div ref={noticeRef}>
           <Alert
             key={notice.id}
@@ -1006,7 +1277,10 @@ export default function UsersManager() {
                 const thumb = assetUrl(u.avatarThumbnail || u.avatar);
                 const isActive = u.status === 1;
                 const isBlocked = u.isBlocked === 1;
+                const isVerified = u.isVerifiedEmail === 1;
                 const busy = busyId === u.id;
+                const isMe =
+                  currentUserId != null && String(u.id) === String(currentUserId);
                 return (
                   <tr
                     key={u.id}
@@ -1026,8 +1300,15 @@ export default function UsersManager() {
                           </div>
                         )}
                         <div className="min-w-0">
-                          <div className="font-semibold break-words">
-                            {fullName(u)}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold break-words">
+                              {fullName(u)}
+                            </span>
+                            {isMe && (
+                              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                                Me
+                              </span>
+                            )}
                           </div>
                           {nativeName(u) && (
                             <div className="text-xs text-slate-400">
@@ -1041,7 +1322,8 @@ export default function UsersManager() {
                       <div className="font-mono text-xs break-all">
                         {u.email}
                       </div>
-                      <div className="text-xs text-slate-400">
+                      <VerifiedBadge verified={isVerified} />
+                      <div className="text-xs text-slate-400 mt-1">
                         {u.phone || "—"}
                       </div>
                     </td>
@@ -1129,6 +1411,21 @@ export default function UsersManager() {
                     </td>
                     <td className="p-4">
                       <div className="flex justify-end gap-2">
+                        {canImpersonate && !showRemoved && (
+                          <button
+                            type="button"
+                            title={`Impersonate ${fullName(u)}`}
+                            aria-label={`Impersonate ${fullName(u)}`}
+                            disabled={
+                              busy || isMe || u.status !== 1 || u.isBlocked === 1
+                            }
+                            onClick={() => handleImpersonate(u)}
+                            className="p-2 rounded-lg text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            <UserRoundCog className="w-4 h-4" />
+                          </button>
+                        )}
+
                         <button
                           onClick={() => setViewing(u)}
                           title="View"
@@ -1160,6 +1457,28 @@ export default function UsersManager() {
                           </>
                         ) : (
                           <>
+                            {!isVerified && (
+                              <>
+                                <button
+                                  onClick={() => handleSendCode(u)}
+                                  disabled={busy}
+                                  title="Send verification code to the email"
+                                  aria-label="Send verification code"
+                                  className="p-2 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-950/30 text-sky-600 transition-colors disabled:opacity-50"
+                                >
+                                  <Mail className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleMarkVerified(u)}
+                                  disabled={busy}
+                                  title="Mark email as verified (no code)"
+                                  aria-label="Mark email as verified"
+                                  className="p-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-600 transition-colors disabled:opacity-50"
+                                >
+                                  <MailCheck className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                             <button
                               onClick={() => openEdit(u)}
                               title="Edit"
@@ -1319,6 +1638,23 @@ export default function UsersManager() {
                     <Field label="Country">{viewing.country || "—"}</Field>
                     <Field label="Region">{viewing.region || "—"}</Field>
                     <Field label="Address">{viewing.address || "—"}</Field>
+                  </div>
+                </section>
+
+                <section className="space-y-3">
+                  <h5 className={sectionTitle}>Email verification</h5>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <Field label="Email">{viewing.email}</Field>
+                    <Field label="Status">
+                      {viewing.isVerifiedEmail === 1
+                        ? "Verified"
+                        : "Unverified"}
+                    </Field>
+                    <Field label="Verified on">
+                      {viewing.isVerifiedEmail === 1
+                        ? fmtDateTime(viewing.emailVerifiedAt)
+                        : "—"}
+                    </Field>
                   </div>
                 </section>
 
@@ -1510,6 +1846,11 @@ export default function UsersManager() {
                       value={form.email}
                       onChange={(e) => setField("email", e.target.value)}
                     />
+                    <span className="block mt-1 text-xs text-slate-500">
+                      {editing === "new"
+                        ? "A verification code is sent to this address. The user enters it after signing in."
+                        : "Changing the email marks it unverified and sends a code to the new address."}
+                    </span>
                   </label>
                   <label className={labelCls}>
                     Phone
@@ -1577,10 +1918,6 @@ export default function UsersManager() {
                     </div>
                   </label>
                 </div>
-                <p className="text-xs text-slate-500">
-                  Only admins can change the role and the extra permission.
-                  Staff can manage customers only.
-                </p>
               </section>
 
               <section className="space-y-3">
@@ -1698,6 +2035,94 @@ export default function UsersManager() {
             </div>
           </form>
         </div>
+      )}
+
+      {/* ===== IMPERSONATION CONFIRMATION MODAL ===== */}
+      {impersonationTarget && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              setImpersonationTarget(null);
+            }
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="impersonation-modal-title"
+            className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+              <h3 id="impersonation-modal-title" className="text-lg font-bold">
+                Confirm impersonation
+              </h3>
+
+              <button
+                type="button"
+                onClick={() => setImpersonationTarget(null)}
+                aria-label="Close"
+                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="shrink-0 w-11 h-11 rounded-full bg-violet-100 text-violet-600 dark:bg-violet-950/40 dark:text-violet-400 flex items-center justify-center">
+                  <UserRoundCog className="w-5 h-5" />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-900 dark:text-white">
+                    Switch to this user's account?
+                  </p>
+
+                  <p className="mt-2 text-sm font-medium text-violet-600 dark:text-violet-400 break-words">
+                    {fullName(impersonationTarget) || impersonationTarget.email}
+                  </p>
+
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Your session will switch to this user's account. You should
+                    be able to return to your administrator account afterward.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setImpersonationTarget(null)}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmImpersonate}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold transition-colors shadow-sm flex items-center justify-center gap-2"
+              >
+                <UserRoundCog className="w-4 h-4" />
+                Start impersonation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== MESSAGES as a pop-up ===== */}
+      {SHOW_NOTICE_AS === "modal" && (
+        <NoticeModal
+          notice={notice}
+          onClose={dismissNotice}
+          onBackToForm={handleBackToForm}
+        />
       )}
     </div>
   );

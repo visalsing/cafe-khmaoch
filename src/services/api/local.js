@@ -91,34 +91,34 @@ export const menuService = {
 };
 
 /* ---------- ORDERS (still localStorage for now) ---------- */
-export const orderService = {
-  async list() {
-    await wait();
-    return read(ORDERS_KEY, []); // newest first
-  },
+// export const orderService = {
+//   async list() {
+//     await wait();
+//     return read(ORDERS_KEY, []); // newest first
+//   },
 
-  async create(data) {
-    await wait();
-    const orders = read(ORDERS_KEY, []);
-    const order = {
-      source: "pos", // "online" for storefront orders
-      status: "completed",
-      ...data,
-      id: Date.now(),
-      number: `BB-${String(orders.length + 1).padStart(4, "0")}`,
-      createdAt: new Date().toISOString(),
-    };
-    write(ORDERS_KEY, [order, ...orders]);
-    return order;
-  },
+//   async create(data) {
+//     await wait();
+//     const orders = read(ORDERS_KEY, []);
+//     const order = {
+//       source: "pos", // "online" for storefront orders
+//       status: "completed",
+//       ...data,
+//       id: Date.now(),
+//       number: `CKINV-${String(orders.length + 1).padStart(7, "0")}`,
+//       createdAt: new Date().toISOString(),
+//     };
+//     write(ORDERS_KEY, [order, ...orders]);
+//     return order;
+//   },
 
-  async updateStatus(id, status) {
-    await wait();
-    const orders = read(ORDERS_KEY, []);
-    const idx = orders.findIndex((o) => o.id === id);
-    if (idx === -1) throw new Error("Order not found");
-    orders[idx] = { ...orders[idx], status };
-    write(ORDERS_KEY, orders);
-    return orders[idx];
-  },
-};
+//   async updateStatus(id, status) {
+//     await wait();
+//     const orders = read(ORDERS_KEY, []);
+//     const idx = orders.findIndex((o) => o.id === id);
+//     if (idx === -1) throw new Error("Order not found");
+//     orders[idx] = { ...orders[idx], status };
+//     write(ORDERS_KEY, orders);
+//     return orders[idx];
+//   },
+// };

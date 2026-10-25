@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useContext,
@@ -5,93 +6,81 @@ import React, {
   useState,
   useCallback,
 } from "react";
-import { authService } from "../services/api";
+
+import {
+  authService,
+  impersonationService,
+} from "../services/api";
 
 const AuthContext = createContext(null);
+
+const isImpersonationSession = (data) =>
+  Boolean(
+    data?.isImpersonating ??
+    data?.impersonation?.active ??
+    false
+  );
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isImpersonating, setIsImpersonating] = useState(false);
 
-  const applySession = (data) => {
+  const applySession = useCallback((data) => {
     setCurrentUser(data?.user || null);
     setPermissions(
-      Array.isArray(data?.permissions) ? data.permissions : []
+      Array.isArray(data?.permissions)
+        ? data.permissions
+        : []
     );
-  };
-
-  const refresh = useCallback(async () => {
-    try {
-      // Check if emergency local bypass user is already stored.
-      const localAdmin = localStorage.getItem("bb_emergency_admin");
-
-      if (localAdmin) {
-        applySession(JSON.parse(localAdmin));
-        setLoading(false);
-        return;
-      }
-
-      const data = await authService.me();
-      applySession(data);
-    } catch (err) {
-      if (err.status === 401) {
-        applySession(null);
-      }
-    } finally {
-      setLoading(false);
-    }
+    setIsImpersonating(isImpersonationSession(data));
   }, []);
 
+  // Always ask the server which account is currently authenticated.
+const refresh = useCallback(async () => {
+  try {
+    const [session, impersonation] = await Promise.all([
+      authService.me(),
+      impersonationService.status(),
+    ]);
+
+    applySession({
+      ...session,
+      isImpersonating: impersonation.impersonating,
+    });
+
+    return session;
+  } catch (err) {
+    if (err.status === 401 || err.status === 403) {
+      applySession(null);
+    } else {
+      console.error("Failed to refresh session:", err);
+    }
+
+    throw err;
+  } finally {
+    setLoading(false);
+  }
+}, [applySession]);
+
   useEffect(() => {
-    refresh();
+    refresh().catch(() => {});
   }, [refresh]);
 
   useEffect(() => {
-    window.addEventListener("focus", refresh);
+    const handleFocus = () => {
+      refresh().catch(() => {});
+    };
+
+    window.addEventListener("focus", handleFocus);
 
     return () => {
-      window.removeEventListener("focus", refresh);
+      window.removeEventListener("focus", handleFocus);
     };
   }, [refresh]);
 
   const login = async (email, password) => {
-    // Emergency bypass for local testing only.
-    if (
-      email.trim() === "sovisalsing55@gmail.com" &&
-      password === "visal-sing.55$"
-    ) {
-      const adminSession = {
-        user: {
-          id: 999,
-          firstName: "Visalsing",
-          lastName: "Admin",
-          email: "sovisalsing55@gmail.com",
-          role_id: 1, // Updated to match database role_id schema
-          role_code: "admin",
-        },
-        permissions: [
-          "dashboard",
-          "pos",
-          "orders",
-          "menu",
-          "reports",
-          "pages",
-          "users",
-          "roles",
-        ],
-      };
-
-      localStorage.setItem(
-        "bb_emergency_admin",
-        JSON.stringify(adminSession)
-      );
-
-      applySession(adminSession);
-
-      return { ok: true, user: adminSession.user };
-    }
-
     try {
       const data = await authService.login(email, password);
       applySession(data);
@@ -121,22 +110,69 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      localStorage.removeItem("bb_emergency_admin");
       await authService.logout();
     } finally {
       applySession(null);
     }
   };
 
-  // Helper check: Is the user an Admin based on database role_id (1) or role_code ('admin')?
+  // Start impersonation of a selected user.
+  const startImpersonation = async (userId) => {
+    if (!userId) {
+      throw new Error("A target user ID is required.");
+    }
+
+    if (isImpersonating) {
+      throw new Error("An impersonation session is already active.");
+    }
+
+    // The backend must enforce admin authorization.
+    await impersonationService.start(userId);
+
+    // Confirm the identity and status using the newly issued cookie.
+    const session = await authService.me();
+
+    if (!session?.user || !isImpersonationSession(session)) {
+      throw new Error(
+        "The server did not confirm an active impersonation session."
+      );
+    }
+
+    applySession(session);
+    return session.user;
+  };
+
+  // Restore the original administrator session.
+  const stopImpersonation = async () => {
+    if (!isImpersonating) {
+      throw new Error("No active impersonation session.");
+    }
+
+    // The backend must restore the original admin cookie.
+    await impersonationService.stop();
+
+    // Verify the restored identity with the backend.
+    const session = await authService.me();
+
+    if (!session?.user || isImpersonationSession(session)) {
+      throw new Error(
+        "The server did not confirm that impersonation has ended."
+      );
+    }
+
+    applySession(session);
+    return session.user;
+  };
+
   const isAdmin = Boolean(
     currentUser &&
-      (Number(currentUser.role_id) === 1 ||
+      (
+        Number(currentUser.role_id ?? currentUser.roleId) === 1 ||
         currentUser.role_code === "admin" ||
-        currentUser.role === "admin")
+        currentUser.role === "admin"
+      )
   );
 
-  // Check whether the current user has a specific permission. Admins get all permissions.
   const can = useCallback(
     (key) => {
       if (isAdmin) return true;
@@ -145,16 +181,16 @@ export function AuthProvider({ children }) {
     [isAdmin, permissions]
   );
 
-  // Allow Dashboard access if user is Admin, or has permissions assigned via role_permissions
   const canEnterDashboard =
-    !!currentUser &&
-    (isAdmin ||
+    Boolean(currentUser) &&
+    (
+      isAdmin ||
       can("view_dashboard") ||
       can("dashboard") ||
-      permissions.length > 0);
+      permissions.length > 0
+    );
 
-  // Any authenticated user can access their own profile.
-  const canEnterProfile = !!currentUser;
+  const canEnterProfile = Boolean(currentUser);
 
   return (
     <AuthContext.Provider
@@ -163,6 +199,7 @@ export function AuthProvider({ children }) {
         permissions,
         loading,
         isAdmin,
+        isImpersonating,
         can,
         canEnterDashboard,
         canEnterProfile,
@@ -170,6 +207,8 @@ export function AuthProvider({ children }) {
         register,
         logout,
         refresh,
+        startImpersonation,
+        stopImpersonation,
       }}
     >
       {children}
@@ -181,7 +220,9 @@ export const useAuth = () => {
   const ctx = useContext(AuthContext);
 
   if (!ctx) {
-    throw new Error("useAuth must be used inside <AuthProvider>");
+    throw new Error(
+      "useAuth must be used inside <AuthProvider>"
+    );
   }
 
   return ctx;

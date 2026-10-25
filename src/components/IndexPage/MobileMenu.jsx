@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { LogOut } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -5,22 +6,29 @@ import { useNavigate, useLocation } from "react-router-dom";
 import useActiveSection from "../../hooks/useActiveSection";
 
 export default function MobileMenu({ isOpen, onClose }) {
-  const { currentUser, canEnterDashboard, canEnterProfile, logout } = useAuth();
+  const {
+    currentUser,
+    canEnterDashboard,
+    canEnterProfile,
+    logout,
+    isImpersonating,
+    stopImpersonation,
+  } = useAuth();
 
   const navigate = useNavigate();
   const location = useLocation();
 
-  // which home-page section is on screen (hero / shop / about / contact).
-  // Hooks must stay ABOVE the `if (!isOpen) return null` line below.
   const activeSection = useActiveSection();
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  // Close menu or modal with Escape key
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Close menu or modal with Escape key.
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !isSubmitting) {
         if (showLogoutModal) {
           setShowLogoutModal(false);
         } else {
@@ -34,24 +42,53 @@ export default function MobileMenu({ isOpen, onClose }) {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, showLogoutModal, onClose]);
+  }, [isOpen, showLogoutModal, isSubmitting, onClose]);
 
   if (!isOpen) return null;
 
   const navLinks = [
     { id: "hero", label: "Home", href: "/#hero" },
     { id: "shop", label: "Menu", href: "/#shop" },
+    { id: "gallery", label: "Gallery", href: "/#gallery" },
     { id: "about", label: "Our Story", href: "/#about" },
     { id: "contact", label: "Contact", href: "/#contact" },
   ];
 
+  const actionLabel = isImpersonating
+    ? "Exit Impersonation"
+    : "Logout";
+
   const handleConfirmLogout = async () => {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+
     try {
-      await logout();
-      setShowLogoutModal(false);
-      onClose();
+      if (isImpersonating) {
+        await stopImpersonation();
+
+        setShowLogoutModal(false);
+        onClose();
+        navigate("/dashboard", { replace: true });
+      } else {
+        await logout();
+
+        setShowLogoutModal(false);
+        onClose();
+        navigate("/", { replace: true });
+      }
     } catch (error) {
-      console.error("Logout failed:", error);
+      console.error(
+        "Logout / impersonation exit failed:",
+        error
+      );
+
+      window.alert(
+        error.message ||
+          "The action failed. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -80,8 +117,6 @@ export default function MobileMenu({ isOpen, onClose }) {
             </span>
           </div>
 
-          
-
           {/* Close Button */}
           <button
             type="button"
@@ -94,13 +129,12 @@ export default function MobileMenu({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* Centered Navigation Links
-            (the avatar + name is no longer here: it sits next to the cart in the top bar) */}
+        {/* Centered Navigation Links */}
         <div className="flex-1 flex flex-col items-center justify-center space-y-6 text-center px-4 py-6 overflow-y-auto">
-          {/* Home Page Sections */}
           {navLinks.map((link) => {
             const isActive =
-              location.pathname === "/" && activeSection === link.id;
+              location.pathname === "/" &&
+              activeSection === link.id;
 
             return (
               <a
@@ -163,16 +197,21 @@ export default function MobileMenu({ isOpen, onClose }) {
           )}
         </div>
 
-        {/* Bottom Login / Logout Button */}
+        {/* Bottom Login / Logout / Exit Impersonation */}
         <div className="p-6 max-w-sm w-full mx-auto pb-12">
           {currentUser ? (
             <button
               type="button"
               onClick={() => setShowLogoutModal(true)}
-              className="w-full py-3.5 rounded-full bg-gradient-to-r from-red-500 to-rose-600 text-white font-semibold text-center shadow-lg hover:opacity-90 transition-opacity cursor-pointer inline-flex items-center justify-center gap-2"
+              disabled={isSubmitting}
+              className={`w-full py-3.5 rounded-full text-white font-semibold text-center shadow-lg transition-opacity cursor-pointer inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${
+                isImpersonating
+                  ? "bg-gradient-to-r from-orange-500 to-amber-600 hover:opacity-90"
+                  : "bg-gradient-to-r from-red-500 to-rose-600 hover:opacity-90"
+              }`}
             >
               <LogOut className="w-5 h-5" />
-              Logout
+              {actionLabel}
             </button>
           ) : (
             <button
@@ -186,11 +225,15 @@ export default function MobileMenu({ isOpen, onClose }) {
         </div>
       </div>
 
-      {/* Logout Confirmation Modal */}
+      {/* Logout / Exit Impersonation Confirmation Modal */}
       {showLogoutModal && (
         <div
           className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setShowLogoutModal(false)}
+          onClick={() => {
+            if (!isSubmitting) {
+              setShowLogoutModal(false);
+            }
+          }}
         >
           <div
             role="dialog"
@@ -203,30 +246,42 @@ export default function MobileMenu({ isOpen, onClose }) {
               id="mobile-logout-modal-title"
               className="text-lg font-bold text-slate-900 dark:text-white"
             >
-              Confirm Logout
+              {isImpersonating
+                ? "Exit Impersonation"
+                : "Confirm Logout"}
             </h3>
 
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              Are you sure you want to log out?
+              {isImpersonating
+                ? "Return to your administrator account?"
+                : "Are you sure you want to log out?"}
             </p>
 
             <div className="flex justify-end gap-3 pt-2">
-              {/* Cancel */}
               <button
                 type="button"
+                disabled={isSubmitting}
                 onClick={() => setShowLogoutModal(false)}
-                className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-60"
               >
                 Cancel
               </button>
 
-              {/* Confirm Logout */}
               <button
                 type="button"
+                disabled={isSubmitting}
                 onClick={handleConfirmLogout}
-                className="px-4 py-2 text-sm font-semibold rounded-xl bg-red-600 hover:bg-red-700 text-white transition-colors shadow-sm cursor-pointer"
+                className={`px-4 py-2 text-sm font-semibold rounded-xl text-white transition-colors shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
+                  isImpersonating
+                    ? "bg-orange-600 hover:bg-orange-700"
+                    : "bg-red-600 hover:bg-red-700"
+                }`}
               >
-                Yes, Log out!
+                {isSubmitting
+                  ? "Please wait..."
+                  : isImpersonating
+                    ? "Return to Admin"
+                    : "Yes, Log out!"}
               </button>
             </div>
           </div>

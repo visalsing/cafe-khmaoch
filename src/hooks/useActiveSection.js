@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 // the home-page sections that have a link in the menus (the order here does not matter)
-export const HOME_SECTIONS = ["hero", "shop", "about", "contact"];
+export const HOME_SECTIONS = ["hero", "shop", "gallery", "about", "contact"];
 
 export default function useActiveSection(ids = HOME_SECTIONS) {
   const { pathname } = useLocation();

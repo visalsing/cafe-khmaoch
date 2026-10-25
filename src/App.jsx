@@ -7,6 +7,7 @@ import Header from "./components/Layout/Header.jsx";
 
 // Auth Import
 import Login from "./components/Auth/Login.jsx";
+import VerifyEmail from "./components/Auth/VerifyEmail.jsx";
 
 // Page Components
 import HomePage from "./components/Homepage/Homepage.jsx";
@@ -74,6 +75,8 @@ import PositionsManager from "./components/Dashboard/Positions.jsx";
 import PermissionsManager from "./components/Dashboard/Permissions.jsx";
 import UsersManager from "./components/Dashboard/Users.jsx";
 import RolePermissions from "./components/Dashboard/RolePermissions.jsx";
+import ForgetPassword from "./components/Auth/ForgetPassword.jsx";
+import ProfileUser from "./components/Dashboard/Profile.jsx";
 
 function DashboardLayout() {
   const [sideBarCollapsed, setSideBarCollapsed] = useState(false);
@@ -151,7 +154,9 @@ function DashboardLayout() {
                 <Route path="/genders" element={<GendersManager />} />
                 <Route path="/nationalities" element={<NationalitiesManager />} />
                 <Route path="/users" element={<UsersManager />} />
+                {/* <Route path="/verify-email" element={<VerifyEmail />} /> */}
                 <Route path="/roles-permissions" element={<RolePermissions />} />
+                <Route path="/profile" element={<ProfileUser />} />
                 {/* <Route
                   path="/lookup"
                   element={
@@ -301,6 +306,8 @@ export default function App() {
       <Route path="/" element={<IndexPage />} />
       <Route path="/cart" element={<CartPage />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/forget-password" element={<ForgetPassword />} />
       <Route path="/settings-page" element={<SettingsPage />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/shop" element={<ShopAll />} />

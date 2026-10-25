@@ -1,17 +1,18 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { query } from "../db.js";
-import { requireAuth, requirePermission, publicUser, USER_SELECT } from "../middleware.js";
+import { requireAuth, requireAdmin, publicUser, USER_SELECT } from "../middleware.js";
 import { uploadOne, storeUpload } from "../upload.js";
 import { removeImages } from "../storage.js";
+import { issueOtp, clientInfo, logEvent } from "../otp.js";
 
 const router = Router();
-router.use(requireAuth, requirePermission("users"));
+// Only the Admin role (role_id = 1) can use anything in this file.
+router.use(requireAuth, requireAdmin);
 
 const FOLDER = "avatars"; // uploads/avatars/img + uploads/avatars/thumbnails
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
-const isAdmin = (req) => req.user.role_code === "admin";
-const canManage = (req, target) => isAdmin(req) || target.role_code === "customer"; // staff manage customers only
+const VERIFY_PURPOSE = "email_verification";
 const bad = (res, status, error) => res.status(status).json({ error });
 
 const FK_MESSAGES = {
@@ -71,15 +72,41 @@ async function lastAdminWouldGo(target, next) {
   return rows[0].n <= 1;
 }
 
-// only admins assign the extra permission, and never an admin-only one
-async function checkPermissionChoice(req, v, existing) {
-  if (v.permissionId === (existing?.permission_id ?? null)) return null;
-  if (!isAdmin(req)) return [403, "Only admins can assign a permission."];
+// the extra permission can never be an admin-only one
+async function checkPermissionChoice(v) {
   if (v.permissionId === null) return null;
   const { rows } = await query("SELECT admin_only FROM permissions WHERE id = $1", [v.permissionId]);
   if (!rows[0]) return [400, "The selected permission does not exist."];
   if (rows[0].admin_only) return [400, "That permission can only belong to admins."];
   return null;
+}
+
+/* ---------- email verification ----------
+   Marks the address "unverified" and emails a 6-digit code to it.
+   The account OWNER types the code after signing in (routes/emailVerification.js);
+   the admin only triggers it. */
+async function sendVerification(req, userId) {
+  const { rows } = await query(
+    "SELECT id, email, first_name FROM users WHERE id = $1 AND is_removed = 0",
+    [userId],
+  );
+  if (!rows[0]) return false;
+
+  await query(
+    `INSERT INTO user_verifications (user_id, is_verified_email, email_updated_at)
+     VALUES ($1, false, now())
+     ON CONFLICT (user_id) DO UPDATE
+       SET is_verified_email = false, email_verified_at = NULL, verified_by = NULL, email_updated_at = now()`,
+    [userId],
+  );
+  // only ONE open code per user and purpose
+  await query(
+    `UPDATE email_otp SET status = 'revoked', revoked_at = now()
+      WHERE user_id = $1 AND purpose = $2 AND status IN ('pending', 'verified')`,
+    [userId, VERIFY_PURPOSE],
+  );
+  await issueOtp({ user: rows[0], purpose: VERIFY_PURPOSE, ctx: clientInfo(req) });
+  return true;
 }
 
 function readFields(body, e = null) {
@@ -130,16 +157,16 @@ router.post("/", uploadOne, async (req, res) => {
   const password = String(b.password || "");
   if (password.length < 8) return bad(res, 400, "Password must be at least 8 characters.");
 
-  // admins choose the role, everyone else can only create customers
-  let role = isAdmin(req) ? await findRole(b) : undefined;
+  let role = await findRole(b);
   if (role === null) return bad(res, 400, "That role does not exist.");
   if (role === undefined) role = await findRole({ role: "customer" });
   if (!role) return bad(res, 500, "The customer role is missing. Run npm run db:setup.");
 
-  const permProblem = await checkPermissionChoice(req, v, null);
+  const permProblem = await checkPermissionChoice(v);
   if (permProblem) return bad(res, permProblem[0], permProblem[1]);
 
   let files = { img: "", thumbnail: "" };
+  let newId;
   try {
     if (req.file) files = await storeUpload(req.file, FOLDER); // 1 upload -> img + thumbnail
     const hash = await bcrypt.hash(password, 12);
@@ -156,13 +183,22 @@ router.post("/", uploadOne, async (req, res) => {
         role.id, v.positionId, v.permissionId, v.status, v.isBlocked, files.img, files.thumbnail,
       ],
     );
-    res.status(201).json(publicUser(await loadUser(rows[0].id)));
+    newId = rows[0].id;
   } catch (err) {
     await removeImages(files.img, files.thumbnail); // don't leave orphan files
     const known = dbProblem(err);
     if (known) return bad(res, known[0], known[1]);
     throw err;
   }
+
+  // the user is saved; a failing email must NOT undo that
+  let verificationSent = false;
+  try {
+    verificationSent = await sendVerification(req, newId);
+  } catch (e) {
+    console.error("[users] verification email failed:", e.message);
+  }
+  res.status(201).json({ ...publicUser(await loadUser(newId)), verificationSent });
 });
 
 /* ================= UPDATE ================= */
@@ -171,13 +207,12 @@ router.put("/:id", uploadOne, async (req, res) => {
   const target = await loadUser(id);
   if (!target) return bad(res, 404, "User not found.");
   if (target.is_removed === 1) return bad(res, 409, "This user was removed. Restore the user before editing.");
-  if (!canManage(req, target)) return bad(res, 403, "Only admins can change staff or admin accounts.");
 
   const b = req.body || {};
   const { v, error } = readFields(b, target);
   if (error) return bad(res, 400, error);
 
-  const role = isAdmin(req) ? await findRole(b) : undefined;
+  const role = await findRole(b);
   if (role === null) return bad(res, 400, "That role does not exist.");
   const next = {
     role_id: role ? role.id : target.role_id,
@@ -191,7 +226,7 @@ router.put("/:id", uploadOne, async (req, res) => {
     return bad(res, 400, "You can't change the role or status of your own account.");
   if (await lastAdminWouldGo(target, next)) return bad(res, 409, "There must be at least one active admin.");
 
-  const permProblem = await checkPermissionChoice(req, v, target);
+  const permProblem = await checkPermissionChoice(v);
   if (permProblem) return bad(res, permProblem[0], permProblem[1]);
 
   let hash = target.password_hash;
@@ -199,6 +234,8 @@ router.put("/:id", uploadOne, async (req, res) => {
     if (String(b.password).length < 8) return bad(res, 400, "Password must be at least 8 characters.");
     hash = await bcrypt.hash(String(b.password), 12);
   }
+
+  const emailChanged = v.email.toLowerCase() !== target.email.toLowerCase();
 
   let avatar = target.avatar;
   let avatarThumb = target.avatar_thumbnail;
@@ -233,13 +270,23 @@ router.put("/:id", uploadOne, async (req, res) => {
 
     // only after the database update worked: delete the replaced / removed files
     if (avatar !== target.avatar) await removeImages(target.avatar, target.avatar_thumbnail);
-    res.json(publicUser(await loadUser(id)));
   } catch (err) {
     if (!committed && uploaded) await removeImages(uploaded.img, uploaded.thumbnail);
     const known = dbProblem(err);
     if (known) return bad(res, known[0], known[1]);
     throw err;
   }
+
+  // a new email address is unverified until its owner enters the code
+  let verificationSent = false;
+  if (emailChanged) {
+    try {
+      verificationSent = await sendVerification(req, id);
+    } catch (e) {
+      console.error("[users] verification email failed:", e.message);
+    }
+  }
+  res.json({ ...publicUser(await loadUser(id)), verificationSent });
 });
 
 /* ================= quick switches: PATCH /:id/status {status: 0|1}, PATCH /:id/block {blocked: 0|1} ================= */
@@ -252,7 +299,6 @@ function flagRoute(column, bodyKey, selfForbiddenValue) {
     const target = await loadUser(id);
     if (!target) return bad(res, 404, "User not found.");
     if (target.is_removed === 1) return bad(res, 409, "This user was removed. Restore the user first.");
-    if (!canManage(req, target)) return bad(res, 403, "Only admins can change staff or admin accounts.");
     if (id === req.user.id && value === selfForbiddenValue) return bad(res, 400, "You can't do that to your own account.");
     if (await lastAdminWouldGo(target, { ...target, [column]: value }))
       return bad(res, 409, "There must be at least one active admin.");
@@ -264,12 +310,64 @@ function flagRoute(column, bodyKey, selfForbiddenValue) {
 router.patch("/:id/status", flagRoute("status", "status", 0));
 router.patch("/:id/block", flagRoute("is_blocked", "blocked", 1));
 
+/* ================= EMAIL VERIFICATION (admin side) ================= */
+
+// send (or re-send) a code to the user's email; the OWNER enters it after signing in
+router.post("/:id/send-verification", async (req, res) => {
+  const id = Number(req.params.id);
+  const target = await loadUser(id);
+  if (!target) return bad(res, 404, "User not found.");
+  if (target.is_removed === 1) return bad(res, 409, "Restore the user first.");
+  if (target.is_verified_email) return bad(res, 409, "This email is already verified.");
+
+  const { rows } = await query(
+    `SELECT resend_available_at FROM email_otp
+      WHERE user_id = $1 AND purpose = $2 ORDER BY created_at DESC LIMIT 1`,
+    [id, VERIFY_PURPOSE],
+  );
+  const wait = rows[0]?.resend_available_at ? new Date(rows[0].resend_available_at) - Date.now() : 0;
+  if (wait > 0) return bad(res, 429, `Please wait ${Math.ceil(wait / 1000)} seconds before sending again.`);
+
+  try {
+    await sendVerification(req, id);
+  } catch (e) {
+    console.error("[users] verification email failed:", e.message);
+    return bad(res, 502, "The email could not be sent. Check the email settings.");
+  }
+  res.json(publicUser(await loadUser(id)));
+});
+
+// admin override, e.g. you confirmed the person in person. It is logged.
+router.post("/:id/mark-verified", async (req, res) => {
+  const id = Number(req.params.id);
+  const target = await loadUser(id);
+  if (!target) return bad(res, 404, "User not found.");
+  if (target.is_removed === 1) return bad(res, 409, "Restore the user first.");
+
+  await query(
+    `INSERT INTO user_verifications (user_id, is_verified_email, email_verified_at, email_updated_at, verified_by)
+     VALUES ($1, true, now(), now(), $2)
+     ON CONFLICT (user_id) DO UPDATE
+       SET is_verified_email = true, email_verified_at = now(), verified_by = $2`,
+    [id, req.user.id],
+  );
+  await query(
+    `UPDATE email_otp SET status = 'revoked', revoked_at = now()
+      WHERE user_id = $1 AND purpose = $2 AND status IN ('pending', 'verified')`,
+    [id, VERIFY_PURPOSE],
+  );
+  await logEvent({
+    otpId: null, userId: id, type: "admin_marked_verified",
+    details: { by: req.user.id }, ctx: clientInfo(req),
+  });
+  res.json(publicUser(await loadUser(id)));
+});
+
 /* ================= REMOVE (soft): email + phone get "Removed-", can be restored ================= */
 router.post("/:id/remove", async (req, res) => {
   const id = Number(req.params.id);
   const target = await loadUser(id);
   if (!target) return bad(res, 404, "User not found.");
-  if (!canManage(req, target)) return bad(res, 403, "Only admins can remove staff or admin accounts.");
   if (id === req.user.id) return bad(res, 400, "You can't remove your own account.");
   if (target.is_removed === 1) return bad(res, 409, "This user is already removed.");
   if (await lastAdminWouldGo(target, { ...target, is_removed: 1 }))
@@ -291,7 +389,6 @@ router.post("/:id/restore", async (req, res) => {
   const id = Number(req.params.id);
   const target = await loadUser(id);
   if (!target) return bad(res, 404, "User not found.");
-  if (!canManage(req, target)) return bad(res, 403, "Only admins can restore staff or admin accounts.");
   if (target.is_removed !== 1) return bad(res, 409, "This user is not removed.");
 
   try {
@@ -315,7 +412,6 @@ router.delete("/:id", async (req, res) => {
   const id = Number(req.params.id);
   const target = await loadUser(id);
   if (!target) return bad(res, 404, "User not found.");
-  if (!canManage(req, target)) return bad(res, 403, "Only admins can delete staff or admin accounts.");
   if (id === req.user.id) return bad(res, 400, "You can't delete your own account.");
   if (await lastAdminWouldGo(target, { ...target, is_removed: 1 }))
     return bad(res, 409, "There must be at least one active admin.");

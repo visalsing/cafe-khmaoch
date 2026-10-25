@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { LogOut } from "lucide-react";
@@ -12,11 +13,20 @@ export default function Navbar({ setMobileMenuOpen }) {
   const location = useLocation();
 
   const { cartCount } = useCart();
-  const { currentUser, canEnterDashboard, canEnterProfile, logout } = useAuth();
 
-  // which home-page section is on screen (hero / shop / gallery / about / contact)
+  const {
+    currentUser,
+    canEnterDashboard,
+    canEnterProfile,
+    logout,
+    isImpersonating,
+    stopImpersonation,
+  } = useAuth();
+
   const activeSection = useActiveSection();
+
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const navLinks = [
     { id: "hero", label: "Home", href: "/#hero" },
@@ -26,18 +36,48 @@ export default function Navbar({ setMobileMenuOpen }) {
     { id: "contact", label: "Contact", href: "/#contact" },
   ];
 
-  const handleConfirmLogout = async () => {
-    try {
-      await logout();
-      setShowLogoutModal(false);
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
 
-  // Avatar image source
-  const avatarSrc = currentUser?.avatarThumbnail || currentUser?.avatar;
+const handleConfirmLogout = async () => {
+  if (isSubmitting) return;
+
+  setIsSubmitting(true);
+
+  try {
+    if (isImpersonating) {
+      await stopImpersonation();
+
+      setShowLogoutModal(false);
+      navigate("/dashboard", { replace: true });
+    } else {
+      await logout();
+
+      setShowLogoutModal(false);
+      navigate("/", { replace: true });
+    }
+  } catch (error) {
+    console.error(
+      "Logout / impersonation exit failed:",
+      error
+    );
+
+    window.alert(
+      error.message ||
+        "The session action failed. Please try again."
+    );
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+
+  const avatarSrc =
+    currentUser?.avatarThumbnail || currentUser?.avatar;
+
   const onProfilePage = location.pathname.startsWith("/profile");
+
+  const actionLabel = isImpersonating
+    ? "Exit Impersonation"
+    : "Logout";
 
   return (
     <>
@@ -51,7 +91,7 @@ export default function Navbar({ setMobileMenuOpen }) {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center shadow-md overflow-hidden p-1.5">
               <img
                 src={logoImg}
-                alt="Bean & Blossom Logo"
+                alt="Café ខ្មោច Logo"
                 className="w-full h-full object-contain"
               />
             </div>
@@ -65,7 +105,8 @@ export default function Navbar({ setMobileMenuOpen }) {
           <div className="hidden lg:flex items-center space-x-6 text-sm font-medium text-slate-600 dark:text-slate-300">
             {navLinks.map((link) => {
               const isActive =
-                location.pathname === "/" && activeSection === link.id;
+                location.pathname === "/" &&
+                activeSection === link.id;
 
               return (
                 <a
@@ -112,17 +153,20 @@ export default function Navbar({ setMobileMenuOpen }) {
             )}
           </div>
 
-          {/* Actions: Cart, Profile Avatar, Logout, Mobile Menu */}
+          {/* Cart, Profile, Logout and Mobile Menu */}
           <div className="flex items-center space-x-2 sm:space-x-3">
-            {/* Cart Button (40x40px) */}
+            {/* Cart Button */}
             <button
               type="button"
               onClick={() => navigate("/cart")}
               className="relative w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-amber-600 hover:bg-amber-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer shrink-0"
               title="Cart"
-              aria-label={`Shopping cart${cartCount > 0 ? `, ${cartCount} items` : ""}`}
+              aria-label={`Shopping cart${
+                cartCount > 0 ? `, ${cartCount} items` : ""
+              }`}
             >
               🛒
+
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-amber-600 text-white font-bold text-xs rounded-full flex items-center justify-center shadow">
                   {cartCount}
@@ -130,17 +174,18 @@ export default function Navbar({ setMobileMenuOpen }) {
               )}
             </button>
 
-            {/* Logged-in User Avatar (40x40px on mobile, expands on sm screens) */}
-            {/* Logged-in User Avatar */}
+            {/* Logged-in User */}
             {currentUser ? (
               <div className="flex items-center">
-                {/* Profile Link Container */}
+                {/* Profile Link */}
                 {canEnterProfile ? (
                   <Link
                     to="/profile"
                     title="My profile"
                     aria-label="Open my profile"
-                    aria-current={onProfilePage ? "page" : undefined}
+                    aria-current={
+                      onProfilePage ? "page" : undefined
+                    }
                     className={`h-10 w-10 sm:w-auto rounded-xl flex items-center justify-center sm:justify-start bg-slate-100 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-slate-700 transition-colors cursor-pointer shrink-0 sm:px-2.5 sm:space-x-2 ${
                       onProfilePage
                         ? "ring-2 ring-amber-500"
@@ -150,21 +195,24 @@ export default function Navbar({ setMobileMenuOpen }) {
                     {avatarSrc ? (
                       <img
                         src={assetUrl(avatarSrc)}
-                        alt={`${currentUser.firstName || "User"} avatar`}
+                        alt={`${
+                          currentUser.firstName || "User"
+                        } avatar`}
                         className="w-7 h-7 rounded-full object-cover bg-slate-200 dark:bg-slate-700 shrink-0"
                       />
                     ) : (
                       <div className="w-7 h-7 rounded-full bg-amber-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                        {currentUser.firstName?.[0]?.toUpperCase() || "U"}
+                        {currentUser.firstName?.[0]?.toUpperCase() ||
+                          "U"}
                       </div>
                     )}
 
-                    {/* Display name only on small screen sizes and up */}
                     <span className="hidden sm:inline text-xs font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[90px]">
                       {currentUser.firstName || "User"}
                     </span>
                   </Link>
                 ) : (
+                  /* Avatar without Profile Link */
                   <div className="h-10 w-10 sm:w-auto rounded-xl flex items-center justify-center sm:justify-start bg-slate-100 dark:bg-slate-800 shrink-0 sm:px-2.5 sm:space-x-2">
                     {avatarSrc ? (
                       <img
@@ -174,27 +222,37 @@ export default function Navbar({ setMobileMenuOpen }) {
                       />
                     ) : (
                       <div className="w-7 h-7 rounded-full bg-amber-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                        {currentUser.firstName?.[0]?.toUpperCase() || "U"}
+                        {currentUser.firstName?.[0]?.toUpperCase() ||
+                          "U"}
                       </div>
                     )}
+
                     <span className="hidden sm:inline text-xs font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[90px]">
                       {currentUser.firstName || "User"}
                     </span>
                   </div>
                 )}
 
-                {/* Logout Button (Hidden on Mobile) */}
+                {/* Logout / Exit Impersonation */}
                 <button
                   type="button"
                   onClick={() => setShowLogoutModal(true)}
-                  className="hidden sm:inline-flex items-center justify-center gap-1.5 h-10 px-3 ml-2 sm:ml-3 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-red-500 hover:text-white transition-all cursor-pointer whitespace-nowrap"
+                  disabled={isSubmitting}
+                  title={actionLabel}
+                  aria-label={actionLabel}
+                  className={`hidden sm:inline-flex items-center justify-center gap-1.5 h-10 px-3 ml-2 sm:ml-3 text-xs font-semibold rounded-xl transition-all cursor-pointer whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed ${
+                    isImpersonating
+                      ? "bg-orange-100 text-orange-800 hover:bg-orange-200 dark:bg-orange-950 dark:text-orange-300"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-red-500 hover:text-white"
+                  }`}
                 >
-                  <LogOut className="w-4 h-4" />
-                  Logout
+                  <LogOut className="w-4 h-4 shrink-0" />
+
+                  {actionLabel}
                 </button>
               </div>
             ) : (
-              /* Login Button (Hidden on Mobile) */
+              /* Login Button */
               <button
                 type="button"
                 onClick={() => navigate("/login")}
@@ -204,7 +262,7 @@ export default function Navbar({ setMobileMenuOpen }) {
               </button>
             )}
 
-            {/* Mobile Hamburger Menu Toggle (40x40px) */}
+            {/* Mobile Hamburger */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
@@ -218,11 +276,15 @@ export default function Navbar({ setMobileMenuOpen }) {
         </div>
       </nav>
 
-      {/* Logout Confirmation Modal */}
+      {/* Logout / Exit Impersonation Confirmation Modal */}
       {showLogoutModal && (
         <div
           className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setShowLogoutModal(false)}
+          onClick={() => {
+            if (!isSubmitting) {
+              setShowLogoutModal(false);
+            }
+          }}
         >
           <div
             role="dialog"
@@ -235,28 +297,42 @@ export default function Navbar({ setMobileMenuOpen }) {
               id="logout-modal-title"
               className="text-lg font-bold text-slate-900 dark:text-white"
             >
-              Confirm Logout
+              {isImpersonating
+                ? "Exit Impersonation"
+                : "Confirm Logout"}
             </h3>
 
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              Are you sure you want to log out?
+              {isImpersonating
+                ? "Return to your administrator account?"
+                : "Are you sure you want to log out?"}
             </p>
 
             <div className="flex justify-end gap-3 pt-2">
               <button
                 type="button"
+                disabled={isSubmitting}
                 onClick={() => setShowLogoutModal(false)}
-                className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-60"
               >
                 Cancel
               </button>
 
               <button
                 type="button"
+                disabled={isSubmitting}
                 onClick={handleConfirmLogout}
-                className="px-4 py-2 text-sm font-semibold rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all shadow-sm cursor-pointer"
+                className={`px-4 py-2 text-sm font-semibold rounded-xl text-white transition-all shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
+                  isImpersonating
+                    ? "bg-orange-600 hover:bg-orange-700"
+                    : "bg-red-600 hover:bg-red-700"
+                }`}
               >
-                Yes, Log out!
+                {isSubmitting
+                  ? "Please wait..."
+                  : isImpersonating
+                    ? "Return to Admin"
+                    : "Yes, Log out!"}
               </button>
             </div>
           </div>
