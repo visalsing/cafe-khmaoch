@@ -30,6 +30,7 @@ import { useAuth } from "../context/AuthContext";
 import { assetUrl, orderService, profileService } from "../services/api";
 import { dual } from "../utils/currency";
 import ReceiptModal from "../components/Dashboard/Receipt";
+import ImageLightbox from "../components/Dashboard/ImageLightbox";
 
 /* <pure> */
 const OTP_LENGTH = 6;
@@ -644,6 +645,7 @@ export default function Profile() {
 
   const [activeTab, setActiveTab] = useState("overview");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showAvatarLightbox, setShowAvatarLightbox] = useState(false);
 
   // Page notifications.
   const [notice, setNotice] = useState(null);
@@ -994,23 +996,31 @@ export default function Profile() {
     <div className="space-y-6">
       {/* identity card */}
       <Panel className="overflow-hidden">
-        <div className="relative h-28 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 sm:h-32">
+        {/* <div className="relative h-28 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 sm:h-32"> */}
+        <div className="relative z-0 h-28 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 sm:h-32">
           <div className="absolute -right-10 -top-12 h-44 w-44 rounded-full bg-white/10" />
           <div className="absolute right-24 top-10 h-24 w-24 rounded-full bg-white/10" />
           <div className="absolute -bottom-16 left-1/3 h-40 w-40 rounded-full bg-black/10" />
         </div>
 
         <div className="px-6 pb-6">
-          <div className="-mt-12 flex flex-col gap-4 sm:-mt-14 sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex items-end gap-4">
+          <div className="relative z-10 -mt-12 flex flex-col gap-4 sm:-mt-14 sm:flex-row sm:items-end sm:justify-between">
+            <div className="relative z-20 flex items-end gap-4">
               {me.avatar ? (
-                <img
-                  src={assetUrl(me.avatar)}
-                  alt="Profile avatar"
-                  className="h-24 w-24 rounded-2xl border-4 border-white bg-stone-100 object-cover shadow-md dark:border-stone-900 dark:bg-stone-800 sm:h-28 sm:w-28"
-                />
+                <button
+                  type="button"
+                  onClick={() => setShowAvatarLightbox(true)}
+                  aria-label="View profile picture"
+                  className="relative z-20 shrink-0 cursor-zoom-in rounded-2xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-500/40"
+                >
+                  <img
+                    src={assetUrl(me.avatar)}
+                    alt="Profile avatar"
+                    className="h-24 w-24 rounded-2xl border-4 border-white bg-stone-100 object-cover shadow-md dark:border-stone-900 dark:bg-stone-800 sm:h-28 sm:w-28"
+                  />
+                </button>
               ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-gradient-to-br from-amber-500 to-orange-600 text-4xl font-extrabold text-white shadow-md dark:border-stone-900 sm:h-28 sm:w-28">
+                <div className="relative z-20 flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-gradient-to-br from-amber-500 to-orange-600 text-4xl font-extrabold text-white shadow-md dark:border-stone-900 sm:h-28 sm:w-28">
                   {initial}
                 </div>
               )}
@@ -1875,6 +1885,16 @@ export default function Profile() {
             </div>
           </div>
         </div>
+      )}
+
+      {showAvatarLightbox && me.avatar && (
+        <ImageLightbox
+          src={assetUrl(me.avatar)}
+          alt={`${displayName}'s profile picture`}
+          title="Profile picture"
+          downloadName="profile-picture"
+          onClose={() => setShowAvatarLightbox(false)}
+        />
       )}
 
       {receiptOrder && (
