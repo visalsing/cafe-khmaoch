@@ -1,63 +1,176 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+
 import { useHero } from "../../context/HeroContext";
 import { assetUrl } from "../../services/api";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import { usePageLoading } from "../../context/PageLoadingContext";
 
-// Text from a JSONB field like {"en": "...", "km": "..."} in the chosen language, falling back to English
+// Text from JSONB fields, with English fallback.
 const getLangText = (field, lang = "en") => {
   if (!field) return "";
+
   if (typeof field === "string") {
     try {
       field = JSON.parse(field);
     } catch {
-      return field; // plain text
+      return field;
     }
   }
-  return field[lang] || (lang === "tw" ? field.zh : "") || field.en || Object.values(field)[0] || "";
+
+  return (
+    field[lang] ||
+    (lang === "tw" ? field.zh : "") ||
+    field.en ||
+    Object.values(field)[0] ||
+    ""
+  );
 };
 
 export default function Hero() {
   const navigate = useNavigate();
-  const { visibleSlides: slides } = useHero();
+  const { visibleSlides: slides = [] } = useHero();
   const { language } = useLanguage();
+  const { registerLoading, finishLoading } = usePageLoading();
+
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
+
   const touchStartX = useRef(null);
+  const imageRefs = useRef(new Map());
+  const loadedImages = useRef(new Set());
+  const loadingKey = "hero-images";
 
   const count = slides.length;
-  const next = () => setCurrent((c) => (c + 1) % count);
-  const prev = () => setCurrent((c) => (c - 1 + count) % count);
 
-  // slides can change from the dashboard: keep the index valid
+  // Track essential hero images.
+  useEffect(() => {
+    loadedImages.current.clear();
+
+    if (count === 0) {
+      finishLoading(loadingKey);
+      return;
+    }
+
+    registerLoading(loadingKey);
+
+    const imageUrls = slides
+      .map((slide) => assetUrl(slide.img))
+      .filter(Boolean);
+
+    // No usable image URLs means there are no image requests to wait for.
+    if (imageUrls.length === 0) {
+      finishLoading(loadingKey);
+      return;
+    }
+
+    // Handle cached images and images that loaded before this effect.
+    const checkImages = () => {
+      const allReady = imageUrls.every((url) => {
+        const image = imageRefs.current.get(url);
+
+        return (
+          loadedImages.current.has(url) ||
+          (image && image.complete)
+        );
+      });
+
+      if (allReady) {
+        finishLoading(loadingKey);
+      }
+    };
+
+    checkImages();
+
+    return () => {
+      finishLoading(loadingKey);
+    };
+  }, [slides, count, registerLoading, finishLoading]);
+
+  const handleImageLoad = (url) => {
+    loadedImages.current.add(url);
+
+    const imageUrls = slides
+      .map((slide) => assetUrl(slide.img))
+      .filter(Boolean);
+
+    const allReady = imageUrls.every((imageUrl) => {
+      const image = imageRefs.current.get(imageUrl);
+
+      return (
+        loadedImages.current.has(imageUrl) ||
+        (image && image.complete)
+      );
+    });
+
+    if (allReady) {
+      finishLoading(loadingKey);
+    }
+  };
+
+  const handleImageError = (url) => {
+    // Failed images must not leave the page loader stuck.
+    loadedImages.current.add(url);
+    handleImageLoad(url);
+  };
+
+  const next = () => {
+    if (count > 1) setCurrent((c) => (c + 1) % count);
+  };
+
+  const prev = () => {
+    if (count > 1) setCurrent((c) => (c - 1 + count) % count);
+  };
+
   useEffect(() => {
     if (current >= count) setCurrent(0);
   }, [count, current]);
 
   useEffect(() => {
     if (paused || count < 2) return;
-    const timer = setInterval(() => setCurrent((c) => (c + 1) % count), 5000);
+
+    const timer = setInterval(
+      () => setCurrent((c) => (c + 1) % count),
+      5000
+    );
+
     return () => clearInterval(timer);
   }, [paused, count]);
 
-  if (count === 0) return null; // all slides hidden (this must stay AFTER all the hooks above)
+  if (count === 0) return null;
 
-  const onTouchStart = (e) => (touchStartX.current = e.touches[0].clientX);
+  const onTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
   const onTouchEnd = (e) => {
     if (touchStartX.current === null) return;
+
     const diff = touchStartX.current - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 50) diff > 0 ? next() : prev();
+
+    if (Math.abs(diff) > 50) {
+      diff > 0 ? next() : prev();
+    }
+
     touchStartX.current = null;
   };
 
   const goTo = (link) => {
     if (!link) return;
-    if (link.startsWith("/")) return navigate(link);
+
+    if (link.startsWith("/")) {
+      navigate(link);
+      return;
+    }
+
     try {
-      document.querySelector(link)?.scrollIntoView({ behavior: "smooth" });
+      document.querySelector(link)?.scrollIntoView({
+        behavior: "smooth",
+      });
     } catch {
-      /* ignore a bad selector */
+      // Ignore invalid selectors.
     }
   };
 
@@ -65,7 +178,6 @@ export default function Hero() {
     <section
       id="hero"
       className="relative overflow-hidden rounded-3xl shadow-2xl h-[420px] sm:h-[520px] text-white"
-      // className="relative overflow-hidden rounded-3xl shadow-2xl h-[380px] sm:h-[480px] lg:h-[580px] text-white"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={onTouchStart}
@@ -80,26 +192,56 @@ export default function Hero() {
           const titleText = getLangText(s.title, language);
           const descText = getLangText(s.text, language);
           const ctaText = getLangText(s.cta, language);
-          const imageUrl = assetUrl(s.img); // ← this line was commented out
+          const imageUrl = assetUrl(s.img);
 
           return (
             <div key={s.id} className="relative min-w-full h-full">
-              <img src={imageUrl} alt={titleText} className="absolute inset-0 w-full h-full object-cover" />
+              {imageUrl && (
+                <img
+                  ref={(node) => {
+                    if (node) {
+                      imageRefs.current.set(imageUrl, node);
+
+                      if (node.complete) {
+                        loadedImages.current.add(imageUrl);
+                      }
+                    } else {
+                      imageRefs.current.delete(imageUrl);
+                    }
+                  }}
+                  src={imageUrl}
+                  alt={titleText}
+                  onLoad={() => handleImageLoad(imageUrl)}
+                  onError={() => handleImageError(imageUrl)}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              )}
+
               <div className="absolute inset-0 bg-gradient-to-r from-stone-950/80 via-stone-900/50 to-transparent" />
+
               <div className="relative z-10 h-full flex items-center px-8 sm:px-16">
                 <div className="max-w-xl space-y-5">
                   {tagText && (
-                    <span className="inline-block px-3.5 py-1 text-xs font-semibold uppercase tracking-wider bg-amber-500/90 rounded-full">
+                    <span className="inline-block px-3.5 py-1 text-xs font-semibold uppercase tracking-wider bg-accent-500/90 rounded-full">
                       {tagText}
                     </span>
                   )}
-                  <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">{titleText}</h1>
-                  {descText && <p className="text-amber-50/90 text-base sm:text-lg leading-relaxed">{descText}</p>}
+
+                  <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+                    {titleText}
+                  </h1>
+
+                  {descText && (
+                    <p className="text-accent-50/90 text-base sm:text-lg leading-relaxed">
+                      {descText}
+                    </p>
+                  )}
+
                   {ctaText && (
                     <div className="pt-2">
                       <button
                         onClick={() => goTo(s.link)}
-                        className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl shadow-lg transition-all cursor-pointer"
+                        className="px-6 py-3 bg-accent-500 hover:bg-accent-600 text-white font-semibold rounded-xl shadow-lg transition-all cursor-pointer"
                       >
                         {ctaText}
                       </button>
@@ -121,6 +263,7 @@ export default function Hero() {
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
+
           <button
             onClick={next}
             aria-label="Next slide"
@@ -136,7 +279,9 @@ export default function Hero() {
                 onClick={() => setCurrent(i)}
                 aria-label={`Go to slide ${i + 1}`}
                 className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
-                  i === current ? "w-8 bg-amber-400" : "w-2.5 bg-white/50 hover:bg-white/80"
+                  i === current
+                    ? "w-8 bg-accent-400"
+                    : "w-2.5 bg-white/50 hover:bg-white/80"
                 }`}
               />
             ))}

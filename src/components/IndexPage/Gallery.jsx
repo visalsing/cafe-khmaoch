@@ -1,40 +1,56 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import { usePageLoading } from "../../context/PageLoadingContext.jsx";
 import { Sparkles, Maximize2, X, Filter } from "lucide-react";
 
 // Static aesthetic gallery items with categories
 const GALLERY_ITEMS = [
   {
     id: 1,
-    title: { en: "Ghostly Ambiance & Warm Lighting", km: "បរិយាកាសដ៏ទាក់ទាញ និងពន្លឺកក់ក្តៅ" },
+    title: {
+      en: "Ghostly Ambiance & Warm Lighting",
+      km: "បរិយាកាសដ៏ទាក់ទាញ និងពន្លឺកក់ក្តៅ",
+    },
     category: "ambiance",
     img: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=1200&q=80",
     tag: { en: "Cozy Corner", km: "ជ្រុងកក់ក្តៅ" },
   },
   {
     id: 2,
-    title: { en: "Signature Black Charcoal Latte", km: "កាហ្វេខ្មៅពិសេសប្រចាំហាង" },
+    title: {
+      en: "Signature Black Charcoal Latte",
+      km: "កាហ្វេខ្មៅពិសេសប្រចាំហាង",
+    },
     category: "drinks",
     img: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=1200&q=80",
     tag: { en: "Best Seller", km: "លក់ដាច់បំផុត" },
   },
   {
     id: 3,
-    title: { en: "Handcrafted Croissants & Pastries", km: "នំខ្យូសង់ និងនំអូប៊ី" },
+    title: {
+      en: "Handcrafted Croissants & Pastries",
+      km: "នំខ្យូសង់ និងនំអូប៊ី",
+    },
     category: "pastries",
     img: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=1200&q=80",
     tag: { en: "Freshly Baked", km: "ឆ្អិនថ្មីៗ" },
   },
   {
     id: 4,
-    title: { en: "Night Vibe & Neon Aesthetic", km: "បរិយាកាសពេលយប់ដ៏ស្រស់ស្អាត" },
+    title: {
+      en: "Night Vibe & Neon Aesthetic",
+      km: "បរិយាកាសពេលយប់ដ៏ស្រស់ស្អាត",
+    },
     category: "night",
     img: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80",
     tag: { en: "Night Mood", km: "អារម្មណ៍ពេលយប់" },
   },
   {
     id: 5,
-    title: { en: "Barista Crafting Art", km: "សិល្បៈនៃការឆុងកាហ្វេរបស់បារីស្តា" },
+    title: {
+      en: "Barista Crafting Art",
+      km: "សិល្បៈនៃការឆុងកាហ្វេរបស់បារីស្តា",
+    },
     category: "ambiance",
     img: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80",
     tag: { en: "Craftmanship", km: "ជំនាញវិជ្ជាជីវៈ" },
@@ -49,6 +65,12 @@ const GALLERY_ITEMS = [
 ];
 
 export default function Gallery() {
+  const { registerLoading, finishLoading } = usePageLoading();
+
+  const imageRefs = useRef([]);
+  const [galleryItems, setGalleryItems] = useState(GALLERY_ITEMS);
+  const [galleryDataReady, setGalleryDataReady] = useState(false);
+
   const { language, t } = useLanguage();
   const activeLanguage = language || "en";
 
@@ -64,15 +86,92 @@ export default function Gallery() {
     { id: "night", label: { en: "Night Vibes", km: "ពេលយប់" } },
   ];
 
-  const filteredItems = activeCategory === "all"
-    ? GALLERY_ITEMS
-    : GALLERY_ITEMS.filter((item) => item.category === activeCategory);
+  // const filteredItems =
+  //   activeCategory === "all"
+  //     ? GALLERY_ITEMS
+  //     : GALLERY_ITEMS.filter((item) => item.category === activeCategory);
+  const filteredItems =
+    activeCategory === "all"
+      ? galleryItems
+      : galleryItems.filter((item) => item.category === activeCategory);
+
+  useEffect(() => {
+    if (!galleryDataReady) return;
+
+    const taskKey = "gallery-images";
+    let cancelled = false;
+
+    registerLoading(taskKey);
+
+    // Only wait for the first three gallery images.
+    // The remaining images can load lazily.
+    const images = imageRefs.current.slice(0, 3).filter(Boolean);
+
+    const imagePromises = images.map((img) => {
+      if (img.complete) {
+        return Promise.resolve();
+      }
+
+      return new Promise((resolve) => {
+        img.addEventListener("load", resolve, { once: true });
+        img.addEventListener("error", resolve, { once: true });
+      });
+    });
+
+    Promise.all(imagePromises).finally(() => {
+      if (!cancelled) {
+        finishLoading(taskKey);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      finishLoading(taskKey);
+    };
+  }, [galleryDataReady, galleryItems, registerLoading, finishLoading]);
+
+  /*
+  useEffect(() => {
+  if (!galleryDataReady) return;
+
+  const taskKey = "gallery-images";
+  let cancelled = false;
+
+  registerLoading(taskKey);
+
+  // Only wait for the first three gallery images.
+  // The remaining images can load lazily.
+  const images = imageRefs.current.slice(0, 3).filter(Boolean);
+
+  const imagePromises = images.map((img) => {
+    if (img.complete) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      img.addEventListener("load", resolve, { once: true });
+      img.addEventListener("error", resolve, { once: true });
+    });
+  });
+
+  Promise.all(imagePromises).finally(() => {
+    if (!cancelled) {
+      finishLoading(taskKey);
+    }
+  });
+
+  return () => {
+    cancelled = true;
+    finishLoading(taskKey);
+  };
+}, [galleryDataReady, galleryItems, registerLoading, finishLoading]);
+  */
 
   return (
     <section id="gallery" className="space-y-10 py-6">
       {/* Section Header */}
       <div className="text-center max-w-2xl mx-auto space-y-3">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-bold uppercase tracking-wider">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-500/10 text-accent-600 dark:text-accent-400 text-xs font-bold uppercase tracking-wider">
           <Sparkles className="w-3.5 h-3.5" />
           <span>{t("gallery_badge") || "Visual Journey"}</span>
         </div>
@@ -80,7 +179,8 @@ export default function Gallery() {
           {t("gallery_title") || "Explore Café ខ្មោច Vibe"}
         </h2>
         <p className="text-sm text-stone-600 dark:text-stone-400 font-medium">
-          {t("gallery_subtitle") || "Immerse yourself in our aesthetic atmosphere, signature drinks, and cozy corners."}
+          {t("gallery_subtitle") ||
+            "Immerse yourself in our aesthetic atmosphere, signature drinks, and cozy corners."}
         </p>
       </div>
 
@@ -92,8 +192,8 @@ export default function Gallery() {
             onClick={() => setActiveCategory(cat.id)}
             className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
               activeCategory === cat.id
-                ? "bg-amber-600 text-white shadow-md shadow-amber-600/20 scale-105"
-                : "bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-800 hover:border-amber-500"
+                ? "bg-accent-600 text-white shadow-md shadow-accent-600/20 scale-105"
+                : "bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-800 hover:border-accent-500"
             }`}
           >
             {cat.label[activeLanguage] || cat.label.en}
@@ -110,11 +210,24 @@ export default function Gallery() {
             className="group relative h-72 rounded-3xl overflow-hidden bg-stone-100 dark:bg-stone-800 shadow-sm border border-stone-200/60 dark:border-stone-800 cursor-pointer transition-all duration-500 hover:shadow-xl hover:-translate-y-1.5"
           >
             {/* Image */}
-            <img
+            {/* <img
               src={item.img}
               alt={item.title[activeLanguage] || item.title.en}
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               loading="lazy"
+            /> */}
+            <img
+              ref={(el) => {
+                imageRefs.current[
+                  filteredItems.findIndex((i) => i.id === item.id)
+                ] = el;
+              }}
+              src={item.img}
+              alt={item.title[activeLanguage] || item.title.en}
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+              loading={filteredItems.indexOf(item) < 3 ? "eager" : "lazy"}
+              onLoad={() => {}}
+              onError={() => {}}
             />
 
             {/* Gradient Overlay */}
@@ -162,7 +275,9 @@ export default function Gallery() {
             <div className="w-full max-h-[75vh] flex items-center justify-center bg-black overflow-hidden">
               <img
                 src={selectedImage.img}
-                alt={selectedImage.title[activeLanguage] || selectedImage.title.en}
+                alt={
+                  selectedImage.title[activeLanguage] || selectedImage.title.en
+                }
                 className="max-h-[75vh] w-auto object-contain"
               />
             </div>
@@ -170,16 +285,17 @@ export default function Gallery() {
             {/* Modal Footer Info */}
             <div className="w-full p-6 bg-stone-900 flex items-center justify-between border-t border-stone-800">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-500">
+                <span className="text-xs font-bold uppercase tracking-wider text-accent-500">
                   {selectedImage.tag[activeLanguage] || selectedImage.tag.en}
                 </span>
                 <h3 className="text-white font-bold text-lg mt-0.5">
-                  {selectedImage.title[activeLanguage] || selectedImage.title.en}
+                  {selectedImage.title[activeLanguage] ||
+                    selectedImage.title.en}
                 </h3>
               </div>
               <button
                 onClick={() => setSelectedImage(null)}
-                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                className="px-5 py-2.5 bg-accent-600 hover:bg-accent-700 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
               >
                 {t("close") || "Close"}
               </button>

@@ -1,10 +1,22 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { 
-  MapPin, Clock, Phone, Navigation, Mail, Wifi, 
-  Snowflake, ParkingSquare, Bike, QrCode, Share2, 
-  Copy, Check, X 
+import {
+  MapPin,
+  Clock,
+  Phone,
+  Navigation,
+  Mail,
+  Wifi,
+  Snowflake,
+  ParkingSquare,
+  Bike,
+  QrCode,
+  Share2,
+  Copy,
+  Check,
+  X,
 } from "lucide-react";
-import { mapService, assetUrl } from "../../services/api";
+import { usePageLoading } from "../../context/PageLoadingContext";
+import { mapService, qrService, assetUrl } from "../../services/api";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import Contact from "./Contact";
 
@@ -22,7 +34,15 @@ const FacebookIcon = (props) => (
 );
 
 const InstagramIcon = (props) => (
-  <svg {...props} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+  <svg
+    {...props}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    viewBox="0 0 24 24"
+  >
     <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
     <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
     <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
@@ -42,14 +62,43 @@ const TikTokIcon = (props) => (
 );
 
 const SOCIAL_LINKS = [
-  { name: "Facebook", icon: FacebookIcon, href: "https://web.facebook.com/profile.php?id=100065127385427", color: "hover:text-blue-600" },
-  { name: "Instagram", icon: InstagramIcon, href: "https://instagram.com", color: "hover:text-pink-600" },
-  { name: "Telegram", icon: TelegramIcon, href: "https://telegram.org", color: "hover:text-sky-500" },
-  { name: "TikTok", icon: TikTokIcon, href: "https://tiktok.com", color: "hover:text-slate-900 dark:hover:text-white" },
-  { name: "Gmail", icon: Mail, href: `mailto:${EMAIL}`, color: "hover:text-red-500" },
+  {
+    name: "Facebook",
+    icon: FacebookIcon,
+    href: "https://web.facebook.com/profile.php?id=100065127385427",
+    color: "hover:text-blue-600",
+  },
+  {
+    name: "Instagram",
+    icon: InstagramIcon,
+    href: "https://instagram.com",
+    color: "hover:text-pink-600",
+  },
+  {
+    name: "Telegram",
+    icon: TelegramIcon,
+    href: "https://telegram.org",
+    color: "hover:text-sky-500",
+  },
+  {
+    name: "TikTok",
+    icon: TikTokIcon,
+    href: "https://tiktok.com",
+    color: "hover:text-slate-900 dark:hover:text-white",
+  },
+  {
+    name: "Gmail",
+    icon: Mail,
+    href: `mailto:${EMAIL}`,
+    color: "hover:text-red-500",
+  },
 ];
 
 export default function LocationSection({ lang = "en" }) {
+  const { registerLoading, finishLoading } = usePageLoading();
+  const shopLoadingKey = "map-shop-data";
+  const logoLoadingKey = "map-shop-logo";
+
   const [shop, setShop] = useState(null);
   const { language, t } = useLanguage();
   const activeLanguage = language || lang || "en";
@@ -58,48 +107,111 @@ export default function LocationSection({ lang = "en" }) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // The QR code chosen in the dashboard (QR Management). null = none selected.
+  const [selectedQr, setSelectedQr] = useState(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrImageFailed, setQrImageFailed] = useState(false);
+
   // ==========================================
   // CHANGE YOUR LIVE WEBSITE URL HERE ANYTIME:
   // ==========================================
-  const CUSTOM_LIVE_DOMAIN = "https://cafe-khmaoch.vercel.app/"; 
+  const CUSTOM_LIVE_DOMAIN = "https://cafe-khmaoch.vercel.app/shop";
 
   // Dynamically uses your custom live domain in production, or current host during testing
-  const websiteUrl = window.location.origin.includes("localhost") 
-    ? CUSTOM_LIVE_DOMAIN 
+  const websiteUrl = window.location.origin.includes("localhost")
+    ? CUSTOM_LIVE_DOMAIN
     : window.location.origin;
 
   const translateJson = useCallback(
     (value) => {
       if (value === null || value === undefined || value === "") return "";
       if (typeof value === "object" && !Array.isArray(value)) {
-        return value[activeLanguage] || value.en || Object.values(value)[0] || "";
+        return (
+          value[activeLanguage] || value.en || Object.values(value)[0] || ""
+        );
       }
       if (typeof value === "string") {
         try {
           const parsed = JSON.parse(value);
           if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-            return parsed[activeLanguage] || parsed.en || Object.values(parsed)[0] || "";
+            return (
+              parsed[activeLanguage] ||
+              parsed.en ||
+              Object.values(parsed)[0] ||
+              ""
+            );
           }
         } catch {}
         return value;
       }
       return String(value);
     },
-    [activeLanguage]
+    [activeLanguage],
   );
 
+  // useEffect(() => {
+  //   let cancelled = false;
+  //   mapService
+  //     .listPublic(activeLanguage)
+  //     .then((list) => {
+  //       if (!cancelled) setShop(Array.isArray(list) ? list[0] || null : null);
+  //     })
+  //     .catch(() => {});
+  //   return () => {
+  //     cancelled = true;
+  //   };
+  // }, [activeLanguage]);
   useEffect(() => {
     let cancelled = false;
+
+    registerLoading(shopLoadingKey);
+
     mapService
       .listPublic(activeLanguage)
       .then((list) => {
-        if (!cancelled) setShop(Array.isArray(list) ? list[0] || null : null);
+        if (!cancelled) {
+          setShop(Array.isArray(list) ? list[0] || null : null);
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) {
+          setShop(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          finishLoading(shopLoadingKey);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      finishLoading(shopLoadingKey);
+    };
+  }, [activeLanguage, registerLoading, finishLoading]);
+
+  // Load the selected QR every time the share popup opens, so a change made in the
+  // dashboard shows up without reloading the page. Any failure -> fallback QR below.
+  useEffect(() => {
+    if (!showShareModal) return;
+    let cancelled = false;
+    setQrLoading(true);
+    setQrImageFailed(false);
+    qrService
+      .getSelected()
+      .then((qr) => {
+        if (!cancelled) setSelectedQr(qr && qr.img ? qr : null);
+      })
+      .catch(() => {
+        if (!cancelled) setSelectedQr(null);
+      })
+      .finally(() => {
+        if (!cancelled) setQrLoading(false);
+      });
     return () => {
       cancelled = true;
     };
-  }, [activeLanguage]);
+  }, [showShareModal]);
 
   if (!shop) return null;
 
@@ -110,21 +222,32 @@ export default function LocationSection({ lang = "en" }) {
   const slogan = translateJson(shop.slogan);
   const location = translateJson(shop.location);
 
-  // Generates QR code targeting the website URL
-  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
-    websiteUrl
+  // Fallback QR (generated on the fly) for when no QR is selected or its image fails to load
+  const fallbackQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
+    websiteUrl,
   )}`;
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(websiteUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const useSelectedQr = Boolean(selectedQr?.img) && !qrImageFailed;
+  const qrImageUrl = useSelectedQr ? assetUrl(selectedQr.img) : fallbackQrUrl;
+  // the link shown + copied: the selected QR's own URL when it has one
+  const shareUrl = (useSelectedQr && selectedQr.url) || websiteUrl;
+  const qrCaption = useSelectedQr ? translateJson(selectedQr.description) : "";
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard blocked (e.g. insecure page): select the text so the visitor can copy it by hand
+      document.getElementById("share-url-input")?.select();
+    }
   };
 
   return (
     <section id="contact" className="scroll-mt-20 space-y-8">
       <div className="text-center max-w-2xl mx-auto space-y-2">
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-amber-600 to-amber-300 bg-clip-text text-transparent">
+        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-accent-600 to-accent-300 bg-clip-text text-transparent">
           {t("contact_us")}
         </h1>
         <p className="text-base text-stone-600 dark:text-stone-300 font-medium">
@@ -134,61 +257,94 @@ export default function LocationSection({ lang = "en" }) {
 
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 sm:p-12 border border-slate-200 dark:border-slate-800 shadow-sm space-y-8">
         <div className="text-center max-w-2xl mx-auto space-y-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+          <span className="text-xs font-bold uppercase tracking-wider text-accent-600 dark:text-accent-400">
             {t("find_us")}
           </span>
-          {title && <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">{title}</h2>}
-          {intro && <p className="text-stone-600 dark:text-stone-400 text-sm">{intro}</p>}
+          {title && (
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              {title}
+            </h2>
+          )}
+          {intro && (
+            <p className="text-stone-600 dark:text-stone-400 text-sm">
+              {intro}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Left Column: Café Info Card */}
           <div className="space-y-6 bg-stone-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-stone-200 dark:border-slate-700">
             <div className="flex items-center gap-3">
+              {/* {logo && (
+                <img
+                  src={logo}
+                  alt=""
+                  className="w-12 h-12 rounded-xl object-contain bg-white dark:bg-slate-800 border-2 border-accent-500/30 dark:border-accent-400/30 shadow-sm"
+                />
+              )} */}
               {logo && (
                 <img
                   src={logo}
                   alt=""
-                  className="w-12 h-12 rounded-xl object-contain bg-white dark:bg-slate-800 border-2 border-amber-500/30 dark:border-amber-400/30 shadow-sm"
+                  onLoad={() => finishLoading(logoLoadingKey)}
+                  onError={() => finishLoading(logoLoadingKey)}
+                  className="w-12 h-12 rounded-xl object-contain bg-white dark:bg-slate-800 border-2 border-accent-500/30 dark:border-accent-400/30 shadow-sm"
                 />
               )}
               <div className="min-w-0">
-                <h3 className="text-xl font-bold text-stone-900 dark:text-white break-words">{shopName}</h3>
-                {slogan && <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">{slogan}</p>}
+                <h3 className="text-xl font-bold text-stone-900 dark:text-white break-words">
+                  {shopName}
+                </h3>
+                {slogan && (
+                  <p className="text-xs text-accent-600 dark:text-accent-400 font-medium">
+                    {slogan}
+                  </p>
+                )}
               </div>
             </div>
 
             <div className="space-y-4 text-sm text-stone-600 dark:text-stone-300">
               {location && (
                 <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <MapPin className="w-5 h-5 text-accent-600 shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-stone-900 dark:text-white">{t("location")}</p>
+                    <p className="font-semibold text-stone-900 dark:text-white">
+                      {t("location")}
+                    </p>
                     <p className="text-xs text-stone-500">{location}</p>
                   </div>
                 </div>
               )}
 
               <div className="flex items-start gap-3">
-                <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <Clock className="w-5 h-5 text-accent-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-stone-900 dark:text-white">{t("opening_hours")}</p>
-                  <p className="text-xs text-stone-500">{translateJson(OPENING_HOURS)}</p>
+                  <p className="font-semibold text-stone-900 dark:text-white">
+                    {t("opening_hours")}
+                  </p>
+                  <p className="text-xs text-stone-500">
+                    {translateJson(OPENING_HOURS)}
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
-                <Phone className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <Phone className="w-5 h-5 text-accent-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-stone-900 dark:text-white">{t("phone")}</p>
+                  <p className="font-semibold text-stone-900 dark:text-white">
+                    {t("phone")}
+                  </p>
                   <p className="text-xs text-stone-500">{PHONE}</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
-                <Mail className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <Mail className="w-5 h-5 text-accent-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-stone-900 dark:text-white">{t("email")}</p>
+                  <p className="font-semibold text-stone-900 dark:text-white">
+                    {t("email")}
+                  </p>
                   <p className="text-xs text-stone-500">{EMAIL}</p>
                 </div>
               </div>
@@ -200,19 +356,19 @@ export default function LocationSection({ lang = "en" }) {
                 </p>
                 <ul className="text-xs text-stone-600 dark:text-stone-300 space-y-2">
                   <li className="flex items-center gap-2">
-                    <Wifi className="w-4 h-4 text-amber-600 shrink-0" />
+                    <Wifi className="w-4 h-4 text-accent-600 shrink-0" />
                     <span>Free High-Speed Wi-Fi & Power Outlets</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Snowflake className="w-4 h-4 text-amber-600 shrink-0" />
+                    <Snowflake className="w-4 h-4 text-accent-600 shrink-0" />
                     <span>Air-Conditioned Indoor Seating</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <ParkingSquare className="w-4 h-4 text-amber-600 shrink-0" />
+                    <ParkingSquare className="w-4 h-4 text-accent-600 shrink-0" />
                     <span>Motorcycle & Car Parking Available</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <Bike className="w-4 h-4 text-amber-600 shrink-0" />
+                    <Bike className="w-4 h-4 text-accent-600 shrink-0" />
                     <span>Takeaway & Fast Delivery Available</span>
                   </li>
                 </ul>
@@ -250,7 +406,7 @@ export default function LocationSection({ lang = "en" }) {
                 href={shop.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
+                className="w-full py-2.5 px-4 rounded-xl bg-accent-600 hover:bg-accent-700 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
               >
                 <Navigation className="w-4 h-4" /> {t("get_directions")}
               </a>
@@ -258,20 +414,24 @@ export default function LocationSection({ lang = "en" }) {
 
             {/* Website & Menu QR Code Callout Box */}
             <div className="pt-2">
-              <div className="bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/20 p-4 rounded-xl flex items-center justify-between gap-3">
+              <div className="bg-accent-500/10 dark:bg-accent-400/10 border border-accent-500/20 p-4 rounded-xl flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm">
-                    <QrCode className="w-6 h-6 text-amber-600" />
+                    <QrCode className="w-6 h-6 text-accent-600" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-stone-900 dark:text-white">Share Website & Menu</p>
-                    <p className="text-[11px] text-stone-500">Scan or share website link</p>
+                    <p className="text-xs font-bold text-stone-900 dark:text-white">
+                      Share Website & Menu
+                    </p>
+                    <p className="text-[11px] text-stone-500">
+                      Scan or share website link
+                    </p>
                   </div>
                 </div>
 
                 <button
                   onClick={() => setShowShareModal(true)}
-                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                  className="px-3 py-1.5 bg-accent-600 hover:bg-accent-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                 >
                   <Share2 className="w-3.5 h-3.5" />
                   <span>Share</span>
@@ -313,6 +473,7 @@ export default function LocationSection({ lang = "en" }) {
             {/* Close Button */}
             <button
               onClick={() => setShowShareModal(false)}
+              aria-label="Close"
               className="absolute top-4 right-4 p-1.5 rounded-full text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-slate-800 transition-colors"
             >
               <X className="w-5 h-5" />
@@ -324,36 +485,51 @@ export default function LocationSection({ lang = "en" }) {
                 {shopName} Website & Menu
               </h3>
               <p className="text-xs text-stone-500">
-                Scan QR code to view our menu and order online
+                {qrCaption || "Scan QR code to view our menu and order online"}
               </p>
             </div>
 
-            {/* QR Image Box */}
+            {/* QR Image Box: always white, so the QR scans even in dark mode */}
             <div className="flex justify-center">
               <div className="p-3 bg-white rounded-2xl border border-stone-200 shadow-inner">
-                <img
-                  src={qrImageUrl}
-                  alt={`${shopName} Website QR Code`}
-                  className="w-48 h-48 object-contain"
-                />
+                {qrLoading ? (
+                  <div
+                    className="w-48 h-48 rounded-lg bg-stone-100 animate-pulse"
+                    aria-label="Loading QR code"
+                  />
+                ) : (
+                  <img
+                    src={qrImageUrl}
+                    alt={`${shopName} Website QR Code`}
+                    onError={() => {
+                      // the selected QR image could not be loaded -> show the generated one instead
+                      if (useSelectedQr) setQrImageFailed(true);
+                    }}
+                    className="w-48 h-48 object-contain"
+                  />
+                )}
               </div>
             </div>
 
             {/* Website URL & Copy Button */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+              <label
+                htmlFor="share-url-input"
+                className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider"
+              >
                 Website URL
               </label>
               <div className="flex items-center gap-2">
                 <input
+                  id="share-url-input"
                   type="text"
                   readOnly
-                  value={websiteUrl}
+                  value={shareUrl}
                   className="w-full px-3 py-2 text-xs bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl text-stone-600 dark:text-stone-300 focus:outline-none"
                 />
                 <button
                   onClick={handleCopyLink}
-                  className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors shadow-sm cursor-pointer"
+                  className="px-3.5 py-2 bg-accent-600 hover:bg-accent-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors shadow-sm cursor-pointer"
                 >
                   {copied ? (
                     <>

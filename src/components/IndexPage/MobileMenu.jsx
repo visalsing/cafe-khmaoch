@@ -1,11 +1,12 @@
-
 import React, { useState, useEffect } from "react";
 import { LogOut } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import useActiveSection from "../../hooks/useActiveSection";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
 export default function MobileMenu({ isOpen, onClose }) {
+  const { language, t } = useLanguage();
   const {
     currentUser,
     canEnterDashboard,
@@ -47,16 +48,14 @@ export default function MobileMenu({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   const navLinks = [
-    { id: "hero", label: "Home", href: "/#hero" },
-    { id: "shop", label: "Menu", href: "/#shop" },
-    { id: "gallery", label: "Gallery", href: "/#gallery" },
-    { id: "about", label: "Our Story", href: "/#about" },
-    { id: "contact", label: "Contact", href: "/#contact" },
+    { id: "hero", label: t("home"), href: "/#hero" },
+    { id: "shop", label: t("menu"), href: "/#shop" },
+    { id: "gallery", label: t("gallery"), href: "/#gallery" },
+    { id: "about", label: t("about_us"), href: "/#about" },
+    { id: "contact", label: t("contact"), href: "/#contact" },
   ];
 
-  const actionLabel = isImpersonating
-    ? "Exit Impersonation"
-    : "Logout";
+  const actionLabel = isImpersonating ? "Exit Impersonation" : "Logout";
 
   const handleConfirmLogout = async () => {
     if (isSubmitting) return;
@@ -78,15 +77,9 @@ export default function MobileMenu({ isOpen, onClose }) {
         navigate("/", { replace: true });
       }
     } catch (error) {
-      console.error(
-        "Logout / impersonation exit failed:",
-        error
-      );
+      console.error(t("logout_exit_impersonate"), error);
 
-      window.alert(
-        error.message ||
-          "The action failed. Please try again."
-      );
+      window.alert(error.message || t("session_act_failed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -108,11 +101,11 @@ export default function MobileMenu({ isOpen, onClose }) {
             className="flex items-center space-x-3 cursor-pointer"
             onClick={() => handleNavigation("/")}
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center shadow-md overflow-hidden p-1.5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-accent-500 to-orange-600 flex items-center justify-center shadow-md overflow-hidden p-1.5">
               <span className="text-white text-xl">☕</span>
             </div>
 
-            <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+            <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-accent-600 to-orange-600 bg-clip-text text-transparent">
               Café ខ្មោច
             </span>
           </div>
@@ -121,7 +114,7 @@ export default function MobileMenu({ isOpen, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-slate-700 flex items-center justify-center transition-all shadow-sm cursor-pointer"
+            className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-accent-600 dark:hover:text-accent-400 hover:bg-accent-50 dark:hover:bg-slate-700 flex items-center justify-center transition-all shadow-sm cursor-pointer"
             title="Close Menu"
             aria-label="Close navigation menu"
           >
@@ -133,8 +126,7 @@ export default function MobileMenu({ isOpen, onClose }) {
         <div className="flex-1 flex flex-col items-center justify-center space-y-6 text-center px-4 py-6 overflow-y-auto">
           {navLinks.map((link) => {
             const isActive =
-              location.pathname === "/" &&
-              activeSection === link.id;
+              location.pathname === "/" && activeSection === link.id;
 
             return (
               <a
@@ -142,10 +134,10 @@ export default function MobileMenu({ isOpen, onClose }) {
                 href={link.href}
                 onClick={onClose}
                 aria-current={isActive ? "location" : undefined}
-                className={`text-lg transition-all cursor-pointer ${
+                className={`!text-lg transition-all cursor-pointer ${
                   isActive
-                    ? "text-amber-600 dark:text-amber-400 font-bold scale-105"
-                    : "text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400"
+                    ? "text-accent-600 dark:text-accent-400 font-bold scale-105"
+                    : "text-slate-600 dark:text-slate-300 hover:text-accent-600 dark:hover:text-accent-400"
                 }`}
               >
                 {link.label}
@@ -157,13 +149,13 @@ export default function MobileMenu({ isOpen, onClose }) {
           <button
             type="button"
             onClick={() => handleNavigation("/settings-page")}
-            className={`text-lg transition-all cursor-pointer ${
+            className={`!text-lg transition-all cursor-pointer ${
               location.pathname === "/settings-page"
-                ? "text-amber-600 dark:text-amber-400 font-bold scale-105"
-                : "text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400"
+                ? "text-accent-600 dark:text-accent-400 font-bold"
+                : "text-slate-600 dark:text-slate-300 hover:text-accent-600 dark:hover:text-accent-400"
             }`}
           >
-            Settings
+            {t("settings")}
           </button>
 
           {/* Profile */}
@@ -171,13 +163,13 @@ export default function MobileMenu({ isOpen, onClose }) {
             <button
               type="button"
               onClick={() => handleNavigation("/profile")}
-              className={`text-lg transition-all cursor-pointer ${
+              className={`!text-lg transition-all cursor-pointer ${
                 location.pathname.startsWith("/profile")
-                  ? "text-amber-600 dark:text-amber-400 font-bold scale-105"
-                  : "text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400"
+                  ? "text-accent-600 dark:text-accent-400 font-bold"
+                  : "text-slate-600 dark:text-slate-300 hover:text-accent-600 dark:hover:text-accent-400"
               }`}
             >
-              Profile
+              {t("profile")}
             </button>
           )}
 
@@ -186,13 +178,13 @@ export default function MobileMenu({ isOpen, onClose }) {
             <button
               type="button"
               onClick={() => handleNavigation("/dashboard")}
-              className={`text-lg transition-all cursor-pointer ${
+              className={`!text-lg transition-all cursor-pointer ${
                 location.pathname.startsWith("/dashboard")
-                  ? "text-amber-600 dark:text-amber-400 font-bold scale-105"
-                  : "text-slate-600 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400"
+                  ? "text-accent-600 dark:text-accent-400 font-bold"
+                  : "text-slate-600 dark:text-slate-300 hover:text-accent-600 dark:hover:text-accent-400"
               }`}
             >
-              Dashboard
+              {t("dashboard")}
             </button>
           )}
         </div>
@@ -206,7 +198,7 @@ export default function MobileMenu({ isOpen, onClose }) {
               disabled={isSubmitting}
               className={`w-full py-3.5 rounded-full text-white font-semibold text-center shadow-lg transition-opacity cursor-pointer inline-flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${
                 isImpersonating
-                  ? "bg-gradient-to-r from-orange-500 to-amber-600 hover:opacity-90"
+                  ? "bg-gradient-to-r from-orange-500 to-accent-600 hover:opacity-90"
                   : "bg-gradient-to-r from-red-500 to-rose-600 hover:opacity-90"
               }`}
             >
@@ -217,9 +209,9 @@ export default function MobileMenu({ isOpen, onClose }) {
             <button
               type="button"
               onClick={() => handleNavigation("/login")}
-              className="w-full py-3.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold text-center shadow-lg hover:opacity-90 transition-opacity cursor-pointer"
+              className="w-full py-3.5 rounded-full bg-gradient-to-r from-accent-500 to-orange-600 text-white font-semibold text-center shadow-lg hover:opacity-90 transition-opacity cursor-pointer"
             >
-              Login
+              {t("login")}
             </button>
           )}
         </div>
@@ -246,15 +238,13 @@ export default function MobileMenu({ isOpen, onClose }) {
               id="mobile-logout-modal-title"
               className="text-lg font-bold text-slate-900 dark:text-white"
             >
-              {isImpersonating
-                ? "Exit Impersonation"
-                : "Confirm Logout"}
+              {isImpersonating ? t("exit_impersonation") : t("confirm_logout")}
             </h3>
 
             <p className="text-sm text-slate-600 dark:text-slate-300">
               {isImpersonating
-                ? "Return to your administrator account?"
-                : "Are you sure you want to log out?"}
+                ? t("return_to_admin_acc")
+                : t("are_you_sure_logout")}
             </p>
 
             <div className="flex justify-end gap-3 pt-2">
@@ -264,7 +254,7 @@ export default function MobileMenu({ isOpen, onClose }) {
                 onClick={() => setShowLogoutModal(false)}
                 className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-60"
               >
-                Cancel
+                {t("cancel")}
               </button>
 
               <button
@@ -278,10 +268,10 @@ export default function MobileMenu({ isOpen, onClose }) {
                 }`}
               >
                 {isSubmitting
-                  ? "Please wait..."
+                  ? t("please_wait")
                   : isImpersonating
-                    ? "Return to Admin"
-                    : "Yes, Log out!"}
+                    ? t("return_to_amdin")
+                    : t("yes_logout")}
               </button>
             </div>
           </div>

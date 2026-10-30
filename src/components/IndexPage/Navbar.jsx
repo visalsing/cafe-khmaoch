@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { LogOut } from "lucide-react";
@@ -6,9 +5,11 @@ import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { assetUrl } from "../../services/api.js";
 import useActiveSection from "../../hooks/useActiveSection";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 import logoImg from "../../assets/logo/cafe-khmaoch-rmbg.png";
 
 export default function Navbar({ setMobileMenuOpen }) {
+  const { language, t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -29,55 +30,46 @@ export default function Navbar({ setMobileMenuOpen }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const navLinks = [
-    { id: "hero", label: "Home", href: "/#hero" },
-    { id: "shop", label: "Menu", href: "/#shop" },
-    { id: "gallery", label: "Gallery", href: "/#gallery" },
-    { id: "about", label: "Our Story", href: "/#about" },
-    { id: "contact", label: "Contact", href: "/#contact" },
+    { id: "hero", label: t("home"), href: "/#hero" },
+    { id: "shop", label: t("menu"), href: "/#shop" },
+    { id: "gallery", label: t("gallery"), href: "/#gallery" },
+    { id: "about", label: t("about_us"), href: "/#about" },
+    { id: "contact", label: t("contact"), href: "/#contact" },
   ];
 
+  const handleConfirmLogout = async () => {
+    if (isSubmitting) return;
 
-const handleConfirmLogout = async () => {
-  if (isSubmitting) return;
+    setIsSubmitting(true);
 
-  setIsSubmitting(true);
+    try {
+      if (isImpersonating) {
+        await stopImpersonation();
 
-  try {
-    if (isImpersonating) {
-      await stopImpersonation();
+        setShowLogoutModal(false);
+        navigate("/dashboard", { replace: true });
+      } else {
+        await logout();
 
-      setShowLogoutModal(false);
-      navigate("/dashboard", { replace: true });
-    } else {
-      await logout();
+        setShowLogoutModal(false);
+        navigate("/", { replace: true });
+      }
+    } catch (error) {
+      console.error(t("logout_exit_impersonate"), error);
 
-      setShowLogoutModal(false);
-      navigate("/", { replace: true });
+      window.alert(
+        error.message || t("session_act_failed"),
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-  } catch (error) {
-    console.error(
-      "Logout / impersonation exit failed:",
-      error
-    );
+  };
 
-    window.alert(
-      error.message ||
-        "The session action failed. Please try again."
-    );
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
-
-  const avatarSrc =
-    currentUser?.avatarThumbnail || currentUser?.avatar;
+  const avatarSrc = currentUser?.avatarThumbnail || currentUser?.avatar;
 
   const onProfilePage = location.pathname.startsWith("/profile");
 
-  const actionLabel = isImpersonating
-    ? "Exit Impersonation"
-    : "Logout";
+  const actionLabel = isImpersonating ? t("exit_impersonation") : t("logout");
 
   return (
     <>
@@ -88,7 +80,7 @@ const handleConfirmLogout = async () => {
             className="flex items-center space-x-3 cursor-pointer"
             onClick={() => navigate("/")}
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center shadow-md overflow-hidden p-1.5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-accent-500 to-accent-600 flex items-center justify-center shadow-md overflow-hidden p-1.5">
               <img
                 src={logoImg}
                 alt="Café ខ្មោច Logo"
@@ -96,7 +88,7 @@ const handleConfirmLogout = async () => {
               />
             </div>
 
-            <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+            <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-accent-600 to-accent-600 bg-clip-text text-transparent">
               Café ខ្មោច
             </span>
           </div>
@@ -105,8 +97,7 @@ const handleConfirmLogout = async () => {
           <div className="hidden lg:flex items-center space-x-6 text-sm font-medium text-slate-600 dark:text-slate-300">
             {navLinks.map((link) => {
               const isActive =
-                location.pathname === "/" &&
-                activeSection === link.id;
+                location.pathname === "/" && activeSection === link.id;
 
               return (
                 <a
@@ -115,8 +106,8 @@ const handleConfirmLogout = async () => {
                   aria-current={isActive ? "location" : undefined}
                   className={`transition-colors cursor-pointer ${
                     isActive
-                      ? "text-amber-600 dark:text-amber-400 font-bold"
-                      : "hover:text-amber-600 dark:hover:text-amber-400"
+                      ? "text-accent-600 dark:text-accent-400 font-bold"
+                      : "hover:text-accent-600 dark:hover:text-accent-400"
                   }`}
                 >
                   {link.label}
@@ -130,11 +121,11 @@ const handleConfirmLogout = async () => {
               onClick={() => navigate("/settings-page")}
               className={`transition-colors text-left cursor-pointer ${
                 location.pathname === "/settings-page"
-                  ? "text-amber-600 dark:text-amber-400 font-bold"
-                  : "hover:text-amber-600 dark:hover:text-amber-400"
+                  ? "text-accent-600 dark:text-accent-400 font-bold"
+                  : "hover:text-accent-600 dark:hover:text-accent-400"
               }`}
             >
-              Settings
+              {t("settings")}
             </button>
 
             {/* Dashboard */}
@@ -144,11 +135,11 @@ const handleConfirmLogout = async () => {
                 onClick={() => navigate("/dashboard")}
                 className={`transition-colors text-left cursor-pointer ${
                   location.pathname.startsWith("/dashboard")
-                    ? "text-amber-600 dark:text-amber-400 font-bold"
-                    : "hover:text-amber-600 dark:hover:text-amber-400"
+                    ? "text-accent-600 dark:text-accent-400 font-bold"
+                    : "hover:text-accent-600 dark:hover:text-accent-400"
                 }`}
               >
-                Dashboard
+                {t("dashboard")}
               </button>
             )}
           </div>
@@ -159,16 +150,15 @@ const handleConfirmLogout = async () => {
             <button
               type="button"
               onClick={() => navigate("/cart")}
-              className="relative w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-amber-600 hover:bg-amber-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-              title="Cart"
+              className="relative w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-accent-600 hover:bg-accent-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+              title={t("cart")}
               aria-label={`Shopping cart${
                 cartCount > 0 ? `, ${cartCount} items` : ""
               }`}
             >
               🛒
-
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-amber-600 text-white font-bold text-xs rounded-full flex items-center justify-center shadow">
+                <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-accent-600 text-white font-bold text-xs rounded-full flex items-center justify-center shadow">
                   {cartCount}
                 </span>
               )}
@@ -181,34 +171,29 @@ const handleConfirmLogout = async () => {
                 {canEnterProfile ? (
                   <Link
                     to="/profile"
-                    title="My profile"
+                    title={t("my_profile")}
                     aria-label="Open my profile"
-                    aria-current={
-                      onProfilePage ? "page" : undefined
-                    }
-                    className={`h-10 w-10 sm:w-auto rounded-xl flex items-center justify-center sm:justify-start bg-slate-100 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-slate-700 transition-colors cursor-pointer shrink-0 sm:px-2.5 sm:space-x-2 ${
+                    aria-current={onProfilePage ? "page" : undefined}
+                    className={`h-10 w-10 sm:w-auto rounded-xl flex items-center justify-center sm:justify-start bg-slate-100 dark:bg-slate-800 hover:bg-accent-100 dark:hover:bg-slate-700 transition-colors cursor-pointer shrink-0 sm:px-2.5 sm:space-x-2 ${
                       onProfilePage
-                        ? "ring-2 ring-amber-500"
+                        ? "ring-2 ring-accent-500"
                         : "border border-transparent"
                     }`}
                   >
                     {avatarSrc ? (
                       <img
                         src={assetUrl(avatarSrc)}
-                        alt={`${
-                          currentUser.firstName || "User"
-                        } avatar`}
+                        alt={`${currentUser.firstName || "User"} avatar`}
                         className="w-7 h-7 rounded-full object-cover bg-slate-200 dark:bg-slate-700 shrink-0"
                       />
                     ) : (
-                      <div className="w-7 h-7 rounded-full bg-amber-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                        {currentUser.firstName?.[0]?.toUpperCase() ||
-                          "U"}
+                      <div className="w-7 h-7 rounded-full bg-accent-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                        {currentUser.firstName?.[0]?.toUpperCase() || "U"}
                       </div>
                     )}
 
                     <span className="hidden sm:inline text-xs font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[90px]">
-                      {currentUser.firstName || "User"}
+                      {currentUser.lastName || "User"} {currentUser.firstName || "User"}
                     </span>
                   </Link>
                 ) : (
@@ -221,14 +206,13 @@ const handleConfirmLogout = async () => {
                         className="w-7 h-7 rounded-full object-cover bg-slate-200 dark:bg-slate-700 shrink-0"
                       />
                     ) : (
-                      <div className="w-7 h-7 rounded-full bg-amber-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                        {currentUser.firstName?.[0]?.toUpperCase() ||
-                          "U"}
+                      <div className="w-7 h-7 rounded-full bg-accent-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                        {currentUser.firstName?.[0]?.toUpperCase() || "U"}
                       </div>
                     )}
 
                     <span className="hidden sm:inline text-xs font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[90px]">
-                      {currentUser.firstName || "User"}
+                      {currentUser.lastName || "User"} {currentUser.firstName || "User"}
                     </span>
                   </div>
                 )}
@@ -242,7 +226,7 @@ const handleConfirmLogout = async () => {
                   aria-label={actionLabel}
                   className={`hidden sm:inline-flex items-center justify-center gap-1.5 h-10 px-3 ml-2 sm:ml-3 text-xs font-semibold rounded-xl transition-all cursor-pointer whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed ${
                     isImpersonating
-                      ? "bg-orange-100 text-orange-800 hover:bg-orange-200 dark:bg-orange-950 dark:text-orange-300"
+                      ? "bg-accent-100 text-accent-800 hover:bg-accent-200 dark:bg-accent-950 dark:text-accent-300"
                       : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-red-500 hover:text-white"
                   }`}
                 >
@@ -256,9 +240,9 @@ const handleConfirmLogout = async () => {
               <button
                 type="button"
                 onClick={() => navigate("/login")}
-                className="hidden sm:inline-flex items-center justify-center h-10 px-4 text-sm font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-blue-950/50 hover:bg-amber-100 dark:hover:bg-blue-900/50 rounded-xl border border-amber-200 dark:border-amber-800 transition-all cursor-pointer"
+                className="hidden sm:inline-flex items-center justify-center h-10 px-4 text-sm font-semibold text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-blue-950/50 hover:bg-accent-100 dark:hover:bg-blue-900/50 rounded-xl border border-accent-200 dark:border-accent-800 transition-all cursor-pointer"
               >
-                Login
+                {t("login")}
               </button>
             )}
 
@@ -297,15 +281,13 @@ const handleConfirmLogout = async () => {
               id="logout-modal-title"
               className="text-lg font-bold text-slate-900 dark:text-white"
             >
-              {isImpersonating
-                ? "Exit Impersonation"
-                : "Confirm Logout"}
+              {isImpersonating ? t("exit_impersonation") : t("confirm_logout")}
             </h3>
 
             <p className="text-sm text-slate-600 dark:text-slate-300">
               {isImpersonating
-                ? "Return to your administrator account?"
-                : "Are you sure you want to log out?"}
+                ? t("return_to_admin_acc")
+                : t("are_you_sure_logout")}
             </p>
 
             <div className="flex justify-end gap-3 pt-2">
@@ -315,7 +297,7 @@ const handleConfirmLogout = async () => {
                 onClick={() => setShowLogoutModal(false)}
                 className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-60"
               >
-                Cancel
+                {t("cancel")}
               </button>
 
               <button
@@ -324,15 +306,15 @@ const handleConfirmLogout = async () => {
                 onClick={handleConfirmLogout}
                 className={`px-4 py-2 text-sm font-semibold rounded-xl text-white transition-all shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
                   isImpersonating
-                    ? "bg-orange-600 hover:bg-orange-700"
+                    ? "bg-accent-600 hover:bg-accent-700"
                     : "bg-red-600 hover:bg-red-700"
                 }`}
               >
                 {isSubmitting
-                  ? "Please wait..."
+                  ? t("please_wait")
                   : isImpersonating
-                    ? "Return to Admin"
-                    : "Yes, Log out!"}
+                    ? t("return_to_amdin")
+                    : t("yes_logout")}
               </button>
             </div>
           </div>

@@ -101,21 +101,32 @@ function Stars({ value = 0, className = "w-4 h-4", t }) {
   );
 }
 
-function SizeChips({ options, active, onPick, t }) {
+function SizeChips({ options, active, onPick, t, compact = false }) {
   return (
-    <div className="flex flex-wrap gap-1.5 pt-1">
-      {options.map((o) => (
+    <div
+      className={`flex flex-wrap items-center ${
+        compact ? "gap-1 pt-0.5" : "gap-1.5 pt-1"
+      }`}
+    >
+      {options.map((option) => (
         <button
-          key={o.key}
+          key={option.key}
           type="button"
-          onClick={() => onPick(o.key)}
-          className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
-            active === o.key
-              ? "bg-amber-600 border-amber-600 text-white"
-              : "bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:border-amber-500"
-          }`}
+          onClick={() => onPick(option.key)}
+          className={`inline-flex items-center justify-center
+            font-semibold border transition-colors cursor-pointer
+            ${
+              compact
+                ? "px-2 py-0.5 text-[10px] sm:text-[11px] rounded-md"
+                : "px-3 py-1 text-xs rounded-lg"
+            }
+            ${
+              active === option.key
+                ? "bg-accent-600 border-accent-600 text-white"
+                : "bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:border-accent-500"
+            }`}
         >
-          {t(o.labelKey)}
+          {t(option.labelKey)}
         </button>
       ))}
     </div>
@@ -446,7 +457,7 @@ export default function ShopAll() {
                 placeholder={t("search_drinks_pastries")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 text-sm bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl focus:outline-none focus:border-amber-500"
+                className="w-full px-4 py-2 text-sm bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl focus:outline-none focus:border-accent-500"
               />
             </div>
           </div>
@@ -458,8 +469,8 @@ export default function ShopAll() {
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
                   selectedCategory === cat.id
-                    ? "bg-amber-600 text-white shadow-md"
-                    : "bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-800 hover:border-amber-500"
+                    ? "bg-accent-600 text-white shadow-md"
+                    : "bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-800 hover:border-accent-500"
                 }`}
               >
                 {cat.id === "All" ? t("all") : translateJson(cat.name)}
@@ -493,7 +504,8 @@ export default function ShopAll() {
               </div>
             )
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            // <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
               {filteredProducts.map((product) => {
                 const options = sizeOptions(product);
                 const option = chosenOption(product);
@@ -523,224 +535,366 @@ export default function ShopAll() {
                 const currentBasePrice = option.base + extraCoffeePrice;
 
                 return (
-                  <div
-                    key={product.id}
-                    className="group relative bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 hover:shadow-xl hover:border-amber-500/50 transition-all duration-300 flex flex-col justify-between overflow-hidden"
-                  >
-                    <div>
-                      {/* <div className="relative h-56 overflow-hidden bg-stone-100 dark:bg-stone-800"> */}
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        aria-label={`View ${translateJson(product.name)} details`}
+                  <React.Fragment key={product.id}>
+                    {/* Compact horizontal card for phones and small tablets */}
+                    <article className="lg:hidden group flex min-w-0 items-stretch overflow-hidden rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-sm transition-shadow hover:shadow-md">
+                      <button
+                        type="button"
                         onClick={() => setSelectedProduct(product)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            setSelectedProduct(product);
-                          }
-                        }}
-                        className="relative h-56 overflow-hidden bg-stone-100 dark:bg-stone-800 cursor-zoom-in"
+                        aria-label={`View ${translateJson(product.name)} details`}
+                        className="relative w-[34%] min-w-[112px] sm:w-36 md:w-40 shrink-0 self-stretch overflow-hidden bg-stone-100 dark:bg-stone-800 text-left"
                       >
                         {img ? (
                           <img
                             src={img}
                             alt={translateJson(product.name)}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-5xl">
+                          <span className="absolute inset-0 flex items-center justify-center text-4xl">
                             ☕
-                          </div>
+                          </span>
                         )}
-
-                        <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                        <span className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/10 pointer-events-none" />
+                        <span className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-wrap gap-1">
                           {discount > 0 && (
-                            <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider bg-rose-600/90 backdrop-blur-md text-white rounded-lg">
+                            <span className="rounded-md bg-rose-600/95 px-2 py-1 text-[10px] font-bold leading-tight text-white">
                               -{discount}%
                             </span>
                           )}
-
                           {translateJson(product.badge).trim() && (
-                            <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider bg-black/60 backdrop-blur-md text-white rounded-lg">
+                            <span className="max-w-full break-words rounded-md bg-black/65 px-2 py-1 text-[10px] font-bold leading-tight text-white">
                               {translateJson(product.badge)}
                             </span>
                           )}
-                        </div>
-                      </div>
-                      <div className="p-5 space-y-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                          {catName.get(product.category_id)}
                         </span>
-                        <h3 className="font-semibold text-stone-900 dark:text-white line-clamp-1">
-                          {translateJson(product.name)}
-                        </h3>
-                        <div className="flex items-center gap-2 text-xs text-stone-500">
-                          <Stars value={rating} t={t} />
-                          <span className="font-semibold text-stone-700 dark:text-stone-300">
+                      </button>
+
+                      <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5 p-2 sm:p-2.5">
+                        {catName.get(product.category_id) && (
+                          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-accent-600 dark:text-accent-400">
+                            {catName.get(product.category_id)}
+                          </span>
+                        )}
+                        <div className="w-full min-w-0">
+                          <h3 className="break-words text-xs sm:text-sm font-bold leading-snug text-stone-900 dark:text-white">
+                            {translateJson(product.name)}
+                          </h3>
+                          {translateJson(product.description).trim() && (
+                            <p className="mt-0.5 break-words whitespace-pre-line line-clamp-2 text-[10px] sm:text-[11px] leading-snug text-stone-500 dark:text-stone-400">
+                              {translateJson(product.description)}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400">
+                          <Stars value={rating} className="h-3 w-3" t={t} />
+                          <span className="text-[10px] font-semibold text-stone-700 dark:text-stone-300">
                             {rating.toFixed(1)}
                           </span>
-                          <span>
-                            ({reviews}{" "}
-                            {reviews === 1 ? t("review") : t("reviews")})
-                          </span>
+                          <span className="text-[10px]">({reviews})</span>
                         </div>
+
                         {options.length > 1 && (
-                          <SizeChips
-                            options={options}
-                            active={option.key}
-                            t={t}
-                            onPick={(key) =>
-                              setPicked((prev) => ({
-                                ...prev,
-                                [product.id]: key,
-                              }))
-                            }
-                          />
+                          <div className="w-full min-w-0">
+                            <SizeChips
+                              options={options}
+                              active={option.key}
+                              t={t}
+                              compact
+                              // onPick={(key) =>
+                              //   setPicked((prev) => ({ ...prev, [product.id]: key }))
+                              // }
+                              onPick={(key) =>
+                                setPicked((previous) => ({
+                                  ...previous,
+                                  [product.id]: key,
+                                }))
+                              }
+                            />
+                          </div>
                         )}
 
-                        {/* Show more options toggle button */}
-                        {hasAnyOptions && (
-                          <div className="pt-2">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setShowOptionsId(isExpanded ? null : product.id)
-                              }
-                              className="w-full flex items-center justify-between text-xs font-semibold text-amber-600 dark:text-amber-400 py-1.5 px-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 transition-colors cursor-pointer"
-                            >
-                              <span>{t("show_more_options")}</span>
-                              {isExpanded ? (
-                                <ChevronUp className="w-4 h-4" />
-                              ) : (
-                                <ChevronDown className="w-4 h-4" />
+                        <div className="mt-auto flex w-full min-w-0 flex-wrap items-end justify-between gap-2 pt-1">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                              <span className="text-xs sm:text-sm font-extrabold text-stone-900 dark:text-white">
+                                {formatPriceWithUSD(currentDisplayPrice).riel}
+                              </span>
+                              {discount > 0 && (
+                                <span className="text-[10px] line-through text-stone-400">
+                                  {formatPriceWithUSD(currentBasePrice).riel}
+                                </span>
                               )}
-                            </button>
+                            </div>
+                            <div className="text-[10px] font-medium text-stone-400 dark:text-stone-500">
+                              {formatPriceWithUSD(currentDisplayPrice).usd}
+                            </div>
+                          </div>
+                          {/* <button
+                            type="button"
+                            onClick={() => setSelectedProduct(product)}
+                            className="shrink-0 px-0.5 py-1 text-[11px] sm:text-xs font-semibold text-accent-600 dark:text-accent-400 underline underline-offset-4 decoration-accent-500/70 hover:text-accent-700 dark:hover:text-accent-300 transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 rounded"
+                          >
+                            {t("see_more") && t("see_more") !== "see_more"
+                              ? t("see_more")
+                              : "See more"}
+                          </button> */}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedProduct(product)}
+                            className="!m-0 !min-h-0 !h-auto !w-auto
+    !border-0 !bg-transparent !px-0 !py-0
+    !text-[10px] sm:!text-[11px]
+    !font-medium !leading-tight
+    text-accent-600 dark:text-accent-400
+    underline underline-offset-2
+    decoration-accent-500/70
+    hover:text-accent-700 dark:hover:text-accent-300
+    transition-colors rounded"
+                          >
+                            {t("see_more") !== "see_more"
+                              ? t("see_more")
+                              : "See more"}
+                          </button>
+                        </div>
+                      </div>
+                    </article>
 
-                            {/* Expandable options panel with radio buttons */}
-                            {isExpanded && (
-                              <div className="mt-3 p-3 bg-stone-50 dark:bg-stone-800/50 rounded-xl space-y-3 text-xs border border-stone-200 dark:border-stone-700 animate-fadeIn">
-                                {/* Sugar Level */}
-                                {availSugar.length > 0 && (
-                                  <div>
-                                    <span className="font-bold text-stone-700 dark:text-stone-300 block mb-1.5">
-                                      {t("sugar_level")}{" "}
-                                      <span className="text-rose-500">*</span>
-                                    </span>
-                                    <div className="space-y-1.5">
-                                      {availSugar.map((sug) => (
-                                        <label
-                                          key={sug.id}
-                                          className="flex items-center gap-2 cursor-pointer text-stone-700 dark:text-stone-300 hover:text-amber-600"
-                                        >
-                                          <input
-                                            type="radio"
-                                            name={`sugar-${product.id}`}
-                                            checked={
-                                              prodCust.sugar?.id === sug.id
-                                            }
-                                            onChange={() =>
-                                              handleCustomizationChange(
-                                                product.id,
-                                                "sugar",
-                                                sug,
-                                              )
-                                            }
-                                            className="accent-amber-600 cursor-pointer"
-                                          />
-                                          <span>{translateJson(sug.name)}</span>
-                                        </label>
-                                      ))}
-                                    </div>
-                                  </div>
+                    {/* Existing desktop card — kept unchanged at large screens */}
+                    <div className="hidden lg:flex group relative bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 hover:shadow-xl hover:border-accent-500/50 transition-all duration-300 flex-col justify-between overflow-hidden">
+                      <div>
+                        {/* <div className="relative h-56 overflow-hidden bg-stone-100 dark:bg-stone-800"> */}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`View ${translateJson(product.name)} details`}
+                          onClick={() => setSelectedProduct(product)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setSelectedProduct(product);
+                            }
+                          }}
+                          // className="relative h-56 overflow-hidden bg-stone-100 dark:bg-stone-800 cursor-zoom-in"
+                          className="relative h-32 xs:h-36 sm:h-40 md:h-44 lg:h-56 overflow-hidden bg-stone-100 dark:bg-stone-800 cursor-zoom-in"
+                        >
+                          {img ? (
+                            <img
+                              src={img}
+                              alt={translateJson(product.name)}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-5xl">
+                              ☕
+                            </div>
+                          )}
+
+                          <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                            {discount > 0 && (
+                              <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider bg-rose-600/90 backdrop-blur-md text-white rounded-lg">
+                                -{discount}%
+                              </span>
+                            )}
+
+                            {translateJson(product.badge).trim() && (
+                              <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider bg-black/60 backdrop-blur-md text-white rounded-lg">
+                                {translateJson(product.badge)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {/* <div className="p-5 space-y-2"> */}
+                        <div className="p-2.5 sm:p-3 md:p-4 lg:p-5 space-y-1.5 sm:space-y-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-accent-600 dark:text-accent-400">
+                            {catName.get(product.category_id)}
+                          </span>
+                          {/* <h3 className="font-semibold text-stone-900 dark:text-white line-clamp-1">
+                          {translateJson(product.name)}
+                        </h3> */}
+                          <h3 className="font-semibold text-sm sm:text-base text-stone-900 dark:text-white line-clamp-2">
+                            {translateJson(product.name)}
+                          </h3>
+                          <div className="flex items-center gap-2 text-xs text-stone-500">
+                            <Stars value={rating} t={t} />
+                            <span className="font-semibold text-stone-700 dark:text-stone-300">
+                              {rating.toFixed(1)}
+                            </span>
+                            <span>
+                              ({reviews}{" "}
+                              {reviews === 1 ? t("review") : t("reviews")})
+                            </span>
+                          </div>
+                          {options.length > 1 && (
+                            <SizeChips
+                              options={options}
+                              active={option.key}
+                              t={t}
+                              // onPick={(key) =>
+                              //   setPicked((prev) => ({
+                              //     ...prev,
+                              //     [product.id]: key,
+                              //   }))
+                              // }
+                              onPick={(key) =>
+                                setPicked((previous) => ({
+                                  ...previous,
+                                  [product.id]: key,
+                                }))
+                              }
+                            />
+                          )}
+
+                          {/* Show more options toggle button */}
+                          {hasAnyOptions && (
+                            <div className="pt-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setShowOptionsId(
+                                    isExpanded ? null : product.id,
+                                  )
+                                }
+                                className="w-full flex items-center justify-between text-xs font-semibold text-accent-600 dark:text-accent-400 py-1.5 px-3 rounded-lg bg-accent-50 dark:bg-accent-950/30 hover:bg-accent-100 transition-colors cursor-pointer"
+                              >
+                                <span>{t("show_more_options")}</span>
+                                {isExpanded ? (
+                                  <ChevronUp className="w-4 h-4" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4" />
                                 )}
+                              </button>
 
-                                {/* Ice Level */}
-                                {availIce.length > 0 && (
-                                  <div>
-                                    <span className="font-bold text-stone-700 dark:text-stone-300 block mb-1.5">
-                                      {t("ice_level")}{" "}
-                                      <span className="text-rose-500">*</span>
-                                    </span>
-                                    <div className="space-y-1.5">
-                                      {availIce.map((ice) => (
-                                        <label
-                                          key={ice.id}
-                                          className="flex items-center gap-2 cursor-pointer text-stone-700 dark:text-stone-300 hover:text-amber-600"
-                                        >
-                                          <input
-                                            type="radio"
-                                            name={`ice-${product.id}`}
-                                            checked={
-                                              prodCust.ice?.id === ice.id
-                                            }
-                                            onChange={() =>
-                                              handleCustomizationChange(
-                                                product.id,
-                                                "ice",
-                                                ice,
-                                              )
-                                            }
-                                            className="accent-amber-600 cursor-pointer"
-                                          />
-                                          <span>{translateJson(ice.name)}</span>
-                                        </label>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Coffee Level */}
-                                {availCoffee.length > 0 && (
-                                  <div>
-                                    <span className="font-bold text-stone-700 dark:text-stone-300 block mb-1.5">
-                                      {t("coffee_level")}{" "}
-                                      <span className="text-rose-500">*</span>
-                                    </span>
-                                    <div className="space-y-1.5">
-                                      {availCoffee.map((cof) => {
-                                        const extra = Number(cof.price || 0);
-                                        return (
+                              {/* Expandable options panel with radio buttons */}
+                              {isExpanded && (
+                                <div className="mt-3 p-3 bg-stone-50 dark:bg-stone-800/50 rounded-xl space-y-3 text-xs border border-stone-200 dark:border-stone-700 animate-fadeIn">
+                                  {/* Sugar Level */}
+                                  {availSugar.length > 0 && (
+                                    <div>
+                                      <span className="font-bold text-stone-700 dark:text-stone-300 block mb-1.5">
+                                        {t("sugar_level")}{" "}
+                                        <span className="text-rose-500">*</span>
+                                      </span>
+                                      <div className="space-y-1.5">
+                                        {availSugar.map((sug) => (
                                           <label
-                                            key={cof.id}
-                                            className="flex items-center gap-2 cursor-pointer text-stone-700 dark:text-stone-300 hover:text-amber-600"
+                                            key={sug.id}
+                                            className="flex items-center gap-2 cursor-pointer text-stone-700 dark:text-stone-300 hover:text-accent-600"
                                           >
                                             <input
                                               type="radio"
-                                              name={`coffee-${product.id}`}
+                                              name={`sugar-${product.id}`}
                                               checked={
-                                                prodCust.coffee?.id === cof.id
+                                                prodCust.sugar?.id === sug.id
                                               }
                                               onChange={() =>
                                                 handleCustomizationChange(
                                                   product.id,
-                                                  "coffee",
-                                                  cof,
+                                                  "sugar",
+                                                  sug,
                                                 )
                                               }
-                                              className="accent-amber-600 cursor-pointer"
+                                              className="accent-accent-600 cursor-pointer"
                                             />
                                             <span>
-                                              {translateJson(cof.name)}
-                                              {/* {extra > 0 &&
-                                                ` (+$${extra.toFixed(2)})`} */}
-                                                {extra > 0 && ` (+${formatPriceWithUSD(extra).riel})`}
+                                              {translateJson(sug.name)}
                                             </span>
                                           </label>
-                                        );
-                                      })}
+                                        ))}
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                                  )}
 
-                    <div className="p-5 pt-0 flex items-center justify-between mt-auto">
-                      {/* <div className="flex items-baseline gap-2">
+                                  {/* Ice Level */}
+                                  {availIce.length > 0 && (
+                                    <div>
+                                      <span className="font-bold text-stone-700 dark:text-stone-300 block mb-1.5">
+                                        {t("ice_level")}{" "}
+                                        <span className="text-rose-500">*</span>
+                                      </span>
+                                      <div className="space-y-1.5">
+                                        {availIce.map((ice) => (
+                                          <label
+                                            key={ice.id}
+                                            className="flex items-center gap-2 cursor-pointer text-stone-700 dark:text-stone-300 hover:text-accent-600"
+                                          >
+                                            <input
+                                              type="radio"
+                                              name={`ice-${product.id}`}
+                                              checked={
+                                                prodCust.ice?.id === ice.id
+                                              }
+                                              onChange={() =>
+                                                handleCustomizationChange(
+                                                  product.id,
+                                                  "ice",
+                                                  ice,
+                                                )
+                                              }
+                                              className="accent-accent-600 cursor-pointer"
+                                            />
+                                            <span>
+                                              {translateJson(ice.name)}
+                                            </span>
+                                          </label>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Coffee Level */}
+                                  {availCoffee.length > 0 && (
+                                    <div>
+                                      <span className="font-bold text-stone-700 dark:text-stone-300 block mb-1.5">
+                                        {t("coffee_level")}{" "}
+                                        <span className="text-rose-500">*</span>
+                                      </span>
+                                      <div className="space-y-1.5">
+                                        {availCoffee.map((cof) => {
+                                          const extra = Number(cof.price || 0);
+                                          return (
+                                            <label
+                                              key={cof.id}
+                                              className="flex items-center gap-2 cursor-pointer text-stone-700 dark:text-stone-300 hover:text-accent-600"
+                                            >
+                                              <input
+                                                type="radio"
+                                                name={`coffee-${product.id}`}
+                                                checked={
+                                                  prodCust.coffee?.id === cof.id
+                                                }
+                                                onChange={() =>
+                                                  handleCustomizationChange(
+                                                    product.id,
+                                                    "coffee",
+                                                    cof,
+                                                  )
+                                                }
+                                                className="accent-accent-600 cursor-pointer"
+                                              />
+                                              <span>
+                                                {translateJson(cof.name)}
+                                                {/* {extra > 0 &&
+                                                ` (+$${extra.toFixed(2)})`} */}
+                                                {extra > 0 &&
+                                                  ` (+${formatPriceWithUSD(extra).riel})`}
+                                              </span>
+                                            </label>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="p-5 pt-0 flex items-center justify-between mt-auto">
+                        {/* <div className="flex items-baseline gap-2">
                         <span className="text-xl font-extrabold text-stone-900 dark:text-white">
                           {currentDisplayPrice.toFixed(2)}៛
                         </span>
@@ -750,29 +904,32 @@ export default function ShopAll() {
                           </span>
                         )}
                       </div> */}
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-xl font-extrabold text-stone-900 dark:text-white">
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-baseline gap-2">
+                            {/* <span className="text-xl font-extrabold text-stone-900 dark:text-white">
                             {formatPriceWithUSD(currentDisplayPrice).riel}
-                          </span>
-                          {discount > 0 && (
-                            <span className="text-sm line-through text-stone-400">
-                              {formatPriceWithUSD(currentBasePrice).riel}
+                          </span> */}
+                            <span className="text-sm sm:text-lg lg:text-xl font-extrabold text-stone-900 dark:text-white">
+                              {formatPriceWithUSD(currentDisplayPrice).riel}
                             </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-stone-400 dark:text-stone-500 font-medium">
-                          <span>
-                            {formatPriceWithUSD(currentDisplayPrice).usd}
-                          </span>
-                          {discount > 0 && (
-                            <span className="line-through">
-                              {formatPriceWithUSD(currentBasePrice).usd}
+                            {discount > 0 && (
+                              <span className="text-sm line-through text-stone-400">
+                                {formatPriceWithUSD(currentBasePrice).riel}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-stone-400 dark:text-stone-500 font-medium">
+                            <span>
+                              {formatPriceWithUSD(currentDisplayPrice).usd}
                             </span>
-                          )}
+                            {discount > 0 && (
+                              <span className="line-through">
+                                {formatPriceWithUSD(currentBasePrice).usd}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      {/* <button
+                        {/* <button
                         onClick={() => handleAdd(product)}
                         disabled={!canAdd}
                         className={`px-4 py-2 text-white font-semibold text-xs rounded-xl shadow-sm transition-all cursor-pointer ${
@@ -780,7 +937,7 @@ export default function ShopAll() {
                             ? "bg-stone-300 dark:bg-stone-700 text-stone-500 cursor-not-allowed opacity-60"
                             : addedId === product.id
                               ? "bg-emerald-600"
-                              : "bg-amber-600 hover:bg-amber-700"
+                              : "bg-accent-600 hover:bg-accent-700"
                         }`}
                         title={
                           !canAdd
@@ -790,27 +947,28 @@ export default function ShopAll() {
                       >
                         {addedId === product.id ? t("added") : t("add_to_order")}
                       </button> */}
-                      {currentUser && (
-                        <button
-                          type="button"
-                          onClick={() => handleAdd(product)}
-                          disabled={!canAdd}
-                          className={`px-4 py-2 text-white font-semibold text-xs rounded-xl shadow-sm transition-all cursor-pointer ${
-                            !canAdd
-                              ? "bg-stone-300 dark:bg-stone-700 text-stone-500 cursor-not-allowed opacity-60"
-                              : addedId === product.id
-                                ? "bg-emerald-600"
-                                : "bg-amber-600 hover:bg-amber-700"
-                          }`}
-                          title={!canAdd ? t("complete_required_levels") : ""}
-                        >
-                          {addedId === product.id
-                            ? t("added")
-                            : t("add_to_order")}
-                        </button>
-                      )}
+                        {currentUser && (
+                          <button
+                            type="button"
+                            onClick={() => handleAdd(product)}
+                            disabled={!canAdd}
+                            className={`px-4 py-2 text-white font-semibold text-xs rounded-xl shadow-sm transition-all cursor-pointer ${
+                              !canAdd
+                                ? "bg-stone-300 dark:bg-stone-700 text-stone-500 cursor-not-allowed opacity-60"
+                                : addedId === product.id
+                                  ? "bg-emerald-600"
+                                  : "bg-accent-600 hover:bg-accent-700"
+                            }`}
+                            title={!canAdd ? t("complete_required_levels") : ""}
+                          >
+                            {addedId === product.id
+                              ? t("added")
+                              : t("add_to_order")}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  </React.Fragment>
                 );
               })}
             </div>
@@ -854,7 +1012,7 @@ export default function ShopAll() {
                       return (
                         <label
                           key={level.id}
-                          className="flex items-center gap-3 p-3 rounded-xl border border-stone-200 dark:border-stone-700 hover:border-amber-500 transition-colors cursor-pointer"
+                          className="flex items-center gap-3 p-3 rounded-xl border border-stone-200 dark:border-stone-700 hover:border-accent-500 transition-colors cursor-pointer"
                         >
                           <input
                             type="radio"
@@ -867,7 +1025,7 @@ export default function ShopAll() {
                                 level,
                               )
                             }
-                            className="accent-amber-600"
+                            className="accent-accent-600"
                           />
 
                           <span className="flex-1 text-sm text-stone-700 dark:text-stone-300">
@@ -875,7 +1033,7 @@ export default function ShopAll() {
                           </span>
 
                           {extra > 0 && (
-                            <span className="text-xs font-semibold text-amber-600">
+                            <span className="text-xs font-semibold text-accent-600">
                               +{formatPriceWithUSD(extra).riel}
                             </span>
                           )}
@@ -939,7 +1097,7 @@ export default function ShopAll() {
                   <div className="flex flex-col flex-1 min-w-0 min-h-0">
                     {/* Header */}
                     <div className="shrink-0 flex items-center justify-between gap-3 p-5 sm:p-6 border-b border-stone-200 dark:border-stone-800">
-                      <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      <span className="text-xs font-bold uppercase tracking-wider text-accent-600 dark:text-accent-400">
                         {catName.get(product.category_id) || ""}
                       </span>
 
@@ -961,7 +1119,7 @@ export default function ShopAll() {
                         </h2>
 
                         {translateJson(product.badge).trim() && (
-                          <span className="inline-flex px-3 py-1 rounded-lg bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 text-xs font-bold">
+                          <span className="inline-flex px-3 py-1 rounded-lg bg-accent-100 dark:bg-accent-950/50 text-accent-700 dark:text-accent-300 text-xs font-bold">
                             {translateJson(product.badge)}
                           </span>
                         )}
@@ -1008,7 +1166,7 @@ export default function ShopAll() {
                       )}
 
                       {/* Price */}
-                      <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50">
+                      <div className="p-4 rounded-xl bg-accent-50 dark:bg-accent-950/30 border border-accent-100 dark:border-accent-900/50">
                         <div className="flex flex-wrap items-baseline gap-3">
                           <span className="text-2xl font-extrabold text-stone-900 dark:text-white">
                             {formatPriceWithUSD(displayPrice).riel}
@@ -1080,7 +1238,7 @@ export default function ShopAll() {
                           className={`w-full py-3.5 px-5 rounded-xl text-sm font-bold text-white transition-colors ${
                             !canAdd
                               ? "bg-stone-300 dark:bg-stone-700 text-stone-500 cursor-not-allowed"
-                              : "bg-amber-600 hover:bg-amber-700"
+                              : "bg-accent-600 hover:bg-accent-700"
                           }`}
                           title={!canAdd ? t("complete_required_levels") : ""}
                         >

@@ -173,7 +173,7 @@ export default function Contact() {
             value={formData.name}
             onChange={handleInputChange}
             placeholder="Visalsing"
-            className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-amber-500 text-stone-900 dark:text-white"
+            className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-accent-500 text-stone-900 dark:text-white"
           />
         </div>
         <div>
@@ -187,7 +187,7 @@ export default function Contact() {
             value={formData.email}
             onChange={handleInputChange}
             placeholder="example@gmail.com"
-            className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-amber-500 text-stone-900 dark:text-white"
+            className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-accent-500 text-stone-900 dark:text-white"
           />
         </div>
       </div>
@@ -204,7 +204,7 @@ export default function Contact() {
           value={formData.title}
           onChange={handleInputChange}
           placeholder="e.g., Table Reservation or General Question"
-          className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-amber-500 text-stone-900 dark:text-white"
+          className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-accent-500 text-stone-900 dark:text-white"
         />
       </div>
 
@@ -220,14 +220,14 @@ export default function Contact() {
           value={formData.message}
           onChange={handleInputChange}
           placeholder="How can we help you?"
-          className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-amber-500 text-stone-900 dark:text-white resize-none"
+          className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-accent-500 text-stone-900 dark:text-white resize-none"
         />
       </div>
 
       <button
         type="submit"
         disabled={submitting}
-        className="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+        className="w-full py-2.5 px-4 rounded-xl bg-accent-600 hover:bg-accent-700 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
       >
         <Send className="w-4 h-4" />
         {submitting ? "Sending..." : "Send Message"}
