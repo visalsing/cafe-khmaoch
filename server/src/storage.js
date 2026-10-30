@@ -27,7 +27,8 @@ export const ENTITIES = [
   "hero",
   "levels_options",
   "country_flags",
-  "avatars"
+  "avatars",
+  "qr"
 ];
 
 // Only these entities can also store SVG files.

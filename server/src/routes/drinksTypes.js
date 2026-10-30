@@ -65,6 +65,13 @@ function parseI18n(raw, max) {
   return out;
 }
 
+/* ---------- sort_num helper: whole number >= 0, or `fallback` when missing/invalid ---------- */
+function parseSortNum(raw, fallback = 0) {
+  if (raw === undefined || raw === null || raw === "") return fallback;
+  const n = Number.parseInt(raw, 10);
+  return Number.isInteger(n) && n >= 0 ? n : fallback;
+}
+
 /* ================= GET: list ================= */
 router.get(
   "/",
@@ -88,15 +95,16 @@ router.post(
     const description = parseI18n(req.body.description, 500) || {};
     if (!name?.en) return res.status(400).json({ error: "The English name is required." });
     const status = Number(req.body.status) === 0 ? 0 : 1;
+    const sortNum = parseSortNum(req.body.sort_num, 0);
 
     const files = req.file ? await storeUpload(req.file) : noFile;
 
     try {
       const { rows } = await pool.query(
-        `INSERT INTO drinks_type (name, description, img, thumbnail, status)
-         VALUES ($1::jsonb, $2::jsonb, $3, $4, $5)
+        `INSERT INTO drinks_type (name, description, img, thumbnail, status, sort_num)
+         VALUES ($1::jsonb, $2::jsonb, $3, $4, $5, $6)
          RETURNING *`,
-        [JSON.stringify(name), JSON.stringify(description), files.img, files.thumbnail, status]
+        [JSON.stringify(name), JSON.stringify(description), files.img, files.thumbnail, status, sortNum]
       );
       res.status(201).json(rows[0]);
     } catch (err) {
@@ -122,6 +130,8 @@ router.put(
     const description = parseI18n(req.body.description, 500) || {};
     if (!name?.en) return res.status(400).json({ error: "The English name is required." });
     const status = Number(req.body.status) === 0 ? 0 : 1;
+    // if sort_num is not sent, keep the stored value instead of resetting it to 0
+    const sortNum = parseSortNum(req.body.sort_num, existing[0].sort_num ?? 0);
 
     let img = existing[0].img;
     let thumbnail = existing[0].thumbnail;
@@ -139,10 +149,11 @@ router.put(
     try {
       const { rows } = await pool.query(
         `UPDATE drinks_type
-         SET name = $1::jsonb, description = $2::jsonb, img = $3, thumbnail = $4, status = $5
-         WHERE id = $6
+         SET name = $1::jsonb, description = $2::jsonb, img = $3, thumbnail = $4,
+             status = $5, sort_num = $6
+         WHERE id = $7
          RETURNING *`,
-        [JSON.stringify(name), JSON.stringify(description), img, thumbnail, status, id]
+        [JSON.stringify(name), JSON.stringify(description), img, thumbnail, status, sortNum, id]
       );
       // only after the DB update succeeded: delete the OLD files
       if (img !== existing[0].img) await dropFiles(existing[0].img, existing[0].thumbnail);

@@ -268,7 +268,7 @@ function itemToApi(i) {
 //   const paid = pays.find((p) => p.status === "paid") || pays[0] || null;
 //   const num = (v) => (v === null || v === undefined ? null : Number(v));
 //   return {
-//     id: o.order_number, // what the screens show ("CKM-1001"); the API accepts it in URLs
+//     id: o.order_number, // what the screens show ("CK-1001"); the API accepts it in URLs
 //     dbId: o.id,
 //     orderNumber: o.order_number,
 //     source: o.source,
@@ -301,7 +301,7 @@ function toApi(o, items, pays, extra = {}) {
   const paid = pays.find((p) => p.status === "paid") || pays[0] || null;
   const num = (v) => (v === null || v === undefined ? null : Number(v));
   return {
-    id: o.order_number, // what the screens show ("CKM-1001"); the API accepts it in URLs
+    id: o.order_number, // what the screens show ("CK-1001"); the API accepts it in URLs
     dbId: o.id,
     orderNumber: o.order_number,
     number: o.order_number, // the name the old screens use
@@ -441,7 +441,7 @@ async function hydrate(orders) {
   );
 }
 
-// "CKM-1001" or the numeric id
+// "CK-1001" or the numeric id
 const byRef = (ref) =>
   /^\d+$/.test(String(ref))
     ? { col: "id", val: Number(ref) }
@@ -471,6 +471,15 @@ export async function listOrders(f = {}) {
   const { rows } = await query(
     `SELECT * FROM orders ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY created_at DESC LIMIT ${limit}`,
     params,
+  );
+  return hydrate(rows);
+}
+
+// orders still in progress, oldest first (the kitchen works in that order)
+export async function listOpenOrders(limit = 15) {
+  const cap = Math.min(Math.max(parseInt(limit, 10) || 15, 1), 50);
+  const { rows } = await query(
+    `SELECT * FROM orders WHERE status IN ('pending', 'preparing', 'ready') ORDER BY created_at ASC LIMIT ${cap}`,
   );
   return hydrate(rows);
 }

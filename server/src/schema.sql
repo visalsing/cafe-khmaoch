@@ -668,7 +668,7 @@ DECLARE
   t TEXT;
 BEGIN
   FOREACH t IN ARRAY ARRAY[
-    'country_flags', 'genders', 'roles', 'positions', 'permissions', 'role_permissions'
+    'country_flags', 'genders', 'roles', 'positions', 'permissions', 'role_permissions',
     'nationalities', 'users', 'categories', 'drinks_type', 'products',
     'hero_slides', 'maps', 'levels_options', 'sugar_level', 'ice_level',
     'coffee_level', 'currencies', 'exchange_rate'
@@ -980,9 +980,9 @@ CREATE INDEX IF NOT EXISTS user_verifications_verified_idx ON user_verifications
 
 
 -- 3. Grandfather: every existing user counts as verified (so nobody is locked out of password reset)
-INSERT INTO user_verifications (user_id, is_verified_email, email_verified_at, email_updated_at)
-SELECT id, TRUE, now(), now() FROM users
-ON CONFLICT (user_id) DO NOTHING;
+-- INSERT INTO user_verifications (user_id, is_verified_email, email_verified_at, email_updated_at)
+-- SELECT id, TRUE, now(), now() FROM users
+-- ON CONFLICT (user_id) DO NOTHING;
 
 -- 4. Two new event types for the audit log
 ALTER TABLE email_otp_events DROP CONSTRAINT IF EXISTS email_otp_events_event_type_check;
@@ -1047,7 +1047,7 @@ CREATE TABLE IF NOT EXISTS promo_codes (
 
 CREATE TABLE IF NOT EXISTS orders (
   id               INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  order_number     TEXT NOT NULL UNIQUE DEFAULT ('CKM-' || nextval('order_number_seq')),
+  order_number     TEXT NOT NULL UNIQUE DEFAULT ('CK-' || nextval('order_number_seq')),
   source           TEXT NOT NULL DEFAULT 'pos'     CHECK (source IN ('pos', 'online')),
   order_type       TEXT NOT NULL DEFAULT 'dine-in' CHECK (order_type IN ('dine-in', 'pickup', 'delivery')),
   status           TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'preparing', 'ready', 'completed', 'cancelled')),
@@ -1185,3 +1185,43 @@ CREATE INDEX IF NOT EXISTS idx_impersonation_logs_admin
 
 CREATE INDEX IF NOT EXISTS idx_impersonation_logs_target
     ON impersonation_logs(target_user_id, started_at DESC);
+
+
+-- ===================================================================
+-- ============ qr_images (QR codes shown on the website) ============
+-- ===================================================================
+CREATE TABLE IF NOT EXISTS qr_images (
+  id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name        JSONB NOT NULL,                              -- {"en":"Website QR","km":"..."}
+  description JSONB NOT NULL DEFAULT '{}'::jsonb,
+  img         TEXT NOT NULL DEFAULT '',
+  thumbnail   TEXT NOT NULL DEFAULT '',
+  url         TEXT NOT NULL DEFAULT '',                    -- where this QR points to
+  status      SMALLINT NOT NULL DEFAULT 1 CHECK (status IN (0, 1)),       -- 1 = active, 0 = hidden
+  is_selected SMALLINT NOT NULL DEFAULT 0 CHECK (is_selected IN (0, 1)),  -- the one shown on the site
+  sort_num    INTEGER NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT qr_images_name_has_en CHECK (name ? 'en' AND length(name->>'en') > 0),
+  CONSTRAINT qr_images_selected_active CHECK (is_selected = 0 OR status = 1),
+  CONSTRAINT qr_images_selected_has_img CHECK (is_selected = 0 OR img <> '')
+);
+
+-- the database itself guarantees at most ONE selected row
+CREATE UNIQUE INDEX IF NOT EXISTS qr_images_one_selected_idx
+  ON qr_images (is_selected) WHERE is_selected = 1;
+CREATE INDEX IF NOT EXISTS qr_images_status_sort_idx ON qr_images (status, sort_num);
+
+DROP TRIGGER IF EXISTS qr_images_updated_at ON qr_images;
+CREATE TRIGGER qr_images_updated_at BEFORE UPDATE ON qr_images
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ====================================================================
+-- ===================== Dashboard: goals + indexes ====================
+-- ====================================================================
+ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS daily_sales_goal  NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (daily_sales_goal >= 0);
+ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS daily_orders_goal INTEGER       NOT NULL DEFAULT 0 CHECK (daily_orders_goal >= 0);
+
+CREATE INDEX IF NOT EXISTS orders_payment_idx   ON orders   (payment_status, created_at DESC);
+CREATE INDEX IF NOT EXISTS payments_created_idx ON payments (created_at DESC);
+CREATE INDEX IF NOT EXISTS impersonation_logs_open_idx ON impersonation_logs (started_at DESC) WHERE ended_at IS NULL;

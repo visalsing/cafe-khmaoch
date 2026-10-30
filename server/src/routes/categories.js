@@ -54,11 +54,18 @@ function parseI18n(raw, max) {
   return out;
 }
 
-/* ================= GET: public list (hidden categories only for menu managers) ================= */
+/* ---------- sort_num helper: whole number >= 0, or `fallback` when missing/invalid ---------- */
+function parseSortNum(raw, fallback = 0) {
+  if (raw === undefined || raw === null || raw === "") return fallback;
+  const n = Number.parseInt(raw, 10);
+  return Number.isInteger(n) && n >= 0 ? n : fallback;
+}
+
+/* ================= GET: public list, ordered by sort_num (hidden categories only for menu managers) ================= */
 router.get("/", optionalAuth, async (req, res) => {
   const all = req.permissions?.includes("menu");
   const { rows } = await pool.query(
-    `SELECT * FROM categories ${all ? "" : "WHERE status = 1"} ORDER BY id ASC`
+    `SELECT * FROM categories ${all ? "" : "WHERE status = 1"} ORDER BY sort_num ASC, id ASC`
   );
   res.json(rows);
 });
@@ -69,16 +76,17 @@ router.post("/", ...guard, uploadOne, async (req, res) => {
   const description = parseI18n(req.body.description, 500) || {};
   if (!name?.en) return res.status(400).json({ error: "The English name is required." });
   const status = Number(req.body.status) === 0 ? 0 : 1;
+  const sortNum = parseSortNum(req.body.sort_num, 0);
 
   // no file chosen -> img and thumbnail stay NULL
   const files = req.file ? await storeUpload(req.file) : { img: null, thumbnail: null };
 
   try {
     const { rows } = await pool.query(
-      `INSERT INTO categories (name, description, img, thumbnail, status, created_at, updated_at)
-       VALUES ($1::jsonb, $2::jsonb, $3, $4, $5, now(), now())
+      `INSERT INTO categories (name, description, img, thumbnail, status, sort_num, created_at, updated_at)
+       VALUES ($1::jsonb, $2::jsonb, $3, $4, $5, $6, now(), now())
        RETURNING *`,
-      [JSON.stringify(name), JSON.stringify(description), files.img, files.thumbnail, status]
+      [JSON.stringify(name), JSON.stringify(description), files.img, files.thumbnail, status, sortNum]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -99,6 +107,8 @@ router.put("/:id", ...guard, uploadOne, async (req, res) => {
   const description = parseI18n(req.body.description, 500) || {};
   if (!name?.en) return res.status(400).json({ error: "The English name is required." });
   const status = Number(req.body.status) === 0 ? 0 : 1;
+  // if sort_num is not sent, keep the stored value instead of resetting it to 0
+  const sortNum = parseSortNum(req.body.sort_num, existing[0].sort_num ?? 0);
 
   // start from what is already stored
   let img = existing[0].img;
@@ -117,10 +127,11 @@ router.put("/:id", ...guard, uploadOne, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `UPDATE categories
-       SET name = $1::jsonb, description = $2::jsonb, img = $3, thumbnail = $4, status = $5, updated_at = now()
-       WHERE id = $6
+       SET name = $1::jsonb, description = $2::jsonb, img = $3, thumbnail = $4,
+           status = $5, sort_num = $6, updated_at = now()
+       WHERE id = $7
        RETURNING *`,
-      [JSON.stringify(name), JSON.stringify(description), img, thumbnail, status, id]
+      [JSON.stringify(name), JSON.stringify(description), img, thumbnail, status, sortNum, id]
     );
     // only after the database update succeeded: delete the OLD files
     if (img !== existing[0].img) await removeImages(existing[0].img, existing[0].thumbnail);

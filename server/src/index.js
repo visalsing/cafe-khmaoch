@@ -26,6 +26,8 @@ import loginVerificationRoutes from "./routes/loginVerification.js";
 import ordersRoutes from "./routes/orders.js";
 import profileRoutes from "./routes/profile.js";
 import impersonationRoutes from "./routes/impersonation.js";
+import qrRoutes from "./routes/qr.js";
+import dashboardRoutes from "./routes/dashboard.js";
 import { UPLOADS_ROOT } from "./storage.js";
 
 if (!process.env.DATABASE_URL || !process.env.JWT_SECRET) {
@@ -100,6 +102,8 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/impersonation", impersonationRoutes);
 
 app.use("/api/orders", ordersRoutes);
+app.use("/api/qr", qrRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.use((req, res) => res.status(404).json({ error: "Not found." }));
 
