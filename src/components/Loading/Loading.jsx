@@ -49,17 +49,17 @@ const CSS = `
   }
 }
 
-/* Lightning bolt */
+/* Lightning bolt: the glow follows the chosen accent color */
 @keyframes ld-lightning {
   0%, 100% {
     opacity: .65;
     transform: scale(.92) rotate(-4deg);
-    filter: drop-shadow(0 0 2px #f59e0b);
+    filter: drop-shadow(0 0 2px rgb(var(--accent-500)));
   }
   50% {
     opacity: 1;
     transform: scale(1.12) rotate(4deg);
-    filter: drop-shadow(0 0 12px #fbbf24);
+    filter: drop-shadow(0 0 12px rgb(var(--accent-400)));
   }
 }
 
@@ -108,14 +108,14 @@ if (typeof document !== "undefined") {
   if (!el.parentNode) document.head.appendChild(el);
 }
 
-/* ---------- the 8 looks ---------- */
+/* ---------- the looks (all colors follow the accent chosen in Settings) ---------- */
 function Dots() {
   return (
     <div className="flex items-center gap-2 h-10">
       {[0, 0.15, 0.3].map((d) => (
         <span
           key={d}
-          className="ld-bounce w-3 h-3 rounded-full bg-amber-500"
+          className="ld-bounce w-3 h-3 rounded-full bg-accent-500"
           style={{ animationDelay: `${d}s` }}
         />
       ))}
@@ -126,29 +126,29 @@ function Dots() {
 function Pulse() {
   return (
     <div className="relative w-14 h-14 flex items-center justify-center">
-      <span className="ld-ring absolute inset-0 rounded-full border-2 border-amber-500" />
+      <span className="ld-ring absolute inset-0 rounded-full border-2 border-accent-500" />
       <span
-        className="ld-ring absolute inset-0 rounded-full border-2 border-amber-400"
+        className="ld-ring absolute inset-0 rounded-full border-2 border-accent-400"
         style={{ animationDelay: "0.8s" }}
       />
-      <span className="w-3.5 h-3.5 rounded-full bg-amber-600" />
+      <span className="w-3.5 h-3.5 rounded-full bg-accent-600" />
     </div>
   );
 }
 
 function Spinner() {
   return (
-    <div className="ld-spin w-11 h-11 rounded-full border-4 border-amber-500/20 border-t-amber-500" />
+    <div className="ld-spin w-11 h-11 rounded-full border-4 border-accent-500/20 border-t-accent-500" />
   );
 }
 
 function Orbit() {
   return (
     <div className="relative w-14 h-14 flex items-center justify-center">
-      <span className="absolute inset-0 rounded-full border-2 border-amber-500/25" />
-      <span className="w-5 h-5 rounded-full bg-amber-600" />
+      <span className="absolute inset-0 rounded-full border-2 border-accent-500/25" />
+      <span className="w-5 h-5 rounded-full bg-accent-600" />
       <span className="ld-orbit absolute inset-0">
-        <span className="absolute left-1/2 -top-[5px] -ml-[5px] w-2.5 h-2.5 rounded-full bg-amber-400 shadow" />
+        <span className="absolute left-1/2 -top-[5px] -ml-[5px] w-2.5 h-2.5 rounded-full bg-accent-400 shadow" />
       </span>
     </div>
   );
@@ -160,7 +160,7 @@ function Bars() {
       {[0, 0.12, 0.24, 0.36, 0.48].map((d) => (
         <span
           key={d}
-          className="ld-wave w-1.5 h-9 rounded-full bg-amber-500"
+          className="ld-wave w-1.5 h-9 rounded-full bg-accent-500"
           style={{ animationDelay: `${d}s` }}
         />
       ))}
@@ -175,24 +175,24 @@ function Coffee() {
         {[0, 0.35, 0.7].map((d) => (
           <span
             key={d}
-            className="ld-steam w-1.5 h-5 rounded-full bg-amber-400/70"
+            className="ld-steam w-1.5 h-5 rounded-full bg-accent-400/70"
             style={{ animationDelay: `${d}s` }}
           />
         ))}
       </div>
       <div className="relative">
-        <div className="w-14 h-9 rounded-t-md rounded-b-[1.75rem] bg-amber-600" />
-        <div className="absolute -right-3.5 top-1.5 w-5 h-5 rounded-full border-4 border-amber-600" />
+        <div className="w-14 h-9 rounded-t-md rounded-b-[1.75rem] bg-accent-600" />
+        <div className="absolute -right-3.5 top-1.5 w-5 h-5 rounded-full border-4 border-accent-600" />
       </div>
-      <div className="w-20 h-1.5 mt-0.5 rounded-full bg-amber-700/60" />
+      <div className="w-20 h-1.5 mt-0.5 rounded-full bg-accent-700/60" />
     </div>
   );
 }
 
 function Progress() {
   return (
-    <div className="w-44 h-1.5 rounded-full bg-amber-500/20 overflow-hidden">
-      <span className="ld-slide block h-full w-2/5 rounded-full bg-amber-500" />
+    <div className="w-44 h-1.5 rounded-full bg-accent-500/20 overflow-hidden">
+      <span className="ld-slide block h-full w-2/5 rounded-full bg-accent-500" />
     </div>
   );
 }
@@ -252,7 +252,7 @@ function Lightning() {
   return (
     <div className="flex items-center justify-center w-16 h-16">
       <span
-        className="ld-lightning text-5xl text-amber-500"
+        className="ld-lightning text-5xl text-accent-500"
         role="img"
         aria-label="Lightning bolt"
       >

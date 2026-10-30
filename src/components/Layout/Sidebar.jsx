@@ -1,19 +1,9 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Settings,
   ChevronDown,
-  ListOrderedIcon,
-  PackageCheckIcon,
-  SendToBackIcon,
-  TruckIcon,
-  RouteIcon,
-  PrinterIcon,
-  BadgeDollarSignIcon,
-  WarehouseIcon,
-  CreditCardIcon,
-  Zap,
   X,
   Search,
   SearchX,
@@ -27,17 +17,17 @@ import {
   ShieldCheck,
   LogOut,
   BoxesIcon,
-  LucideBook,
-  ExternalLink,
   CoinsIcon,
   FlagIcon,
   PersonStanding,
   Flag,
   User,
+  QrCode,
 } from "lucide-react";
-
+import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useAuth } from "../../context/AuthContext";
 import Avatar from "../Dashboard/Users/Avatar";
+import LogoutModal from "../Auth/LogoutModal";
 import { ROLE_INFO, fullName } from "../../utils/access";
 import logoImg from "../../assets/logo/cafe-khmaoch-rmbg.png"; // or your preferred logo path
 
@@ -56,13 +46,13 @@ const PERMISSION_BY_ID = {
 
 const menuItems = [
   {
-    id: "dashboard",
+    id: "profile",
     path: "/dashboard/profile",
     icon: User,
     label: "Profile",
   },
-    {
-    id: "profile",
+  {
+    id: "dashboard",
     path: "/dashboard",
     icon: LayoutDashboard,
     label: "Dashboard",
@@ -111,7 +101,7 @@ const menuItems = [
       },
       {
         id: "sugar-level",
-        path: "/dashboard/levels-options/sugar-level",
+        path: "/dashboard/sugar-level",
         label: "Sugar Level",
       },
       { id: "ice-level", path: "/dashboard/ice-level", label: "Ice Level" },
@@ -210,6 +200,12 @@ const menuItems = [
         icon: Flag,
         label: "Nationalities",
       },
+      {
+        id: "qr-management",
+        path: "/dashboard/qr-management",
+        icon: QrCode,
+        label: "QR Website",
+      },
     ],
   },
   {
@@ -224,225 +220,25 @@ const menuItems = [
     icon: Settings,
     label: "Settings",
   },
-  // {
-  //   id: "users-stop",
-  //   icon: Users,
-  //   label: "Users",
-  //   submenu: [
-  //     { id: "users-list", path: "/dashboard/users-stop", label: "Users" },
-  //     {
-  //       id: "roles-permissions",
-  //       path: "/dashboard/roles-permissions-stop",
-  //       label: "Roles & Permissions",
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: "orderbooking",
-  //   icon: ListOrderedIcon,
-  //   label: "Order Booking",
-  //   submenu: [
-  //     {
-  //       id: "takeorderimports",
-  //       path: "/dashboard/takeorderimports",
-  //       label: "Take Order Imports",
-  //     },
-  //     {
-  //       id: "stock-allocation",
-  //       path: "/dashboard/stock-allocation",
-  //       label: "Stock Allocation",
-  //     },
-  //     {
-  //       id: "orderediting",
-  //       path: "/dashboard/orderediting",
-  //       label: "Order Editing",
-  //     },
-  //     {
-  //       id: "ordercancel",
-  //       path: "/dashboard/ordercancel",
-  //       label: "Order Cancel",
-  //     },
-  //     {
-  //       id: "manualSaleOrderCreation",
-  //       path: "/dashboard/manualSaleOrderCreation",
-  //       label: "Manual Sale Order Creation",
-  //     },
-  //     {
-  //       id: "takeOrderFromSalesman",
-  //       path: "/dashboard/takeOrderFromSalesman",
-  //       label: "Take Order From Salesman",
-  //     },
-  //     {
-  //       id: "editOrderSaleDcode",
-  //       path: "/dashboard/editOrderSaleDcode",
-  //       label: "Edit Order Sale in DCode",
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: "san",
-  //   icon: WarehouseIcon,
-  //   label: "SAN",
-  //   submenu: [
-  //     {
-  //       id: "changeProductType",
-  //       path: "/dashboard/changeProductType",
-  //       label: "Change Product Type",
-  //     },
-  //     {
-  //       id: "moveWarehouse",
-  //       path: "/dashboard/moveWarehouse",
-  //       label: "Move Warehouse",
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: "gin-grn",
-  //   icon: PackageCheckIcon,
-  //   label: "GIN/GRN",
-  //   submenu: [
-  //     {
-  //       id: "good-issue-note",
-  //       path: "/dashboard/good-issue-note",
-  //       label: "Good Issue Note",
-  //     },
-  //     {
-  //       id: "goodReturnNote",
-  //       path: "/dashboard/goodReturnNote",
-  //       label: "Good Return Note",
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: "sales-return",
-  //   icon: PackageCheckIcon,
-  //   label: "Sales Return",
-  //   submenu: [
-  //     {
-  //       id: "sales-return",
-  //       path: "/dashboard/sales-return",
-  //       label: "Sales Return",
-  //     },
-  //     {
-  //       id: "fresh-sales-return",
-  //       path: "/dashboard/fresh-sales-return",
-  //       label: "Fresh Sales Return",
-  //     },
-  //     {
-  //       id: "fresh-sales-return-below24h",
-  //       path: "/dashboard/fresh-sales-return-below24h",
-  //       label: "Fresh Sales Return Below 24h",
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: "Stock-Inquiry",
-  //   icon: SendToBackIcon,
-  //   label: "Stock Inquiry",
-  //   submenu: [
-  //     {
-  //       id: "stock-inquiry",
-  //       path: "/dashboard/stock-inquiry",
-  //       label: "Stock Inquiry",
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: "Dispatch-Advice-II",
-  //   icon: SendToBackIcon,
-  //   label: "Dispatch Advice II",
-  //   submenu: [
-  //     {
-  //       id: "dispatch-advice-ii",
-  //       path: "/dashboard/dispatch-advice-ii",
-  //       label: "Dispatch Advice II",
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: "depositslip",
-  //   icon: CreditCardIcon,
-  //   label: "Deposit Slip",
-  //   submenu: [
-  //     {
-  //       id: "checkDepositSlip",
-  //       path: "/dashboard/checkDepositSlip",
-  //       label: "Check Deposit Slip",
-  //     },
-  //     {
-  //       id: "editDepositSlip",
-  //       path: "/dashboard/editDepositSlip",
-  //       label: "Edit Deposit Slip",
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: "delivery",
-  //   icon: TruckIcon,
-  //   label: "Delivery",
-  //   submenu: [
-  //     {
-  //       id: "changeDeliveryDate",
-  //       path: "/dashboard/changeDeliveryDate",
-  //       label: "Change Delivery Date",
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: "print",
-  //   icon: PrinterIcon,
-  //   label: "Print",
-  //   submenu: [
-  //     {
-  //       id: "printInvoice",
-  //       path: "/dashboard/printInvoice",
-  //       label: "Print Invoice",
-  //     },
-  //     {
-  //       id: "printPicklist",
-  //       path: "/dashboard/printPicklist",
-  //       label: "Print Picklist",
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: "routeSettlement",
-  //   path: "/dashboard/routeSettlement",
-  //   icon: RouteIcon,
-  //   label: "Route Settlement",
-  // },
-  // {
-  //   id: "price",
-  //   icon: BadgeDollarSignIcon,
-  //   label: "Price",
-  //   submenu: [
-  //     {
-  //       id: "priceOutlet",
-  //       path: "/dashboard/priceOutlet",
-  //       label: "Check SKU Price Sale to Outlet",
-  //     },
-  //     {
-  //       id: "priceUnilever",
-  //       path: "/dashboard/priceUnilever",
-  //       label: "Check SKU Price from Unilever",
-  //     },
-  //   ],
-  // },
-
-  //   {
-  //   id: "lookup-manager",
-  //   path: "/dashboard/lookup",
-  //   icon: LucideBook,
-  //   label: "Lookup Manager",
-  // },
 ];
 
 function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
-  const { currentUser, can, logout } = useAuth();
+  const { language, t } = useLanguage();
+  const { currentUser, can, isImpersonating } = useAuth();
 
   const [expandedItems, setExpandedItems] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Logout always asks first. Only while an administrator is impersonating,
+  // the same place becomes "Exit impersonation".
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const logoutFromMobile = useRef(false);
+
+  const askLogout = (fromMobile = false) => {
+    logoutFromMobile.current = fromMobile;
+    setShowLogoutModal(true);
+  };
 
   const isAdmin = currentUser?.role === "admin";
   const allowed = (id) =>
@@ -463,33 +259,99 @@ function Sidebar({ collapsed, onToggle }) {
 
   const isSearching = searchQuery.trim().length > 0;
 
+  // Normalize text for case-insensitive, Unicode-aware searching.
+  const normalizeSearchText = (value) =>
+    String(value ?? "")
+      .normalize("NFC")
+      .toLocaleLowerCase(language)
+      .trim();
+
+  // Translate a menu item based on its ID.
+  const getItemLabel = (item) => {
+    const keys = {
+      profile: "profile",
+      dashboard: "dashboard",
+      pos: "point_of_sales_pos",
+      orders: "orders",
+      "menu-management": "menu_management",
+      "levels-customization": "level_customization",
+      reports: "reports",
+      pages: "pages",
+      "user-management": "user_management",
+      "system-settings": "system_customization",
+      homepage: "homepage",
+      settings: "settings",
+    };
+
+    const key = keys[item.id];
+    return key ? t(key) : item.label;
+  };
+
+  // Translate submenu labels based on their IDs.
+  const getSubItemLabel = (item) => {
+    const keys = {
+      menu: "menu_items",
+      categories: "drinks_categories",
+      "drink-types": "drinks_types",
+      "levels-options-overview": "level_options",
+      "sugar-level": "sugar_levels",
+      "ice-level": "ice_levels",
+      "coffee-level": "coffee_levels",
+      "pages-overview": "page_overviews",
+      "pages-hero": "page_hero",
+      map: "page_map",
+      users: "users",
+      positions: "positions",
+      roles: "roles",
+      "roles-permissions": "role_permissions",
+      permissions: "permission_lists",
+      "exchange-rate": "exchange_rate",
+      currencies: "currencies",
+      "country-flags": "countries_flags",
+      genders: "genders",
+      nationalities: "nationalities",
+      "qr-management": "qr_website",
+    };
+
+    const key = keys[item.id];
+    return key ? t(key) : item.label;
+  };
+
   // 2. Then filter items based on search query
   const filteredMenuItems = useMemo(() => {
     if (!isSearching) return authorizedMenuItems;
 
-    const query = searchQuery.trim().toLowerCase();
+    const query = normalizeSearchText(searchQuery);
 
-    return authorizedMenuItems.reduce((acc, item) => {
-      const labelMatches = item.label.toLowerCase().includes(query);
+    return authorizedMenuItems.reduce((result, item) => {
+      const translatedLabel = getItemLabel(item);
+
+      const parentMatches = [item.label, translatedLabel, item.id].some(
+        (text) => normalizeSearchText(text).includes(query),
+      );
 
       if (item.submenu) {
-        const matchingSubmenu = item.submenu.filter((sub) =>
-          sub.label.toLowerCase().includes(query),
-        );
+        const matchingSubmenu = item.submenu.filter((sub) => {
+          const translatedSubLabel = getSubItemLabel(sub);
 
-        if (labelMatches || matchingSubmenu.length > 0) {
-          acc.push({
+          return [sub.label, translatedSubLabel, sub.id].some((text) =>
+            normalizeSearchText(text).includes(query),
+          );
+        });
+
+        if (parentMatches || matchingSubmenu.length > 0) {
+          result.push({
             ...item,
-            submenu: labelMatches ? item.submenu : matchingSubmenu,
+            submenu: parentMatches ? item.submenu : matchingSubmenu,
           });
         }
-      } else if (labelMatches) {
-        acc.push(item);
+      } else if (parentMatches) {
+        result.push(item);
       }
 
-      return acc;
+      return result;
     }, []);
-  }, [searchQuery, isSearching, authorizedMenuItems]);
+  }, [searchQuery, isSearching, authorizedMenuItems, language, t]);
 
   useEffect(() => {
     if (isSearching) return;
@@ -540,7 +402,7 @@ function Sidebar({ collapsed, onToggle }) {
           className="w-full pl-9 pr-9 py-2.5 bg-slate-100
             dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl
             text-sm text-slate-800 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2
-            focus:ring-amber-500 focus:border-transparent transition-all"
+            focus:ring-accent-500 focus:border-transparent transition-all"
         />
         {isSearching && (
           <button
@@ -576,7 +438,7 @@ function Sidebar({ collapsed, onToggle }) {
                 <button
                   className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
                     isParentActive
-                      ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/25"
+                      ? "bg-gradient-to-r from-accent-500 to-accent-600 text-white shadow-lg shadow-accent-500/25"
                       : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
                   }`}
                   onClick={() => toggleExpanded(item.id)}
@@ -584,7 +446,25 @@ function Sidebar({ collapsed, onToggle }) {
                   <div className="flex items-center space-x-3">
                     <item.icon className="w-5 h-5 flex-shrink-0" />
                     {(!collapsed || isMobile) && (
-                      <span className="font-medium ml-2">{item.label}</span>
+                      // <span className="font-medium ml-2">{item.label}</span>
+                      <span className="font-medium ml-2">
+                        {t(
+                          {
+                            profile: "profile",
+                            dashboard: "dashboard",
+                            pos: "pos",
+                            orders: "orders",
+                            "menu-management": "menu_management",
+                            "levels-customization": "levels_customization",
+                            reports: "reports",
+                            pages: "pages",
+                            "user-management": "user_management",
+                            "system-settings": "system_customization",
+                            homepage: "nav_homepage",
+                            settings: "nav_settings",
+                          }[item.id] || item.label,
+                        )}
+                      </span>
                     )}
                   </div>
                   {(!collapsed || isMobile) && (
@@ -603,7 +483,7 @@ function Sidebar({ collapsed, onToggle }) {
                   className={({ isActive }) =>
                     `w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
                       isActive
-                        ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/25"
+                        ? "bg-gradient-to-r from-accent-500 to-accent-600 text-white shadow-lg shadow-accent-500/25"
                         : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
                     }`
                   }
@@ -611,7 +491,25 @@ function Sidebar({ collapsed, onToggle }) {
                   <div className="flex items-center space-x-3">
                     <item.icon className="w-5 h-5 flex-shrink-0" />
                     {(!collapsed || isMobile) && (
-                      <span className="font-medium ml-2">{item.label}</span>
+                      // <span className="font-medium ml-2">{item.label}</span>
+                      <span className="font-medium ml-2">
+                        {t(
+                          {
+                            profile: "profile",
+                            dashboard: "dashboard",
+                            pos: "point_of_sales_pos",
+                            orders: "orders",
+                            "menu-management": "menu_management",
+                            "levels-customization": "level_customization",
+                            reports: "reports",
+                            pages: "pages",
+                            "user-management": "user_management",
+                            "system-settings": "system_customization",
+                            homepage: "homepage",
+                            settings: "settings",
+                          }[item.id] || item.label,
+                        )}
+                      </span>
                     )}
                   </div>
                 </NavLink>
@@ -630,12 +528,37 @@ function Sidebar({ collapsed, onToggle }) {
                         className={({ isActive }) =>
                           `block w-full text-left p-2 text-sm rounded-lg transition-all ${
                             isActive
-                              ? "bg-amber-100 text-amber-700 font-medium dark:bg-amber-500/15 dark:text-amber-300"
+                              ? "bg-accent-100 text-accent-700 font-medium dark:bg-accent-500/15 dark:text-accent-400"
                               : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50"
                           }`
                         }
                       >
-                        {subitem.label}
+                        {/* {subitem.label} */}
+                        {t(
+                          {
+                            menu: "menu_items",
+                            categories: "drinks_categories",
+                            "drink-types": "drinks_types",
+                            "levels-options-overview": "level_options",
+                            "sugar-level": "sugar_levels",
+                            "ice-level": "ice_levels",
+                            "coffee-level": "coffee_levels",
+                            "pages-overview": "page_overviews",
+                            "pages-hero": "page_hero",
+                            map: "page_map",
+                            users: "users",
+                            positions: "positions",
+                            roles: "roles",
+                            "roles-permissions": "role_permissions",
+                            permissions: "permission_lists",
+                            "exchange-rate": "exchange_rate",
+                            currencies: "currencies",
+                            "country-flags": "countries_flags",
+                            genders: "genders",
+                            nationalities: "nationalities",
+                            "qr-management": "qr_website",
+                          }[subitem.id] || subitem.label,
+                        )}
                       </NavLink>
                     ))}
                   </div>
@@ -647,6 +570,77 @@ function Sidebar({ collapsed, onToggle }) {
     </nav>
   );
 
+  // The user card at the bottom.
+  //  - normal mode:        desktop = small "Log out" icon, phone menu = a "Log out" button
+  //  - impersonation mode: an accent card with an "Exit impersonation" button (desktop and phone)
+  const renderUserCard = (isMobile = false) => (
+    <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50">
+      <div
+        className={`rounded-xl p-3 ${
+          isImpersonating
+            ? "bg-accent-50 ring-1 ring-accent-200 dark:bg-accent-950/30 dark:ring-accent-800/60"
+            : "bg-slate-50 dark:bg-slate-800/50"
+        }`}
+      >
+        <div className="flex items-center space-x-3">
+          <Avatar
+            user={currentUser}
+            className="w-10 h-10 rounded-full ring-2 ring-accent-500 flex-shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
+              {fullName(currentUser) || "User"}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+              {ROLE_INFO[currentUser?.role]?.label ||
+                currentUser?.role ||
+                "Member"}
+            </p>
+          </div>
+
+          {!isMobile && !isImpersonating && (
+            <button
+              type="button"
+              onClick={() => askLogout(false)}
+              title="Log out"
+              aria-label="Log out"
+              className="p-2 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {isImpersonating && (
+          <>
+            <p className="mt-3 text-[11px] font-bold uppercase tracking-wider text-accent-700 dark:text-accent-400">
+              {t("impersonation_mode")}
+            </p>
+            <button
+              type="button"
+              onClick={() => askLogout(isMobile)}
+              className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-accent-600 hover:bg-accent-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent-500/30"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              {t("exit_impersonation")}
+            </button>
+          </>
+        )}
+
+        {isMobile && !isImpersonating && (
+          <button
+            type="button"
+            onClick={() => askLogout(true)}
+            className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-lg border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50 dark:border-rose-900/60 dark:hover:bg-rose-950/30"
+          >
+            <LogOut className="w-4 h-4" />
+            {t("log_out")}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <div
@@ -656,7 +650,7 @@ function Sidebar({ collapsed, onToggle }) {
       >
         <div className="p-6 border-b border-slate-200/50 dark:border-slate-700/50">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-tr from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden p-1.5">
+            <div className="w-10 h-10 bg-gradient-to-tr from-accent-500 to-accent-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden p-1.5">
               <img
                 src={logoImg}
                 alt="Café Logo"
@@ -669,7 +663,7 @@ function Sidebar({ collapsed, onToggle }) {
                   Café ខ្មោច
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Coffee, Relaxed & Thrilled
+                  {t("coffee_relaxed_spooky")}
                 </p>
               </div>
             )}
@@ -680,31 +674,28 @@ function Sidebar({ collapsed, onToggle }) {
 
         {renderNavContent(false)}
 
-        {!collapsed && (
-          <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50">
-            <div className="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-              <Avatar
-                user={currentUser}
-                className="w-10 h-10 rounded-full ring-2 ring-amber-500 flex-shrink-0"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
-                  {fullName(currentUser) || "User"}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {ROLE_INFO[currentUser?.role]?.label ||
-                    currentUser?.role ||
-                    "Member"}
-                </p>
-              </div>
-              {/* Optional logout button */}
-              <button
-                onClick={logout}
-                className="text-slate-400 hover:text-red-500 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
+        {!collapsed && renderUserCard(false)}
+
+        {/* narrow sidebar: only an icon (accent while impersonating) */}
+        {collapsed && (
+          <div className="flex justify-center border-t border-slate-200/50 p-3 dark:border-slate-700/50">
+            <button
+              type="button"
+              onClick={() => askLogout(false)}
+              title={isImpersonating ? "Exit impersonation" : "Log out"}
+              aria-label={isImpersonating ? "Exit impersonation" : "Log out"}
+              className={`p-2.5 rounded-xl transition-colors ${
+                isImpersonating
+                  ? "bg-accent-100 text-accent-700 hover:bg-accent-200 dark:bg-accent-900/40 dark:text-accent-300 dark:hover:bg-accent-900/60"
+                  : "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"
+              }`}
+            >
+              {isImpersonating ? (
+                <ShieldCheck className="w-5 h-5" />
+              ) : (
+                <LogOut className="w-5 h-5" />
+              )}
+            </button>
           </div>
         )}
       </div>
@@ -713,7 +704,7 @@ function Sidebar({ collapsed, onToggle }) {
         <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900 md:hidden transition-all duration-300 ease-in-out transform animate-in slide-in-from-top fade-in">
           <div className="flex items-center justify-between p-6 border-b border-slate-200/50 dark:border-slate-700/50">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-tr from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden p-1.5">
+              <div className="w-10 h-10 bg-gradient-to-tr from-accent-500 to-accent-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden p-1.5">
                 <img
                   src={logoImg}
                   alt="Café Logo"
@@ -725,7 +716,7 @@ function Sidebar({ collapsed, onToggle }) {
                   Café ខ្មោច
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Coffee, Relaxed & Thrilled
+                  {t("coffee_relaxed_spooky")}
                 </p>
               </div>
             </div>
@@ -741,26 +732,18 @@ function Sidebar({ collapsed, onToggle }) {
 
           {renderNavContent(true)}
 
-          <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50">
-            <div className="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
-              <Avatar
-                user={currentUser}
-                className="w-10 h-10 rounded-full ring-2 ring-amber-500 flex-shrink-0"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
-                  {fullName(currentUser) || "User"}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {ROLE_INFO[currentUser?.role]?.label ||
-                    currentUser?.role ||
-                    "Member"}
-                </p>
-              </div>
-            </div>
-          </div>
+          {renderUserCard(true)}
         </div>
       )}
+
+      {/* Outside the blurred sidebar on purpose, so it covers the whole screen */}
+      <LogoutModal
+        open={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onDone={() => {
+          if (logoutFromMobile.current) onToggle?.(); // also close the phone menu
+        }}
+      />
     </>
   );
 }

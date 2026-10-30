@@ -10,6 +10,9 @@ export const LANGUAGES = [
   { code: "lo", label: "Lao", nativeLabel: "ພາສາລາວ" },
   { code: "ja", label: "Japanese", nativeLabel: "日本語"},
   { code: "vi", label: "Vietnamese", nativeLabel: "Tiếng Việt"},
+  { code: "my", label: "Burmese", nativeLabel: "မြန်မာဘာသာစကား"},
+  { code: "ko", label: "Korean", nativeLabel: "한국어"},
+  { code: "fr", label: "French", nativeLabel: "Français"},
 ];
 
 export function LanguageProvider({ children }) {

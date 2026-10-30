@@ -31,7 +31,7 @@ function Header({ sideBarCollapsed, onToggleSidebar, currentPage = "dashboard" }
         {/* Left Section */}
         <div className="flex items-center space-x-4">
           <button
-            className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/30 dark:hover:text-amber-400 transition-colors"
+            className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-accent-50 hover:text-accent-600 dark:hover:bg-accent-950/30 dark:hover:text-accent-400 transition-colors"
             onClick={onToggleSidebar}
           >
             <Menu className="w-5 h-5" />
@@ -44,7 +44,7 @@ function Header({ sideBarCollapsed, onToggleSidebar, currentPage = "dashboard" }
             <p className="text-sm text-slate-500 dark:text-slate-400">
               {currentPage === "dashboard" ? (
                 <>
-                  Welcome back, <span className="font-semibold text-amber-600 dark:text-amber-400">Sing</span>! Here's what's happening today.
+                  Welcome back, <span className="font-semibold text-accent-600 dark:text-accent-400">Sing</span>! Here's what's happening today.
                 </>
               ) : (
                 `Viewing your ${pageLabel} stats.`
@@ -59,7 +59,7 @@ function Header({ sideBarCollapsed, onToggleSidebar, currentPage = "dashboard" }
           <button
             onClick={cycleTheme}
             title={`Theme: ${theme}`}
-            className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/30 dark:hover:text-amber-400 transition-colors cursor-pointer"
+            className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-accent-50 hover:text-accent-600 dark:hover:bg-accent-950/30 dark:hover:text-accent-400 transition-colors cursor-pointer"
           >
             <ThemeIcon className="w-5 h-5" />
           </button>
@@ -68,7 +68,7 @@ function Header({ sideBarCollapsed, onToggleSidebar, currentPage = "dashboard" }
           <button
             onClick={() => navigate("/")}
             title="Preview Website"
-            className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/30 dark:hover:text-amber-400 transition-colors cursor-pointer"
+            className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-accent-50 hover:text-accent-600 dark:hover:bg-accent-950/30 dark:hover:text-accent-400 transition-colors cursor-pointer"
           >
             <ExternalLink className="w-5 h-5" />
           </button>
@@ -77,7 +77,7 @@ function Header({ sideBarCollapsed, onToggleSidebar, currentPage = "dashboard" }
           <button
             onClick={() => navigate("/dashboard/settings")}
             title="Settings"
-            className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/30 dark:hover:text-amber-400 transition-colors cursor-pointer"
+            className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-accent-50 hover:text-accent-600 dark:hover:bg-accent-950/30 dark:hover:text-accent-400 transition-colors cursor-pointer"
           >
             <Settings className="w-5 h-5" />
           </button>
