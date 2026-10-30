@@ -20,3 +20,5 @@ export * from "./api/reset_password.js";
 export * from "./api/orders.js";
 export * from "./api/profile.js";
 export * from "./api/impersonation.js";
+export * from "./api/qr.js";
+export * from "./api/dashboard.js";

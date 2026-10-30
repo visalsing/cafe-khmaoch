@@ -38,3 +38,18 @@ export function useDigits() {
 
   return (num) => formatDigits(num, style);
 }
+
+export function useDigitStyle() {
+  const read = () => localStorage.getItem("app_digit_style") || "standard";
+  const [style, setStyle] = useState(read);
+  useEffect(() => {
+    const h = () => setStyle(read());
+    window.addEventListener("storage", h);
+    window.addEventListener("digitStyleChange", h);
+    return () => {
+      window.removeEventListener("storage", h);
+      window.removeEventListener("digitStyleChange", h);
+    };
+  }, []);
+  return style;
+}
