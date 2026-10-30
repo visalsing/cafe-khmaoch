@@ -73,7 +73,7 @@ export default function PagesOverview() {
             className={`text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-2 transition-all ${
               s.soon
                 ? "opacity-60 cursor-not-allowed"
-                : "hover:border-amber-500 hover:shadow-lg cursor-pointer"
+                : "hover:border-accent-500 hover:shadow-lg cursor-pointer"
             }`}
           >
             <div className="text-3xl">{s.emoji}</div>

@@ -16,13 +16,23 @@ import {
   ExternalLink,
   Images,
   List,
+  Download,
+  FileSpreadsheet,
+  AlertTriangle,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import { heroService, assetUrl } from "../../../services/api";
+import { useLanguage } from "../../../context/LanguageContext.jsx";
+import { useDateFormat } from "../../../utils/useDateFormat.js";
 import ImageUpload from "../ImageUpload";
 import ImageLightbox from "../ImageLightbox";
 import CustomSelect from "../CustomSelect";
 import Pagination from "../Pagination";
-import { inputCls, I18nInput, asList, tr, cleanI18n } from "../Shared.jsx";
+import { inputCls, I18nInput, asList, cleanI18n } from "../Shared.jsx";
+
+/* ========================================================================
+   1. SMALL UI PIECES (Alert, Chip, View-modal helpers)
+   ======================================================================== */
 
 /* ---------- Alert: left accent border + close (X) button ---------- */
 const ALERT_STYLES = {
@@ -69,8 +79,8 @@ function Chip({ active, onClick, children }) {
       onClick={onClick}
       className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
         active
-          ? "bg-amber-600 border-amber-600 text-white"
-          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-500"
+          ? "bg-accent-600 border-accent-600 text-white"
+          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-accent-500"
       }`}
     >
       {children}
@@ -87,7 +97,6 @@ const LANG_LABELS = {
   ja: "日本語",
   vi: "Tiếng Việt",
 };
-const fmtDateTime = (v) => (v ? new Date(v).toLocaleString() : "—");
 
 // all translations of one text, English first
 function TextByLang({ value }) {
@@ -130,7 +139,44 @@ function Field({ label, children }) {
   );
 }
 
-/* ---------- form helpers ---------- */
+/* ========================================================================
+   2. TRANSLATION HELPERS
+   ======================================================================== */
+
+// Turns whatever the database returned into a {en, km, ...} object.
+// Handles real objects, JSON strings like '{"en":"","km":""}', and plain strings.
+const parseI18n = (v) => {
+  if (!v) return {};
+  if (typeof v === "string") {
+    try {
+      const p = JSON.parse(v);
+      return p && typeof p === "object" ? p : { en: v };
+    } catch {
+      return { en: v };
+    }
+  }
+  return typeof v === "object" ? v : { en: String(v) };
+};
+
+// "km-KH" / "KM" / "kh" -> "km", "en-US" -> "en" (so it always matches the data keys)
+const toLangKey = (language) => {
+  const l = String(language || "en")
+    .toLowerCase()
+    .split(/[-_]/)[0];
+  return l === "kh" ? "km" : l;
+};
+
+// the string for one language: uses the requested language first, then falls back
+const pickText = (value, langKey) => {
+  const obj = parseI18n(value);
+  return (
+    obj[langKey] || obj.en || obj.km || Object.values(obj).find(Boolean) || ""
+  );
+};
+
+/* ========================================================================
+   3. FORM HELPERS (empty form, "nothing changed" check)
+   ======================================================================== */
 const emptyForm = {
   tag: {},
   title: {},
@@ -144,10 +190,10 @@ const LINK_SUGGESTIONS = ["#shop", "#about", "#contact", "/shop", "/cart"];
 
 // the form values for an existing slide (used when opening Edit and for the "nothing changed" check)
 const formFromSlide = (s) => ({
-  tag: s.tag || {},
-  title: s.title || {},
-  text: s.text || {},
-  cta: s.cta || {},
+  tag: parseI18n(s.tag),
+  title: parseI18n(s.title),
+  text: parseI18n(s.text),
+  cta: parseI18n(s.cta),
   link: s.link || "",
   status: s.status,
 });
@@ -155,7 +201,9 @@ const formFromSlide = (s) => ({
 // comparable version of a form: same value -> same text (ignores key order and extra spaces)
 const stableTexts = (o) =>
   Object.fromEntries(
-    Object.entries(cleanI18n(o)).sort(([a], [b]) => a.localeCompare(b)),
+    Object.entries(cleanI18n(parseI18n(o))).sort(([a], [b]) =>
+      a.localeCompare(b),
+    ),
   );
 const fingerprint = (f) =>
   JSON.stringify({
@@ -182,7 +230,9 @@ const getLangText = (field, lang = "en") => {
   );
 };
 
-/* ---------- Slide mode: the slides as a slider, like on the homepage ---------- */
+/* ========================================================================
+   4. SLIDE MODE: the slides as a slider, like on the homepage
+   ======================================================================== */
 function SlideShow({ slides, onEdit }) {
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -282,7 +332,7 @@ function SlideShow({ slides, onEdit }) {
                 <div className="relative z-10 h-full flex items-center px-8 sm:px-16">
                   <div className="max-w-xl space-y-5">
                     {tagText && (
-                      <span className="inline-block px-3.5 py-1 text-xs font-semibold uppercase tracking-wider bg-amber-500/90 rounded-full">
+                      <span className="inline-block px-3.5 py-1 text-xs font-semibold uppercase tracking-wider bg-accent-500/90 rounded-full">
                         {tagText}
                       </span>
                     )}
@@ -290,7 +340,7 @@ function SlideShow({ slides, onEdit }) {
                       {titleText}
                     </h1>
                     {descText && (
-                      <p className="text-amber-50/90 text-base sm:text-lg leading-relaxed">
+                      <p className="text-accent-50/90 text-base sm:text-lg leading-relaxed">
                         {descText}
                       </p>
                     )}
@@ -299,7 +349,7 @@ function SlideShow({ slides, onEdit }) {
                         {/* preview only: the button does nothing here */}
                         <span
                           title={s.link ? `Links to ${s.link}` : undefined}
-                          className="inline-block px-6 py-3 bg-amber-500 text-white font-semibold rounded-xl shadow-lg"
+                          className="inline-block px-6 py-3 bg-accent-500 text-white font-semibold rounded-xl shadow-lg"
                         >
                           {ctaText}
                         </span>
@@ -340,7 +390,7 @@ function SlideShow({ slides, onEdit }) {
                   aria-label={`Go to slide ${i + 1}`}
                   className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
                     i === index
-                      ? "w-8 bg-amber-400"
+                      ? "w-8 bg-accent-400"
                       : "w-2.5 bg-white/50 hover:bg-white/80"
                   }`}
                 />
@@ -360,7 +410,7 @@ function SlideShow({ slides, onEdit }) {
         <button
           type="button"
           onClick={() => onEdit(currentSlide)}
-          className="px-4 py-2 text-sm font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-2 transition-colors shadow-sm shrink-0"
+          className="px-4 py-2 text-sm font-semibold rounded-xl bg-accent-600 hover:bg-accent-700 text-white flex items-center gap-2 transition-colors shadow-sm shrink-0"
         >
           <Pencil className="w-4 h-4" /> Edit this slide
         </button>
@@ -369,7 +419,18 @@ function SlideShow({ slides, onEdit }) {
   );
 }
 
+/* ========================================================================
+   5. MAIN COMPONENT
+   ======================================================================== */
 export default function HeroManager() {
+  const { language, t } = useLanguage();
+  const { dateTime } = useDateFormat();
+  const langKey = toLangKey(language);
+
+  // ONE function for every localized text on this page
+  const getLocalizedValue = (value) => pickText(value, langKey);
+
+  /* ---------- 5.1 State ---------- */
   const [slides, setSlides] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -390,11 +451,18 @@ export default function HeroManager() {
   const [pageSize, setPageSize] = useState(10); // 10 | 20 | 30 | 40 | 50 | 100 | "all"
   const [togglingId, setTogglingId] = useState(null); // slide whose show/hide is saving
 
+  // delete + reset confirmation
+  const [deleting, setDeleting] = useState(null);
+  const [deletingLoading, setDeletingLoading] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+
   // ALL alerts are shown on the page, between the search/filters and the list
   const [notice, setNotice] = useState(null); // { id, type, title, message, returnToForm }
   const [modalHidden, setModalHidden] = useState(false); // form is hidden (not lost) while its alert is shown
   const noticeRef = useRef(null);
 
+  /* ---------- 5.2 Alerts (notice) ---------- */
   const notify = (type, title, message, { returnToForm = false } = {}) =>
     setNotice({ id: Date.now(), type, title, message, returnToForm });
 
@@ -404,12 +472,23 @@ export default function HeroManager() {
     setNotice(null);
   };
 
-  // closes the view modal (and its full-screen image, if open)
-  const closeView = () => {
-    setLightboxOpen(false);
-    setViewing(null);
-  };
+  // green + yellow alerts disappear by themselves; red ones and "back to the form" ones stay
+  useEffect(() => {
+    if (!notice || notice.type === "error" || notice.returnToForm) return;
+    const timer = setTimeout(() => setNotice(null), 5000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
+  // make sure the alert is visible (the page may be scrolled)
+  useEffect(() => {
+    if (notice)
+      noticeRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+  }, [notice]);
+
+  /* ---------- 5.3 Load ---------- */
   // returns true when the slides were loaded; silent = no "Loading..." flash
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -430,21 +509,12 @@ export default function HeroManager() {
     load();
   }, [load]);
 
-  // green + yellow alerts disappear by themselves; red ones and "back to the form" ones stay
-  useEffect(() => {
-    if (!notice || notice.type === "error" || notice.returnToForm) return;
-    const timer = setTimeout(() => setNotice(null), 5000);
-    return () => clearTimeout(timer);
-  }, [notice]);
-
-  // make sure the alert is visible (the page may be scrolled)
-  useEffect(() => {
-    if (notice)
-      noticeRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
-  }, [notice]);
+  /* ---------- 5.4 View modal helpers ---------- */
+  // closes the view modal (and its full-screen image, if open)
+  const closeView = () => {
+    setLightboxOpen(false);
+    setViewing(null);
+  };
 
   // Esc closes the view modal (the lightbox handles its own Esc first and stops it from reaching here)
   useEffect(() => {
@@ -458,11 +528,13 @@ export default function HeroManager() {
     return () => window.removeEventListener("keydown", onKey);
   }, [viewing]);
 
+  /* ---------- 5.5 Pagination reset ---------- */
   // search / filters / page size changed -> start again from page 1
   useEffect(() => {
     setPage(1);
   }, [query, statusFilter, pageSize]);
 
+  /* ---------- 5.6 Add / Edit form ---------- */
   // preview of a newly chosen image file
   useEffect(() => {
     if (!imageChange.file) {
@@ -509,14 +581,15 @@ export default function HeroManager() {
 
     const isNew = editing === "new";
 
-    if (!form.title.en?.trim()) return warn("The English title is required.");
+    const titleEn = String(parseI18n(form.title).en ?? "").trim();
+    if (!titleEn) return warn("The English title is required.");
     if (isNew && !imageChange.file) return warn("Please choose an image.");
     if (!isNew && imageChange.remove && !imageChange.file)
       return warn(
         "A slide needs an image. Choose a new one instead of removing it.",
       );
 
-    const itemName = form.title.en.trim();
+    const itemName = titleEn;
 
     // editing but nothing was touched (no field changed, no image chosen)
     if (!isNew) {
@@ -537,10 +610,10 @@ export default function HeroManager() {
     try {
       // multipart form: text fields + the image file (server makes img + thumbnail from it)
       const fd = new FormData();
-      fd.append("tag", JSON.stringify(cleanI18n(form.tag)));
-      fd.append("title", JSON.stringify(cleanI18n(form.title)));
-      fd.append("text", JSON.stringify(cleanI18n(form.text)));
-      fd.append("cta", JSON.stringify(cleanI18n(form.cta)));
+      fd.append("tag", JSON.stringify(cleanI18n(parseI18n(form.tag))));
+      fd.append("title", JSON.stringify(cleanI18n(parseI18n(form.title))));
+      fd.append("text", JSON.stringify(cleanI18n(parseI18n(form.text))));
+      fd.append("cta", JSON.stringify(cleanI18n(parseI18n(form.cta))));
       fd.append("link", form.link.trim());
       fd.append("status", String(Number(form.status)));
       if (imageChange.file) fd.append("image", imageChange.file); // field name must be "image"
@@ -571,6 +644,7 @@ export default function HeroManager() {
     }
   };
 
+  /* ---------- 5.7 Show / hide (eye button) ---------- */
   // the eye button: shows / hides the slide on the homepage (updates ONLY the status)
   const toggleStatus = async (s) => {
     const next = Number(s.status) === 1 ? 0 : 1;
@@ -582,8 +656,8 @@ export default function HeroManager() {
         "success",
         "Slide updated",
         next === 1
-          ? `"${tr(s.title)}" was updated successfully. It is now visible on the homepage.`
-          : `"${tr(s.title)}" was updated successfully. It is now hidden from the homepage.`,
+          ? `"${getLocalizedValue(s.title)}" was updated successfully. It is now visible on the homepage.`
+          : `"${getLocalizedValue(s.title)}" was updated successfully. It is now hidden from the homepage.`,
       );
     } catch (err) {
       notify(
@@ -596,6 +670,7 @@ export default function HeroManager() {
     }
   };
 
+  /* ---------- 5.8 Chevron Up & Down order (saves right away, unchanged) ---------- */
   // moves a slide up (-1) or down (+1) in the FULL list, then saves the new order
   const moveSlide = async (id, dir) => {
     const idx = slides.findIndex((s) => s.id === id);
@@ -616,6 +691,7 @@ export default function HeroManager() {
     }
   };
 
+  /* ---------- 5.9 Refresh ---------- */
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -631,48 +707,63 @@ export default function HeroManager() {
     }
   };
 
-  const handleDelete = async (s) => {
-    if (!window.confirm(`Delete slide "${tr(s.title)}"?`)) return;
+  /* ---------- 5.10 Delete (with confirmation modal) ---------- */
+  const handleDelete = (s) => {
+    setDeleting(s);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting || deletingLoading) return;
+
+    const item = deleting;
+    setDeletingLoading(true);
+
     try {
-      await heroService.remove(s.id);
-      setSlides((prev) => prev.filter((x) => x.id !== s.id));
+      await heroService.remove(item.id);
+      setDeleting(null);
+      setSlides((prev) => prev.filter((x) => x.id !== item.id));
       notify(
         "success",
         "Slide deleted",
-        `"${tr(s.title)}" was deleted successfully.`,
+        `"${getLocalizedValue(item.title)}" was deleted successfully.`,
       );
     } catch (err) {
+      setDeleting(null);
       notify(
         "error",
         "Failed to delete the slide",
         err.message || "Something went wrong. Please try again.",
       );
+    } finally {
+      setDeletingLoading(false);
     }
   };
 
-  const handleReset = async () => {
-    if (
-      !window.confirm(
-        "Reset the hero slides to the defaults? ALL your slides will be replaced.",
-      )
-    )
-      return;
+  /* ---------- 5.11 Reset to defaults (with confirmation modal) ---------- */
+  const confirmReset = async () => {
+    if (resetLoading) return;
+    setResetLoading(true);
     try {
       setSlides(asList(await heroService.reset()));
+      setShowReset(false);
       notify(
         "success",
         "Slides reset",
         "The hero slides were reset to the defaults.",
       );
     } catch (err) {
+      setShowReset(false);
       notify(
         "error",
         "Failed to reset the slides",
         err.message || "Something went wrong. Please try again.",
       );
+    } finally {
+      setResetLoading(false);
     }
   };
 
+  /* ---------- 5.12 Filters ---------- */
   const isShown = (s) => Number(s.status) === 1;
   const visibleCount = slides.filter(isShown).length;
   const hiddenCount = slides.length - visibleCount;
@@ -683,14 +774,15 @@ export default function HeroManager() {
   // the order can only be changed on the full list (no search / filter)
   const canReorder = !query.trim() && statusFilter === "all";
 
+  /* ---------- 5.13 Search, filter, paginate ---------- */
   const shown = slides.filter((s) => {
     if (statusFilter !== "all" && Number(s.status) !== statusFilter)
       return false;
     const haystack = [
-      ...valuesOf(s.tag),
-      ...valuesOf(s.title),
-      ...valuesOf(s.text),
-      ...valuesOf(s.cta),
+      ...valuesOf(parseI18n(s.tag)),
+      ...valuesOf(parseI18n(s.title)),
+      ...valuesOf(parseI18n(s.text)),
+      ...valuesOf(parseI18n(s.cta)),
     ]
       .join(" ")
       .toLowerCase();
@@ -714,32 +806,35 @@ export default function HeroManager() {
       ? assetUrl(editing.img)
       : "");
 
+  /* ---------- 5.14 Lightbox info popup ---------- */
   // content of the lightbox "Info" popup (dark style, because the lightbox is dark)
   const lightboxInfo = viewing ? (
     <div className="space-y-3 text-sm">
       <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-500">
+        <span className="text-xs font-bold uppercase tracking-wider text-accent-500">
           Title
         </span>
-        <p className="mt-1 font-medium">{tr(viewing.title) || "—"}</p>
+        <p className="mt-1 font-medium">
+          {getLocalizedValue(viewing.title) || "—"}
+        </p>
       </div>
       <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-500">
+        <span className="text-xs font-bold uppercase tracking-wider text-accent-500">
           Description
         </span>
         <p className="mt-1 text-slate-300 text-xs leading-relaxed">
-          {tr(viewing.text) || "No description provided."}
+          {getLocalizedValue(viewing.text) || "No description provided."}
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
         <div>
           <span className="text-[11px] text-slate-400">Badge</span>
-          <p className="font-semibold">{tr(viewing.tag) || "—"}</p>
+          <p className="font-semibold">{getLocalizedValue(viewing.tag) || "—"}</p>
         </div>
         <div>
           <span className="text-[11px] text-slate-400">Button</span>
           <p className="font-semibold">
-            {tr(viewing.cta) || "—"}
+            {getLocalizedValue(viewing.cta) || "—"}
             {viewing.link ? ` → ${viewing.link}` : ""}
           </p>
         </div>
@@ -747,6 +842,112 @@ export default function HeroManager() {
     </div>
   ) : null;
 
+  /* ---------- 5.15 Excel / CSV export ---------- */
+  // Export the complete filtered result (in the saved slide order), not just the current page.
+  const getExportData = () =>
+    shown.map((s) => {
+      const title = parseI18n(s.title);
+      const tag = parseI18n(s.tag);
+      const text = parseI18n(s.text);
+      const cta = parseI18n(s.cta);
+      return {
+        Position: slides.findIndex((x) => x.id === s.id) + 1,
+        ID: s.id,
+        Title: title.en || "",
+        "Title (Khmer)": title.km || "",
+        "Title (Chinese)": title.zh || "",
+        "Title (Lao)": title.lo || "",
+        "Title (Japanese)": title.ja || "",
+        "Title (Vietnamese)": title.vi || "",
+        Badge: tag.en || "",
+        "Badge (Khmer)": tag.km || "",
+        Description: text.en || "",
+        "Description (Khmer)": text.km || "",
+        "Button label": cta.en || "",
+        "Button label (Khmer)": cta.km || "",
+        "Button link": s.link || "",
+        "Has image": s.img ? "Yes" : "No",
+        Status: isShown(s) ? "Visible" : "Hidden",
+        "Created At": s.created_at ?? "",
+        "Updated At": s.updated_at ?? "",
+      };
+    });
+
+  const exportFileName = (ext) =>
+    `hero-slides-${new Date().toISOString().slice(0, 10)}.${ext}`;
+
+  const exportToCSV = () => {
+    if (shown.length === 0) {
+      notify(
+        "warning",
+        "Nothing to export",
+        "No slides match your current filters.",
+      );
+      return;
+    }
+
+    const rows = getExportData();
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const csv = XLSX.utils.sheet_to_csv(worksheet);
+
+    // UTF-8 BOM helps Excel display Khmer, Lao, Thai, and other scripts.
+    const blob = new Blob(["\uFEFF", csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = exportFileName("csv");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    notify(
+      "success",
+      "CSV exported",
+      `${rows.length} slide(s) exported successfully.`,
+    );
+  };
+
+  const exportToExcel = () => {
+    if (shown.length === 0) {
+      notify(
+        "warning",
+        "Nothing to export",
+        "No slides match your current filters.",
+      );
+      return;
+    }
+
+    const rows = getExportData();
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+
+    worksheet["!cols"] = Object.keys(rows[0]).map((key) => ({
+      wch: Math.min(
+        Math.max(
+          key.length + 2,
+          ...rows.map((row) => String(row[key] ?? "").length + 2),
+        ),
+        35,
+      ),
+    }));
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Hero Slides");
+    XLSX.writeFile(workbook, exportFileName("xlsx"));
+
+    notify(
+      "success",
+      "Excel exported",
+      `${rows.length} slide(s) exported successfully.`,
+    );
+  };
+
+  /* ========================================================================
+     6. RENDER
+     ======================================================================== */
   return (
     <div className="space-y-6">
       <style>{`
@@ -767,6 +968,7 @@ export default function HeroManager() {
         }
       `}</style>
 
+      {/* ===== 6.1 PAGE HEADER: title + Excel / CSV / Preview / Reset / Refresh / Add ===== */}
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
         <div>
           <h1 className="text-2xl font-extrabold">Hero Slider</h1>
@@ -776,24 +978,48 @@ export default function HeroManager() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2 self-start">
+          <button
+            type="button"
+            onClick={exportToExcel}
+            disabled={loading || shown.length === 0}
+            title="Export filtered slides to Excel"
+            className="px-3 py-2 text-sm rounded-xl border border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400 flex items-center gap-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 disabled:opacity-50 transition-colors"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Excel</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={exportToCSV}
+            disabled={loading || shown.length === 0}
+            title="Export filtered slides to CSV"
+            className="px-3 py-2 text-sm rounded-xl border border-sky-300 text-sky-700 dark:border-sky-800 dark:text-sky-400 flex items-center gap-2 hover:bg-sky-50 dark:hover:bg-sky-950/30 disabled:opacity-50 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            <span>CSV</span>
+          </button>
+
           <a
             href="/"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 transition-colors"
+            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 transition-colors"
           >
             <ExternalLink className="w-4 h-4" /> Preview
           </a>
           <button
-            onClick={handleReset}
-            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 transition-colors"
+            type="button"
+            onClick={() => setShowReset(true)}
+            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 transition-colors"
           >
             <RotateCcw className="w-4 h-4" /> Reset
           </button>
           <button
+            type="button"
             onClick={handleRefresh}
             disabled={refreshing}
-            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 disabled:opacity-60 transition-colors"
+            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 disabled:opacity-60 transition-colors"
           >
             <RotateCcw
               className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
@@ -801,14 +1027,16 @@ export default function HeroManager() {
             Refresh
           </button>
           <button
+            type="button"
             onClick={openNew}
-            className="px-4 py-2 text-sm font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-2 transition-colors shadow-sm"
+            className="px-4 py-2 text-sm font-semibold rounded-xl bg-accent-600 hover:bg-accent-700 text-white flex items-center gap-2 transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" /> Add slide
           </button>
         </div>
       </div>
 
+      {/* ===== 6.2 TOOLBAR: search + filters + slide view ===== */}
       <div className="flex flex-wrap items-center gap-2">
         <input
           value={query}
@@ -820,12 +1048,12 @@ export default function HeroManager() {
           type="button"
           onClick={() => setShowFilters((v) => !v)}
           aria-expanded={showFilters}
-          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 transition-colors"
+          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 transition-colors"
         >
           <SlidersHorizontal className="w-4 h-4" />
           {showFilters ? "Hide Filters" : "Show Filters"}
           {activeFilters > 0 && (
-            <span className="px-1.5 rounded-full bg-amber-600 text-white text-xs leading-5">
+            <span className="px-1.5 rounded-full bg-accent-600 text-white text-xs leading-5">
               {activeFilters}
             </span>
           )}
@@ -836,8 +1064,8 @@ export default function HeroManager() {
           aria-pressed={slideMode}
           className={`px-4 py-2 text-sm font-medium rounded-xl border flex items-center gap-2 transition-colors ${
             slideMode
-              ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300"
-              : "border-slate-300 dark:border-slate-700 hover:border-amber-500"
+              ? "border-accent-500 bg-accent-50 dark:bg-accent-950/30 text-accent-700 dark:text-accent-300"
+              : "border-slate-300 dark:border-slate-700 hover:border-accent-500"
           }`}
         >
           {slideMode ? (
@@ -849,6 +1077,7 @@ export default function HeroManager() {
         </button>
       </div>
 
+      {/* ===== 6.3 FILTER PANEL ===== */}
       {showFilters && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-4 shadow-sm">
           <div className="space-y-2">
@@ -858,7 +1087,7 @@ export default function HeroManager() {
                 active={statusFilter === "all"}
                 onClick={() => setStatusFilter("all")}
               >
-                All
+                {t("all")}
               </Chip>
               <Chip
                 active={statusFilter === 1}
@@ -879,7 +1108,7 @@ export default function HeroManager() {
             <button
               type="button"
               onClick={clearFilters}
-              className="text-sm text-amber-600 font-medium underline"
+              className="text-sm text-accent-600 font-medium underline"
             >
               Clear filters
             </button>
@@ -887,7 +1116,7 @@ export default function HeroManager() {
         </div>
       )}
 
-      {/* ===== ALERTS: between the search/filters and the list ===== */}
+      {/* ===== 6.4 ALERTS: between the search/filters and the list ===== */}
       {notice && (
         <div ref={noticeRef}>
           <Alert
@@ -935,156 +1164,164 @@ export default function HeroManager() {
         </Alert>
       )}
 
-      {/* ===== SLIDE MODE (slider) or SLIDE LIST ===== */}
+      {/* ===== 6.5 SLIDE MODE (slider) or SLIDE LIST ===== */}
       {slideMode && !loading && !error ? (
-        <SlideShow
-          slides={slides.filter(isShown)}
-          onEdit={openEdit}
-        />
+        <SlideShow slides={slides.filter(isShown)} onEdit={openEdit} />
       ) : (
-      <>
-      <div className="space-y-3">
-        {loading && (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 text-center text-slate-400 shadow-sm">
-            Loading...
-          </div>
-        )}
-        {!loading && !error && shown.length === 0 && (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 text-center text-slate-400 shadow-sm">
-            {slides.length === 0
-              ? "No slides yet. Add one, or press Reset to load the defaults."
-              : "No slides match your filters."}
-          </div>
-        )}
-        {!loading &&
-          pageItems.map((s) => {
-            const pos = slides.findIndex((x) => x.id === s.id);
-            const shownNow = isShown(s);
-            const reorderHint = canReorder
-              ? ""
-              : "Clear the search and filters to change the order";
-            return (
-              <div
-                key={s.id}
-                className={`flex flex-col sm:flex-row gap-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors ${
-                  !shownNow ? "opacity-60" : ""
-                }`}
-              >
-                <img
-                  src={assetUrl(s.img)}
-                  alt=""
-                  className="w-full sm:w-48 h-28 object-cover rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0"
-                />
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-bold text-slate-400">
-                      #{pos + 1}
-                    </span>
-                    {tr(s.tag) && (
-                      <span className="text-xs font-semibold uppercase tracking-wider text-amber-600">
-                        {tr(s.tag)}
-                      </span>
-                    )}
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                        shownNow
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-slate-200 text-slate-600"
-                      }`}
-                    >
-                      {shownNow ? "Visible" : "Hidden"}
-                    </span>
-                  </div>
-                  <h3 className="font-bold truncate">{tr(s.title)}</h3>
-                  <p className="text-sm text-slate-500 line-clamp-2">
-                    {tr(s.text)}
-                  </p>
-                  {tr(s.cta) && (
-                    <p className="text-xs text-slate-500">
-                      Button: <b>{tr(s.cta)}</b> → {s.link || "-"}
-                    </p>
-                  )}
-                </div>
-                <div className="flex sm:flex-col items-center justify-end gap-1">
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => moveSlide(s.id, -1)}
-                      disabled={!canReorder || pos === 0}
-                      title={reorderHint || "Move up"}
-                      aria-label="Move up"
-                      className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 transition-colors"
-                    >
-                      <ChevronUp className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => moveSlide(s.id, 1)}
-                      disabled={!canReorder || pos === slides.length - 1}
-                      title={reorderHint || "Move down"}
-                      aria-label="Move down"
-                      className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 transition-colors"
-                    >
-                      <ChevronDown className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="flex gap-1">
-                    {/* View details: its own icon, so it is not mixed up with the show/hide eye */}
-                    <button
-                      onClick={() => setViewing(s)}
-                      title="View details"
-                      aria-label="View details"
-                      className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-sky-600 transition-colors"
-                    >
-                      <FileText className="w-4 h-4" />
-                    </button>
-                    {/* Show / hide on the homepage */}
-                    <button
-                      onClick={() => toggleStatus(s)}
-                      disabled={togglingId === s.id}
-                      title={shownNow ? "Hide from the homepage" : "Show on the homepage"}
-                      aria-label={shownNow ? "Hide from the homepage" : "Show on the homepage"}
-                      className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-wait transition-colors"
-                    >
-                      {shownNow ? (
-                        <Eye className="w-4 h-4" />
-                      ) : (
-                        <EyeOff className="w-4 h-4" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => openEdit(s)}
-                      title="Edit"
-                      aria-label="Edit"
-                      className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(s)}
-                      title="Delete"
-                      aria-label="Delete"
-                      className="p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-500 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
+        <>
+          <div className="space-y-3">
+            {loading && (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 text-center text-slate-400 shadow-sm">
+                Loading...
               </div>
-            );
-          })}
-      </div>
+            )}
+            {!loading && !error && shown.length === 0 && (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 text-center text-slate-400 shadow-sm">
+                {slides.length === 0
+                  ? "No slides yet. Add one, or press Reset to load the defaults."
+                  : "No slides match your filters."}
+              </div>
+            )}
+            {!loading &&
+              pageItems.map((s) => {
+                const pos = slides.findIndex((x) => x.id === s.id);
+                const shownNow = isShown(s);
+                const reorderHint = canReorder
+                  ? ""
+                  : "Clear the search and filters to change the order";
+                return (
+                  <div
+                    key={s.id}
+                    className={`flex flex-col sm:flex-row gap-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors ${
+                      !shownNow ? "opacity-60" : ""
+                    }`}
+                  >
+                    <img
+                      src={assetUrl(s.img)}
+                      alt=""
+                      className="w-full sm:w-48 h-28 object-cover rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0"
+                    />
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-bold text-slate-400">
+                          #{pos + 1}
+                        </span>
+                        {getLocalizedValue(s.tag) && (
+                          <span className="text-xs font-semibold uppercase tracking-wider text-accent-600">
+                            {getLocalizedValue(s.tag)}
+                          </span>
+                        )}
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                            shownNow
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-slate-200 text-slate-600"
+                          }`}
+                        >
+                          {shownNow ? "Visible" : "Hidden"}
+                        </span>
+                      </div>
+                      <h3 className="font-bold truncate">
+                        {getLocalizedValue(s.title)}
+                      </h3>
+                      <p className="text-sm text-slate-500 line-clamp-2">
+                        {getLocalizedValue(s.text)}
+                      </p>
+                      {getLocalizedValue(s.cta) && (
+                        <p className="text-xs text-slate-500">
+                          Button: <b>{getLocalizedValue(s.cta)}</b> →{" "}
+                          {s.link || "-"}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex sm:flex-col items-center justify-end gap-1">
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => moveSlide(s.id, -1)}
+                          disabled={!canReorder || pos === 0}
+                          title={reorderHint || "Move up"}
+                          aria-label="Move up"
+                          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 transition-colors"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => moveSlide(s.id, 1)}
+                          disabled={!canReorder || pos === slides.length - 1}
+                          title={reorderHint || "Move down"}
+                          aria-label="Move down"
+                          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 transition-colors"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="flex gap-1">
+                        {/* View details: its own icon, so it is not mixed up with the show/hide eye */}
+                        <button
+                          onClick={() => setViewing(s)}
+                          title="View details"
+                          aria-label="View details"
+                          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-sky-600 transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </button>
+                        {/* Show / hide on the homepage */}
+                        <button
+                          onClick={() => toggleStatus(s)}
+                          disabled={togglingId === s.id}
+                          title={
+                            shownNow
+                              ? "Hide from the homepage"
+                              : "Show on the homepage"
+                          }
+                          aria-label={
+                            shownNow
+                              ? "Hide from the homepage"
+                              : "Show on the homepage"
+                          }
+                          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-wait transition-colors"
+                        >
+                          {shownNow ? (
+                            <Eye className="w-4 h-4" />
+                          ) : (
+                            <EyeOff className="w-4 h-4" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => openEdit(s)}
+                          title="Edit"
+                          aria-label="Edit"
+                          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(s)}
+                          title="Delete"
+                          aria-label="Delete"
+                          className="p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-500 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
 
-      {/* pagination: below the list */}
-      <Pagination
-        page={currentPage}
-        pageSize={pageSize}
-        total={shown.length}
-        onPage={setPage}
-        onPageSize={setPageSize}
-      />
-      </>
+          {/* pagination: below the list */}
+          <Pagination
+            page={currentPage}
+            pageSize={pageSize}
+            total={shown.length}
+            onPage={setPage}
+            onPageSize={setPageSize}
+          />
+        </>
       )}
 
-      {/* ===== VIEW modal (read-only) + full-screen image ===== */}
+      {/* ===== 6.6 VIEW modal (read-only) + full-screen image ===== */}
       {viewing && (
         <>
           <div
@@ -1111,6 +1348,7 @@ export default function HeroManager() {
               </div>
 
               <div className="p-6 space-y-6 overflow-y-auto flex-1">
+                {/* image (click = full screen) */}
                 {viewing.img ? (
                   <button
                     type="button"
@@ -1133,9 +1371,10 @@ export default function HeroManager() {
                   </div>
                 )}
 
+                {/* title + status */}
                 <div className="flex items-start justify-between gap-3">
                   <h4 className="text-xl font-extrabold break-words">
-                    {tr(viewing.title)}
+                    {getLocalizedValue(viewing.title)}
                   </h4>
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
@@ -1148,6 +1387,7 @@ export default function HeroManager() {
                   </span>
                 </div>
 
+                {/* each text in all languages */}
                 {[
                   ["Title", viewing.title],
                   ["Badge", viewing.tag],
@@ -1155,21 +1395,22 @@ export default function HeroManager() {
                   ["Button label", viewing.cta],
                 ].map(([label, value]) => (
                   <section key={label} className="space-y-2">
-                    <h5 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                       {label}
                     </h5>
-                    <TextByLang value={value} />
+                    <TextByLang value={parseI18n(value)} />
                   </section>
                 ))}
 
+                {/* position, link, dates */}
                 <section className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <Field label="Position">
                     #{slides.findIndex((x) => x.id === viewing.id) + 1} of{" "}
                     {slides.length}
                   </Field>
                   <Field label="Button link">{viewing.link || "—"}</Field>
-                  <Field label="Created">{fmtDateTime(viewing.created_at)}</Field>
-                  <Field label="Updated">{fmtDateTime(viewing.updated_at)}</Field>
+                  <Field label="Created">{dateTime(viewing.created_at)}</Field>
+                  <Field label="Updated">{dateTime(viewing.updated_at)}</Field>
                 </section>
               </div>
 
@@ -1188,7 +1429,7 @@ export default function HeroManager() {
                     closeView();
                     openEdit(s);
                   }}
-                  className="py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                  className="py-2.5 rounded-xl bg-accent-600 hover:bg-accent-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
                 >
                   <Pencil className="w-4 h-4" /> Edit
                 </button>
@@ -1200,8 +1441,8 @@ export default function HeroManager() {
           {lightboxOpen && viewing.img && (
             <ImageLightbox
               src={assetUrl(viewing.img)}
-              alt={tr(viewing.title)}
-              title={tr(viewing.title)}
+              alt={getLocalizedValue(viewing.title)}
+              title={getLocalizedValue(viewing.title)}
               info={lightboxInfo}
               infoTitle="Slide details"
               onClose={() => setLightboxOpen(false)}
@@ -1210,7 +1451,7 @@ export default function HeroManager() {
         </>
       )}
 
-      {/* ===== ADD / EDIT modal (with live preview) ===== */}
+      {/* ===== 6.7 ADD / EDIT modal (with live preview) ===== */}
       {editing && (
         <div
           className={`fixed inset-0 z-50 bg-black/50 backdrop-blur-sm items-center justify-center p-4 ${
@@ -1239,7 +1480,7 @@ export default function HeroManager() {
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* live preview (English text) */}
               <section className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Preview
                 </h4>
                 <div className="relative h-44 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 text-white">
@@ -1254,7 +1495,7 @@ export default function HeroManager() {
                   <div className="relative z-10 h-full flex items-center px-6">
                     <div className="space-y-1.5 max-w-xs">
                       {form.tag.en && (
-                        <span className="inline-block px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-amber-500/90 rounded-full">
+                        <span className="inline-block px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-accent-500/90 rounded-full">
                           {form.tag.en}
                         </span>
                       )}
@@ -1262,12 +1503,12 @@ export default function HeroManager() {
                         {form.title.en || "Slide title"}
                       </p>
                       {form.text.en && (
-                        <p className="text-xs text-amber-50/90 line-clamp-2">
+                        <p className="text-xs text-accent-50/90 line-clamp-2">
                           {form.text.en}
                         </p>
                       )}
                       {form.cta.en && (
-                        <span className="inline-block px-3 py-1 text-xs font-semibold bg-amber-500 rounded-lg">
+                        <span className="inline-block px-3 py-1 text-xs font-semibold bg-accent-500 rounded-lg">
                           {form.cta.en}
                         </span>
                       )}
@@ -1276,8 +1517,9 @@ export default function HeroManager() {
                 </div>
               </section>
 
+              {/* image */}
               <section className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Image
                 </h4>
                 <ImageUpload
@@ -1288,8 +1530,9 @@ export default function HeroManager() {
                 />
               </section>
 
+              {/* texts */}
               <section className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Texts (all languages)
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
@@ -1325,8 +1568,9 @@ export default function HeroManager() {
                 </div>
               </section>
 
+              {/* button link */}
               <section className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Button link
                 </h4>
                 <label className="text-sm text-slate-600 dark:text-slate-400 block w-full">
@@ -1346,8 +1590,9 @@ export default function HeroManager() {
                 </label>
               </section>
 
+              {/* status */}
               <section className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Display
                 </h4>
                 <label className="text-sm text-slate-600 dark:text-slate-400 block w-full sm:max-w-xs">
@@ -1365,6 +1610,7 @@ export default function HeroManager() {
                 </label>
               </section>
 
+              {/* buttons */}
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <button
                   type="button"
@@ -1375,13 +1621,171 @@ export default function HeroManager() {
                 </button>
                 <button
                   disabled={saving}
-                  className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold transition-colors text-center shadow-sm"
+                  className="w-full py-2.5 rounded-xl bg-accent-600 hover:bg-accent-700 disabled:opacity-50 text-white font-semibold transition-colors text-center shadow-sm"
                 >
                   {saving ? "Saving..." : "Save slide"}
                 </button>
               </div>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ===== 6.8 DELETE CONFIRMATION modal ===== */}
+      {deleting && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => {
+            if (!deletingLoading) setDeleting(null);
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-modal-title"
+            aria-describedby="delete-modal-description"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+          >
+            {/* Icon + Heading */}
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400">
+                <Trash2 className="h-6 w-6" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h3
+                  id="delete-modal-title"
+                  className="text-lg font-bold text-slate-900 dark:text-white"
+                >
+                  Delete slide?
+                </h3>
+
+                <p
+                  id="delete-modal-description"
+                  className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400"
+                >
+                  Are you sure you want to delete{" "}
+                  <span className="font-semibold text-slate-900 dark:text-slate-200">
+                    "{getLocalizedValue(deleting.title)}"
+                  </span>
+                  ? This action cannot be undone.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setDeleting(null)}
+                disabled={deletingLoading}
+                aria-label="Close delete confirmation"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-7 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleting(null)}
+                disabled={deletingLoading}
+                className="rounded-xl border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deletingLoading}
+                className="flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deletingLoading ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== 6.9 RESET CONFIRMATION modal ===== */}
+      {showReset && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => {
+            if (!resetLoading) setShowReset(false);
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="reset-modal-title"
+            aria-describedby="reset-modal-description"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+          >
+            {/* Icon + Heading */}
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h3
+                  id="reset-modal-title"
+                  className="text-lg font-bold text-slate-900 dark:text-white"
+                >
+                  Reset the hero slides?
+                </h3>
+
+                <p
+                  id="reset-modal-description"
+                  className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400"
+                >
+                  The hero slides will go back to the defaults.{" "}
+                  <span className="font-semibold text-slate-900 dark:text-slate-200">
+                    ALL your slides will be replaced.
+                  </span>{" "}
+                  This action cannot be undone.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowReset(false)}
+                disabled={resetLoading}
+                aria-label="Close reset confirmation"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-7 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setShowReset(false)}
+                disabled={resetLoading}
+                className="rounded-xl border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmReset}
+                disabled={resetLoading}
+                className="flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <RotateCcw
+                  className={`h-4 w-4 ${resetLoading ? "animate-spin" : ""}`}
+                />
+                {resetLoading ? "Resetting..." : "Yes, Reset"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
