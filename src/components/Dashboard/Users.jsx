@@ -84,8 +84,8 @@ function Chip({ active, onClick, children }) {
       onClick={onClick}
       className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
         active
-          ? "bg-amber-600 border-amber-600 text-white"
-          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-500"
+          ? "bg-accent-600 border-accent-600 text-white"
+          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-accent-500"
       }`}
     >
       {children}
@@ -104,7 +104,7 @@ function Toggle({ checked, onChange, disabled, label }) {
       title={label}
       disabled={disabled}
       onClick={onChange}
-      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 disabled:opacity-50 disabled:cursor-wait ${
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/50 disabled:opacity-50 disabled:cursor-wait ${
         checked ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"
       }`}
     >
@@ -165,7 +165,7 @@ function NoticeModal({ notice, onClose, onBackToForm }) {
     },
     warning: {
       icon: MailWarning,
-      color: "text-amber-600 bg-amber-100",
+      color: "text-accent-600 bg-accent-100",
       heading: "Please review",
     },
   };
@@ -230,7 +230,7 @@ function NoticeModal({ notice, onClose, onBackToForm }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl bg-amber-600 px-5 py-2.5 font-semibold text-white shadow-sm transition-colors hover:bg-amber-700"
+            className="rounded-xl bg-accent-600 px-5 py-2.5 font-semibold text-white shadow-sm transition-colors hover:bg-accent-700"
           >
             OK
           </button>
@@ -306,7 +306,7 @@ const labelOf = (value) => {
 };
 
 const ROLE_BADGE = {
-  admin: "bg-amber-100 text-amber-800",
+  admin: "bg-accent-100 text-accent-800",
   staff: "bg-sky-100 text-sky-700",
   customer: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
 };
@@ -963,13 +963,13 @@ export default function UsersManager() {
   const lightboxInfo = viewing ? (
     <div className="space-y-3 text-sm">
       <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-500">
+        <span className="text-xs font-bold uppercase tracking-wider text-accent-500">
           Name
         </span>
         <p className="mt-1 font-medium">{fullName(viewing)}</p>
       </div>
       <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-500">
+        <span className="text-xs font-bold uppercase tracking-wider text-accent-500">
           Email
         </span>
         <p className="mt-1 text-slate-300 text-xs">{viewing.email}</p>
@@ -996,7 +996,7 @@ export default function UsersManager() {
 
   const labelCls = "text-sm text-slate-600 dark:text-slate-400 block w-full";
   const sectionTitle =
-    "text-xs font-bold uppercase tracking-wider text-amber-600";
+    "text-xs font-bold uppercase tracking-wider text-accent-600";
 
   return (
     <div className="space-y-6">
@@ -1033,7 +1033,7 @@ export default function UsersManager() {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 disabled:opacity-60 transition-colors"
+            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 disabled:opacity-60 transition-colors"
           >
             <RotateCcw
               className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
@@ -1042,7 +1042,7 @@ export default function UsersManager() {
           </button>
           <button
             onClick={openNew}
-            className="px-4 py-2 text-sm font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-2 transition-colors shadow-sm"
+            className="px-4 py-2 text-sm font-semibold rounded-xl bg-accent-600 hover:bg-accent-700 text-white flex items-center gap-2 transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" /> Add user
           </button>
@@ -1060,12 +1060,12 @@ export default function UsersManager() {
           type="button"
           onClick={() => setShowFilters((v) => !v)}
           aria-expanded={showFilters}
-          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 transition-colors"
+          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 transition-colors"
         >
           <SlidersHorizontal className="w-4 h-4" />
           {showFilters ? "Hide Filters" : "Show Filters"}
           {activeFilters > 0 && (
-            <span className="px-1.5 rounded-full bg-amber-600 text-white text-xs leading-5">
+            <span className="px-1.5 rounded-full bg-accent-600 text-white text-xs leading-5">
               {activeFilters}
             </span>
           )}
@@ -1076,8 +1076,8 @@ export default function UsersManager() {
           aria-pressed={showRemoved}
           className={`px-4 py-2 text-sm font-medium rounded-xl border flex items-center gap-2 transition-colors ${
             showRemoved
-              ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300"
-              : "border-slate-300 dark:border-slate-700 hover:border-amber-500"
+              ? "border-accent-500 bg-accent-50 dark:bg-accent-950/30 text-accent-700 dark:text-accent-300"
+              : "border-slate-300 dark:border-slate-700 hover:border-accent-500"
           }`}
         >
           {showRemoved ? (
@@ -1190,7 +1190,7 @@ export default function UsersManager() {
             <button
               type="button"
               onClick={clearFilters}
-              className="text-sm text-amber-600 font-medium underline"
+              className="text-sm text-accent-600 font-medium underline"
             >
               Clear filters
             </button>
@@ -1295,7 +1295,7 @@ export default function UsersManager() {
                             className="w-10 h-10 rounded-full object-cover bg-slate-100 dark:bg-slate-800"
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-bold flex items-center justify-center text-sm">
+                          <div className="w-10 h-10 rounded-full bg-accent-100 dark:bg-accent-950/40 text-accent-700 dark:text-accent-400 font-bold flex items-center justify-center text-sm">
                             {u.firstName?.[0]?.toUpperCase() || "U"}
                           </div>
                         )}
@@ -1305,7 +1305,7 @@ export default function UsersManager() {
                               {fullName(u)}
                             </span>
                             {isMe && (
-                              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                              <span className="inline-flex items-center rounded-full bg-accent-100 px-2 py-0.5 text-[10px] font-bold text-accent-700 dark:bg-accent-950/40 dark:text-accent-300">
                                 Me
                               </span>
                             )}
@@ -1570,7 +1570,7 @@ export default function UsersManager() {
                       />
                     </button>
                   ) : (
-                    <div className="w-20 h-20 shrink-0 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-bold text-2xl flex items-center justify-center">
+                    <div className="w-20 h-20 shrink-0 rounded-full bg-accent-100 dark:bg-accent-950/40 text-accent-700 dark:text-accent-400 font-bold text-2xl flex items-center justify-center">
                       {viewing.firstName?.[0]?.toUpperCase() || "U"}
                     </div>
                   )}
@@ -1731,7 +1731,7 @@ export default function UsersManager() {
                       closeView();
                       openEdit(u);
                     }}
-                    className="py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                    className="py-2.5 rounded-xl bg-accent-600 hover:bg-accent-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
                   >
                     <Pencil className="w-4 h-4" /> Edit
                   </button>
@@ -2023,7 +2023,7 @@ export default function UsersManager() {
                 </button>
                 <button
                   disabled={saving}
-                  className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold transition-colors text-center shadow-sm"
+                  className="w-full py-2.5 rounded-xl bg-accent-600 hover:bg-accent-700 disabled:opacity-50 text-white font-semibold transition-colors text-center shadow-sm"
                 >
                   {saving
                     ? "Saving..."

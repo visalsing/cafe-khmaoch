@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useLanguage } from "../../context/LanguageContext.jsx";
+import { useDateFormat } from "../../utils/useDateFormat.js";
+import { useDigits } from "../../utils/digitFormatter";
 import {
   authService,
   profileService,
@@ -97,12 +99,12 @@ function VerifiedBadge({ verified }) {
   );
 }
 
-// a white card with a small amber title (same look as the sections of the Add / Edit forms)
+// a white card with a small accent title (same look as the sections of the Add / Edit forms)
 function Card({ icon: Icon, title, action, children }) {
   return (
     <section className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600">
+        <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-accent-600">
           {Icon && <Icon className="w-4 h-4" />}
           {title}
         </h2>
@@ -175,7 +177,7 @@ const labelOf = (value) => {
 };
 
 const ROLE_BADGE = {
-  admin: "bg-amber-100 text-amber-800",
+  admin: "bg-accent-100 text-accent-800",
   staff: "bg-sky-100 text-sky-700",
   customer: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
 };
@@ -245,6 +247,8 @@ export default function Profile() {
   // const { refreshUser } = useAuth(); // re-reads the signed-in user so the sidebar / top bar show the new name and photo
   const { refreshUser, isImpersonating, stopImpersonation } = useAuth();
   const { language, t } = useLanguage();
+  const { date, dateTime } = useDateFormat();
+  const formatNum = useDigits();
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -877,7 +881,7 @@ export default function Profile() {
 
   const labelCls = "text-sm text-slate-600 dark:text-slate-400 block w-full";
   const sectionTitle =
-    "text-xs font-bold uppercase tracking-wider text-amber-600";
+    "text-xs font-bold uppercase tracking-wider text-accent-600";
   const pwType = showPw ? "text" : "password";
 
   const isVerified = profile?.isVerifiedEmail === 1;
@@ -887,13 +891,13 @@ export default function Profile() {
   const lightboxInfo = profile ? (
     <div className="space-y-3 text-sm">
       <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-500">
+        <span className="text-xs font-bold uppercase tracking-wider text-accent-500">
           Name
         </span>
         <p className="mt-1 font-medium">{fullName(profile)}</p>
       </div>
       <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-500">
+        <span className="text-xs font-bold uppercase tracking-wider text-accent-500">
           Email
         </span>
         <p className="mt-1 text-slate-300 text-xs">{profile.email}</p>
@@ -936,7 +940,7 @@ export default function Profile() {
           <button
             onClick={handleRefresh}
             disabled={refreshing || loading}
-            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 disabled:opacity-60 transition-colors"
+            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 disabled:opacity-60 transition-colors"
           >
             <RotateCcw
               className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
@@ -946,7 +950,7 @@ export default function Profile() {
           <button
             onClick={openEdit}
             disabled={!profile}
-            className="px-4 py-2 text-sm font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white flex items-center gap-2 transition-colors shadow-sm"
+            className="px-4 py-2 text-sm font-semibold rounded-xl bg-accent-600 hover:bg-accent-700 disabled:opacity-50 text-white flex items-center gap-2 transition-colors shadow-sm"
           >
             <Pencil className="w-4 h-4" /> {t("edit_profile")}
           </button>
@@ -1021,7 +1025,7 @@ export default function Profile() {
                   />
                 </button>
               ) : (
-                <div className="w-24 h-24 shrink-0 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-bold text-3xl flex items-center justify-center self-start">
+                <div className="w-24 h-24 shrink-0 rounded-full bg-accent-100 dark:bg-accent-950/40 text-accent-700 dark:text-accent-400 font-bold text-3xl flex items-center justify-center self-start">
                   {profile.firstName?.[0]?.toUpperCase() || (
                     <UserIcon className="w-10 h-10" />
                   )}
@@ -1106,14 +1110,16 @@ export default function Profile() {
                 <Field label="Extra permission">
                   {nameIn(permissions, profile.permissionId, "name")}
                 </Field>
-                <Field label="Member since">{fmtDate(profile.createdAt)}</Field>
+                <Field label="Member since">
+                  {dateTime(profile.createdAt)}
+                </Field>
                 <Field label="Last login">
                   {profile.lastLoginAt
-                    ? fmtDateTime(profile.lastLoginAt)
+                    ? dateTime(profile.lastLoginAt)
                     : "Never"}
                 </Field>
                 <Field label="Last updated">
-                  {fmtDateTime(profile.updatedAt)}
+                  {dateTime(profile.updatedAt)}
                 </Field>
               </div>
               <p className="text-xs text-slate-500">
@@ -1132,7 +1138,7 @@ export default function Profile() {
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 <b>{profile.email}</b> was verified
                 {profile.emailVerifiedAt
-                  ? ` on ${fmtDateTime(profile.emailVerifiedAt)}`
+                  ? ` on ${dateTime(profile.emailVerifiedAt)}`
                   : ""}
                 .
               </p>
@@ -1149,7 +1155,7 @@ export default function Profile() {
                     type="button"
                     onClick={handleSendCode}
                     disabled={cooldown > 0 || Boolean(codeBusy)}
-                    className="px-4 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 dark:border-slate-700 hover:border-amber-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    className="px-4 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 dark:border-slate-700 hover:border-accent-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                   >
                     <Mail className="w-4 h-4" />
                     {codeBusy === "send"
@@ -1177,7 +1183,7 @@ export default function Profile() {
                     />
                     <button
                       disabled={code.length !== 6 || Boolean(codeBusy)}
-                      className="px-5 py-2.5 text-sm font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors shadow-sm"
+                      className="px-5 py-2.5 text-sm font-semibold rounded-xl bg-accent-600 hover:bg-accent-700 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors shadow-sm"
                     >
                       {codeBusy === "verify" ? "Checking..." : "Verify"}
                     </button>
@@ -1211,7 +1217,7 @@ export default function Profile() {
                 <button
                   type="submit"
                   disabled={emailChangeBusy}
-                  className="px-4 py-2 rounded-xl bg-amber-600 text-white font-semibold disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-accent-600 text-white font-semibold disabled:opacity-50"
                 >
                   {emailChangeBusy
                     ? "Sending code..."
@@ -1363,7 +1369,7 @@ export default function Profile() {
                       <button
                         type="button"
                         onClick={() => setShowPw((v) => !v)}
-                        className="text-sm text-slate-500 hover:text-amber-600 flex items-center gap-1.5"
+                        className="text-sm text-slate-500 hover:text-accent-600 flex items-center gap-1.5"
                       >
                         {showPw ? (
                           <EyeOff className="w-4 h-4" />
@@ -1379,7 +1385,7 @@ export default function Profile() {
                           setForgotPasswordMode(true);
                           setNotice(null);
                         }}
-                        className="text-sm font-medium text-amber-600 hover:text-amber-700 hover:underline"
+                        className="text-sm font-medium text-accent-600 hover:text-accent-700 hover:underline"
                       >
                         Forgot current password?
                       </button>
@@ -1388,7 +1394,7 @@ export default function Profile() {
                     <button
                       type="submit"
                       disabled={pwSaving || passwordCodeBusy}
-                      className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold disabled:opacity-50"
+                      className="px-4 py-2.5 rounded-xl bg-accent-600 hover:bg-accent-700 text-white font-semibold disabled:opacity-50"
                     >
                       {pwSaving
                         ? "Updating password..."
@@ -1423,7 +1429,7 @@ export default function Profile() {
                       type="button"
                       onClick={handleRequestForgotPasswordCode}
                       disabled={forgotPasswordBusy}
-                      className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold disabled:opacity-50"
+                      className="px-4 py-2.5 rounded-xl bg-accent-600 hover:bg-accent-700 text-white font-semibold disabled:opacity-50"
                     >
                       {forgotPasswordBusy
                         ? "Sending code..."
@@ -1510,7 +1516,7 @@ export default function Profile() {
                         <button
                           type="button"
                           onClick={() => setShowPw((v) => !v)}
-                          className="text-sm text-slate-500 hover:text-amber-600 flex items-center gap-1.5"
+                          className="text-sm text-slate-500 hover:text-accent-600 flex items-center gap-1.5"
                         >
                           {showPw ? (
                             <EyeOff className="w-4 h-4" />
@@ -1524,7 +1530,7 @@ export default function Profile() {
                           type="button"
                           disabled={forgotPasswordBusy}
                           onClick={handleRequestForgotPasswordCode}
-                          className="text-sm font-medium text-amber-600 hover:underline disabled:opacity-50"
+                          className="text-sm font-medium text-accent-600 hover:underline disabled:opacity-50"
                         >
                           {forgotPasswordBusy ? "Sending..." : "Resend code"}
                         </button>
@@ -1538,7 +1544,7 @@ export default function Profile() {
                           forgotNewPassword.length < 8 ||
                           forgotNewPassword !== forgotConfirmPassword
                         }
-                        className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold disabled:opacity-50"
+                        className="px-4 py-2.5 rounded-xl bg-accent-600 hover:bg-accent-700 text-white font-semibold disabled:opacity-50"
                       >
                         {forgotPasswordSaving
                           ? "Resetting password..."
@@ -1748,7 +1754,7 @@ export default function Profile() {
                 </button>
                 <button
                   disabled={saving}
-                  className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold transition-colors text-center shadow-sm"
+                  className="w-full py-2.5 rounded-xl bg-accent-600 hover:bg-accent-700 disabled:opacity-50 text-white font-semibold transition-colors text-center shadow-sm"
                 >
                   {saving ? "Saving..." : "Save profile"}
                 </button>

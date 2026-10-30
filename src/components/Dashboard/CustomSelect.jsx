@@ -36,8 +36,8 @@ export default function CustomSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className={`${inputCls} w-full flex items-center justify-between text-left cursor-pointer bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:border-amber-500 focus:outline-none transition-all ${
-          open ? "border-amber-600 ring-2 ring-amber-600/20" : ""
+        className={`${inputCls} w-full flex items-center justify-between text-left cursor-pointer bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:border-accent-500 focus:outline-none transition-all ${
+          open ? "border-accent-600 ring-2 ring-accent-600/20" : ""
         }`}
       >
         <span className={selected ? "text-slate-800 dark:text-slate-100" : "text-slate-400"}>
@@ -45,7 +45,7 @@ export default function CustomSelect({
         </span>
         <ChevronDown
           className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
-            open ? "rotate-180 text-amber-500" : ""
+            open ? "rotate-180 text-accent-500" : ""
           }`}
         />
       </button>
@@ -53,7 +53,7 @@ export default function CustomSelect({
       {open && (
         <div
           role="listbox"
-          className={`absolute z-50 w-full max-h-48 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl p-1.5 space-y-0.5 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] dark:[scrollbar-color:#475569_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:my-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-amber-500 ${
+          className={`absolute z-50 w-full max-h-48 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl p-1.5 space-y-0.5 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] dark:[scrollbar-color:#475569_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:my-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-accent-500 ${
             dropUp ? "bottom-full mb-1" : "mt-1"
           }`}
         >
@@ -71,12 +71,12 @@ export default function CustomSelect({
                 }}
                 className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-medium text-left transition-colors flex items-center justify-between gap-1.5 ${
                   active
-                    ? "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400"
-                    : "text-slate-700 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-amber-950/20 hover:text-amber-700 dark:hover:text-amber-400"
+                    ? "bg-accent-100 dark:bg-accent-950/40 text-accent-700 dark:text-accent-400"
+                    : "text-slate-700 dark:text-slate-300 hover:bg-accent-50 dark:hover:bg-accent-950/20 hover:text-accent-700 dark:hover:text-accent-400"
                 }`}
               >
                 <span className="truncate">{option.label}</span>
-                {active && <span className="text-amber-600 shrink-0 font-bold text-xs">✓</span>}
+                {active && <span className="text-accent-600 shrink-0 font-bold text-xs">✓</span>}
               </button>
             );
           })}

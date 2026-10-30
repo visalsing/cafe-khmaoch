@@ -100,7 +100,7 @@ export default function Pagination({ page, pageSize, total, onPage, onPageSize, 
               value={customInput}
               onChange={handleCustomChange}
               placeholder="Qty"
-              className="w-16 px-2 py-1.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-amber-500 text-center"
+              className="w-16 px-2 py-1.5 text-sm rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-accent-500 text-center"
             />
           )}
         </div>
@@ -113,7 +113,7 @@ export default function Pagination({ page, pageSize, total, onPage, onPageSize, 
           aria-label="First page"
           disabled={page <= 1 || isAll}
           onClick={() => onPage(1)}
-          className={`${navBtn} border-slate-200 dark:border-slate-700 hover:border-amber-500`}
+          className={`${navBtn} border-slate-200 dark:border-slate-700 hover:border-accent-500`}
         >
           <ChevronsLeft className="w-4 h-4" />
         </button>
@@ -123,7 +123,7 @@ export default function Pagination({ page, pageSize, total, onPage, onPageSize, 
           aria-label="Previous page"
           disabled={page <= 1 || isAll}
           onClick={() => onPage(page - 1)}
-          className={`${navBtn} border-slate-200 dark:border-slate-700 hover:border-amber-500`}
+          className={`${navBtn} border-slate-200 dark:border-slate-700 hover:border-accent-500`}
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -139,8 +139,8 @@ export default function Pagination({ page, pageSize, total, onPage, onPageSize, 
               onClick={() => onPage(n)}
               className={`${navBtn} ${
                 n === page
-                  ? "bg-amber-600 border-amber-600 text-white"
-                  : "border-slate-200 dark:border-slate-700 hover:border-amber-500"
+                  ? "bg-accent-600 border-accent-600 text-white"
+                  : "border-slate-200 dark:border-slate-700 hover:border-accent-500"
               }`}
             >
               {n}
@@ -152,7 +152,7 @@ export default function Pagination({ page, pageSize, total, onPage, onPageSize, 
         {isAll && (
           <button
             type="button"
-            className={`${navBtn} bg-amber-600 border-amber-600 text-white`}
+            className={`${navBtn} bg-accent-600 border-accent-600 text-white`}
           >
             1
           </button>
@@ -163,7 +163,7 @@ export default function Pagination({ page, pageSize, total, onPage, onPageSize, 
           aria-label="Next page"
           disabled={page >= totalPages || isAll}
           onClick={() => onPage(page + 1)}
-          className={`${navBtn} border-slate-200 dark:border-slate-700 hover:border-amber-500`}
+          className={`${navBtn} border-slate-200 dark:border-slate-700 hover:border-accent-500`}
         >
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -174,7 +174,7 @@ export default function Pagination({ page, pageSize, total, onPage, onPageSize, 
           aria-label="Last page"
           disabled={page >= totalPages || isAll}
           onClick={() => onPage(totalPages)}
-          className={`${navBtn} border-slate-200 dark:border-slate-700 hover:border-amber-500`}
+          className={`${navBtn} border-slate-200 dark:border-slate-700 hover:border-accent-500`}
         >
           <ChevronsRight className="w-4 h-4" />
         </button>

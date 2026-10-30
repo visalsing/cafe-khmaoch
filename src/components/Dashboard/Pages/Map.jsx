@@ -69,8 +69,8 @@ function Chip({ active, onClick, children }) {
       onClick={onClick}
       className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
         active
-          ? "bg-amber-600 border-amber-600 text-white"
-          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-500"
+          ? "bg-accent-600 border-accent-600 text-white"
+          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-accent-500"
       }`}
     >
       {children}
@@ -89,7 +89,7 @@ function Toggle({ checked, onChange, disabled, label }) {
       title={label}
       disabled={disabled}
       onClick={onChange}
-      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 disabled:opacity-50 disabled:cursor-wait ${
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/50 disabled:opacity-50 disabled:cursor-wait ${
         checked ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"
       }`}
     >
@@ -535,13 +535,13 @@ export default function MapManager() {
   const lightboxInfo = viewing ? (
     <div className="space-y-3 text-sm">
       <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-500">
+        <span className="text-xs font-bold uppercase tracking-wider text-accent-500">
           Name
         </span>
         <p className="mt-1 font-medium">{viewing.name}</p>
       </div>
       <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-500">
+        <span className="text-xs font-bold uppercase tracking-wider text-accent-500">
           Slogan
         </span>
         <p className="mt-1 text-slate-300 text-xs leading-relaxed">
@@ -588,7 +588,7 @@ export default function MapManager() {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 disabled:opacity-60 transition-colors"
+            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 disabled:opacity-60 transition-colors"
           >
             <RotateCcw
               className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
@@ -597,7 +597,7 @@ export default function MapManager() {
           </button>
           <button
             onClick={openNew}
-            className="px-4 py-2 text-sm font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-2 transition-colors shadow-sm"
+            className="px-4 py-2 text-sm font-semibold rounded-xl bg-accent-600 hover:bg-accent-700 text-white flex items-center gap-2 transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" /> Add map
           </button>
@@ -615,12 +615,12 @@ export default function MapManager() {
           type="button"
           onClick={() => setShowFilters((v) => !v)}
           aria-expanded={showFilters}
-          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 transition-colors"
+          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 transition-colors"
         >
           <SlidersHorizontal className="w-4 h-4" />
           {showFilters ? "Hide Filters" : "Show Filters"}
           {activeFilters > 0 && (
-            <span className="px-1.5 rounded-full bg-amber-600 text-white text-xs leading-5">
+            <span className="px-1.5 rounded-full bg-accent-600 text-white text-xs leading-5">
               {activeFilters}
             </span>
           )}
@@ -629,9 +629,9 @@ export default function MapManager() {
           href="https://www.google.com/maps"
           target="_blank"
           rel="noreferrer"
-          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 bg-white dark:bg-slate-900 transition-colors"
+          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 bg-white dark:bg-slate-900 transition-colors"
         >
-          <MapPin className="w-4 h-4 text-amber-600" />
+          <MapPin className="w-4 h-4 text-accent-600" />
           <span>GoogleMap</span>
           <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
         </a>
@@ -667,7 +667,7 @@ export default function MapManager() {
             <button
               type="button"
               onClick={clearFilters}
-              className="text-sm text-amber-600 font-medium underline"
+              className="text-sm text-accent-600 font-medium underline"
             >
               Clear filters
             </button>
@@ -941,7 +941,7 @@ export default function MapManager() {
                     href={viewing.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm font-medium text-amber-600 hover:underline break-all"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-accent-600 hover:underline break-all"
                   >
                     <ExternalLink className="w-4 h-4 shrink-0" />
                     {viewing.link}
@@ -955,7 +955,7 @@ export default function MapManager() {
                   ["Description", viewing.description],
                 ].map(([label, value]) => (
                   <section key={label} className="space-y-2">
-                    <h5 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                       {label}
                     </h5>
                     <TextByLang value={value} />
@@ -987,7 +987,7 @@ export default function MapManager() {
                     closeView();
                     openEdit(m);
                   }}
-                  className="py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                  className="py-2.5 rounded-xl bg-accent-600 hover:bg-accent-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
                 >
                   <Pencil className="w-4 h-4" /> Edit
                 </button>
@@ -1037,7 +1037,7 @@ export default function MapManager() {
             {/* Scrollable Content Container */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               <section className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Logo
                 </h4>
                 <ImageUpload
@@ -1049,7 +1049,7 @@ export default function MapManager() {
               </section>
 
               <section className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Shop
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1075,7 +1075,7 @@ export default function MapManager() {
               </section>
 
               <section className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Texts (all languages)
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
@@ -1112,7 +1112,7 @@ export default function MapManager() {
               </section>
 
               <section className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Google Map
                 </h4>
                 <label className="text-sm font-medium text-slate-600 dark:text-slate-400 block w-full">
@@ -1153,7 +1153,7 @@ export default function MapManager() {
               </section>
 
               <section className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Display
                 </h4>
                 <label className="text-sm text-slate-600 dark:text-slate-400 block w-full sm:max-w-xs">
@@ -1181,7 +1181,7 @@ export default function MapManager() {
                 </button>
                 <button
                   disabled={saving}
-                  className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold transition-colors text-center shadow-sm"
+                  className="w-full py-2.5 rounded-xl bg-accent-600 hover:bg-accent-700 disabled:opacity-50 text-white font-semibold transition-colors text-center shadow-sm"
                 >
                   {saving ? "Saving..." : "Save map"}
                 </button>

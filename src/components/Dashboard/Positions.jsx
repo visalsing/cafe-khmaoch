@@ -65,8 +65,8 @@ function Chip({ active, onClick, children }) {
       onClick={onClick}
       className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
         active
-          ? "bg-amber-600 border-amber-600 text-white"
-          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-500"
+          ? "bg-accent-600 border-accent-600 text-white"
+          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-accent-500"
       }`}
     >
       {children}
@@ -84,7 +84,7 @@ function Toggle({ checked, onChange, disabled, label }) {
       title={label}
       disabled={disabled}
       onClick={onChange}
-      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 disabled:opacity-50 disabled:cursor-wait ${
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/50 disabled:opacity-50 disabled:cursor-wait ${
         checked ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"
       }`}
     >
@@ -475,14 +475,14 @@ export default function PositionsManager() {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 disabled:opacity-60 transition-colors"
+            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 disabled:opacity-60 transition-colors"
           >
             <RotateCcw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
             Refresh
           </button>
           <button
             onClick={openNew}
-            className="px-4 py-2 text-sm font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-2 transition-colors shadow-sm"
+            className="px-4 py-2 text-sm font-semibold rounded-xl bg-accent-600 hover:bg-accent-700 text-white flex items-center gap-2 transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" /> Add position
           </button>
@@ -500,12 +500,12 @@ export default function PositionsManager() {
           type="button"
           onClick={() => setShowFilters((v) => !v)}
           aria-expanded={showFilters}
-          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 transition-colors"
+          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 transition-colors"
         >
           <SlidersHorizontal className="w-4 h-4" />
           {showFilters ? "Hide Filters" : "Show Filters"}
           {activeFilters > 0 && (
-            <span className="px-1.5 rounded-full bg-amber-600 text-white text-xs leading-5">
+            <span className="px-1.5 rounded-full bg-accent-600 text-white text-xs leading-5">
               {activeFilters}
             </span>
           )}
@@ -542,7 +542,7 @@ export default function PositionsManager() {
             <button
               type="button"
               onClick={clearFilters}
-              className="text-sm text-amber-600 font-medium underline"
+              className="text-sm text-accent-600 font-medium underline"
             >
               Clear filters
             </button>
@@ -742,14 +742,14 @@ export default function PositionsManager() {
               </div>
 
               <section className="space-y-2">
-                <h5 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h5 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Position Titles (by language)
                 </h5>
                 <ArrayByLang value={viewing.position_title} />
               </section>
 
               <section className="space-y-2">
-                <h5 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h5 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Description
                 </h5>
                 <TextByLang value={viewing.description} />
@@ -777,7 +777,7 @@ export default function PositionsManager() {
                   closeView();
                   openEdit(p);
                 }}
-                className="py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                className="py-2.5 rounded-xl bg-accent-600 hover:bg-accent-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
               >
                 <Pencil className="w-4 h-4" /> Edit
               </button>
@@ -813,7 +813,7 @@ export default function PositionsManager() {
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               <section className="space-y-3">
                 <div className="flex flex-col">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                     Position Titles (separated by commas for multiple titles)
                   </h4>
                   <span className="text-[11px] text-slate-400">
@@ -831,7 +831,7 @@ export default function PositionsManager() {
               </section>
 
               <section className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Description (all languages)
                 </h4>
                 <I18nInput
@@ -845,7 +845,7 @@ export default function PositionsManager() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <section className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-amber-600">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-accent-600">
                     Sort Number
                   </label>
                   <input
@@ -858,7 +858,7 @@ export default function PositionsManager() {
                 </section>
 
                 <section className="space-y-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-amber-600 mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-accent-600 mb-1">
                     Status
                   </label>
                   <CustomSelect
@@ -881,7 +881,7 @@ export default function PositionsManager() {
               <button
                 type="submit"
                 disabled={saving}
-                className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-colors flex items-center gap-2 shadow-sm disabled:opacity-60"
+                className="px-5 py-2.5 rounded-xl bg-accent-600 hover:bg-accent-700 text-white font-semibold transition-colors flex items-center gap-2 shadow-sm disabled:opacity-60"
               >
                 {saving && <RotateCcw className="w-4 h-4 animate-spin" />}
                 {editing === "new" ? "Create position" : "Save changes"}

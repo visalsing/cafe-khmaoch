@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Plus,
   Pencil,
@@ -7,20 +7,39 @@ import {
   X,
   SlidersHorizontal,
   RotateCcw,
+  GripVertical,
+  ArrowUpDown,
+  ArrowDownAZ,
+  ChevronUp,
+  ChevronDown,
+  Download,
+  FileSpreadsheet,
 } from "lucide-react";
-import { nationalitiesService, countryFlagsService } from "../../services/api";
+import * as XLSX from "xlsx";
+import {
+  nationalitiesService,
+  countryFlagsService,
+  assetUrl,
+} from "../../services/api";
+import { useLanguage } from "../../context/LanguageContext.jsx";
+import { useDateFormat } from "../../utils/useDateFormat.js";
+import { useDigits } from "../../utils/digitFormatter";
+import CustomSelect from "./CustomSelect";
+import Pagination from "./Pagination";
 import {
   inputCls,
   I18nInput,
   useList,
   asList,
-  tr,
   cleanI18n,
   bySort,
-  fmtDate,
 } from "./Shared.jsx";
 
-/* ---------- Alert Component ---------- */
+/* ========================================================================
+   1. SMALL UI PIECES (Alert, Chip, Toggle, View-modal helpers)
+   ======================================================================== */
+
+/* ---------- Alert: left accent border + close (X) button ---------- */
 const ALERT_STYLES = {
   success:
     "bg-green-50 border-green-500 text-green-800 dark:bg-green-950/30 dark:text-green-300",
@@ -57,6 +76,7 @@ function Alert({ type = "success", title, children, onClose, action }) {
   );
 }
 
+// Pill button used by the filter panel
 function Chip({ active, onClick, children }) {
   return (
     <button
@@ -73,6 +93,7 @@ function Chip({ active, onClick, children }) {
   );
 }
 
+// on/off switch used in the Status column
 function Toggle({ checked, onChange, disabled, label }) {
   return (
     <button
@@ -96,10 +117,19 @@ function Toggle({ checked, onChange, disabled, label }) {
   );
 }
 
-const fmtDateTime = (v) => (v ? new Date(v).toLocaleString() : "—");
+/* ---------- Pieces used by the "View" modal ---------- */
+const LANG_LABELS = {
+  en: "English",
+  km: "ខ្មែរ",
+  zh: "中文",
+  lo: "ລາວ",
+  ja: "日本語",
+  vi: "Tiếng Việt",
+};
 
+// all translations of one text, English first
 function TextByLang({ value }) {
-  const entries = Object.entries(value || {})
+  const entries = Object.entries(parseI18n(value))
     .filter(([, text]) => text)
     .sort(([a], [b]) =>
       a === "en" ? -1 : b === "en" ? 1 : a.localeCompare(b),
@@ -110,7 +140,7 @@ function TextByLang({ value }) {
       {entries.map(([code, text]) => (
         <li key={code} className="flex gap-3">
           <span className="w-20 shrink-0 pt-0.5 text-xs text-slate-400">
-            {code.toUpperCase()}
+            {LANG_LABELS[code] || code.toUpperCase()}
           </span>
           <span className="text-slate-800 dark:text-slate-100 break-words">
             {text}
@@ -132,6 +162,48 @@ function Field({ label, children }) {
   );
 }
 
+/* ========================================================================
+   2. TRANSLATION HELPERS
+   ======================================================================== */
+
+// Turns whatever the database returned into a {en, km, ...} object.
+// Handles real objects, JSON strings like '{"en":"","km":""}', and plain strings.
+const parseI18n = (v) => {
+  if (!v) return {};
+  if (typeof v === "string") {
+    try {
+      const p = JSON.parse(v);
+      return p && typeof p === "object" ? p : { en: v };
+    } catch {
+      return { en: v };
+    }
+  }
+  return typeof v === "object" ? v : { en: String(v) };
+};
+
+// "km-KH" / "KM" / "kh" -> "km", "en-US" -> "en" (so it always matches the data keys)
+const toLangKey = (language) => {
+  const l = String(language || "en")
+    .toLowerCase()
+    .split(/[-_]/)[0];
+  return l === "kh" ? "km" : l;
+};
+
+// the string for one language: uses the requested language first, then falls back
+const pickText = (value, langKey) => {
+  const obj = parseI18n(value);
+  return (
+    obj[langKey] || obj.en || obj.km || Object.values(obj).find(Boolean) || ""
+  );
+};
+
+/* ========================================================================
+   3. FORM HELPERS (empty form, "nothing changed" check, payload builder)
+   ======================================================================== */
+
+// NOTE: for nationalities the status is reversed: 0 = Active, 1 = Not Active
+const isActiveStatus = (n) => Number(n.status) === 0;
+
 const emptyForm = {
   nationality: {},
   nation_code: "",
@@ -140,30 +212,56 @@ const emptyForm = {
   sort_num: 0,
 };
 
+// the form values for an existing nationality (used when opening Edit and for the "nothing changed" check)
 const formFromNationality = (n) => ({
-  nationality: n.nationality || {},
+  nationality: parseI18n(n.nationality),
   nation_code: n.nation_code || "",
   country_flags_id: n.country_flags_id ?? "",
-  status: n.status,
+  status: Number(n.status) === 1 ? 1 : 0,
   sort_num: n.sort_num ?? 0,
 });
 
+// comparable version of a form: same value -> same text (ignores key order and extra spaces)
 const stableTexts = (o) =>
   Object.fromEntries(
-    Object.entries(cleanI18n(o)).sort(([a], [b]) => a.localeCompare(b)),
+    Object.entries(cleanI18n(parseI18n(o))).sort(([a], [b]) =>
+      a.localeCompare(b),
+    ),
   );
 
 const fingerprint = (f) =>
   JSON.stringify({
     nationality: stableTexts(f.nationality),
-    nation_code: String(f.nation_code || ""),
-    country_flags_id:
-      f.country_flags_id === "" ? null : Number(f.country_flags_id),
-    status: Number(f.status),
+    nation_code: String(f.nation_code || "").trim(),
+    country_flags_id: f.country_flags_id ? Number(f.country_flags_id) : null,
+    status: Number(f.status) === 1 ? 1 : 0,
     sort_num: Number(f.sort_num) || 0,
   });
 
+// ONE payload builder for every "update the whole record" case
+// (status switch, drag order, chevron order, normal save). It always sends
+// every field, so changing the status or the order can never clear something else.
+const buildNationalityPayload = (item, { status, sortNum } = {}) => ({
+  nationality: cleanI18n(parseI18n(item.nationality)),
+  nation_code: String(item.nation_code || "").trim(),
+  country_flags_id: item.country_flags_id ? Number(item.country_flags_id) : null,
+  status: Number(status ?? item.status) === 1 ? 1 : 0,
+  sort_num: Number(sortNum ?? item.sort_num) || 0,
+});
+
+/* ========================================================================
+   4. MAIN COMPONENT
+   ======================================================================== */
 export default function NationalitiesManager() {
+  const { language, t } = useLanguage();
+  const { dateTime } = useDateFormat();
+  const formatNum = useDigits();
+  const langKey = toLangKey(language);
+
+  // ONE function for every localized text on this page
+  const getLocalizedValue = (value) => pickText(value, langKey);
+
+  /* ---------- 4.1 Data ---------- */
   const {
     list: nationalities,
     loading,
@@ -172,8 +270,10 @@ export default function NationalitiesManager() {
   } = useList(nationalitiesService.list);
 
   const [flags, setFlags] = useState([]);
-  const [editing, setEditing] = useState(null);
-  const [viewing, setViewing] = useState(null);
+
+  /* ---------- 4.2 State ---------- */
+  const [editing, setEditing] = useState(null); // null | "new" | nationality
+  const [viewing, setViewing] = useState(null); // nationality shown in the view modal
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState("");
@@ -181,51 +281,33 @@ export default function NationalitiesManager() {
   const [statusFilter, setStatusFilter] = useState("all"); // "all" | 0 (active) | 1 (not active)
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [togglingId, setTogglingId] = useState(null);
+  const [pageSize, setPageSize] = useState(10); // 10 | 20 | 30 | 40 | 50 | 100
+  const [togglingId, setTogglingId] = useState(null); // nationality whose status switch is saving
 
-  const [notice, setNotice] = useState(null);
-  const [modalHidden, setModalHidden] = useState(false);
+  // delete confirmation
+  const [deleting, setDeleting] = useState(null);
+  const [deletingLoading, setDeletingLoading] = useState(false);
+
+  // chevron reordering: moves are kept on screen until "Save order" is pressed
+  const [pendingOrder, setPendingOrder] = useState(null); // null | array of nationality ids (unsaved order)
+  const [reorderSaving, setReorderSaving] = useState(false);
+
+  // drag & drop "Order" modal
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [orderItems, setOrderItems] = useState([]);
+  const [draggedId, setDraggedId] = useState(null);
+  const [orderSaving, setOrderSaving] = useState(false);
+
+  // sort menu
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [sortMode, setSortMode] = useState("default");
+
+  // ALL alerts are shown on the page, between the search/filters and the table
+  const [notice, setNotice] = useState(null); // { id, type, title, message, returnToForm }
+  const [modalHidden, setModalHidden] = useState(false); // form is hidden (not lost) while its alert is shown
   const noticeRef = useRef(null);
 
-  const notify = (type, title, message, { returnToForm = false } = {}) =>
-    setNotice({ id: Date.now(), type, title, message, returnToForm });
-
-  const dismissNotice = () => {
-    if (notice?.returnToForm) setModalHidden(false);
-    setNotice(null);
-  };
-
-  const closeView = () => setViewing(null);
-
-  useEffect(() => {
-    if (!notice || notice.type === "error" || notice.returnToForm) return;
-    const timer = setTimeout(() => setNotice(null), 5000);
-    return () => clearTimeout(timer);
-  }, [notice]);
-
-  useEffect(() => {
-    if (notice)
-      noticeRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
-  }, [notice]);
-
-  useEffect(() => {
-    if (!viewing) return;
-    const onKey = (e) => {
-      if (e.key !== "Escape") return;
-      setViewing(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [viewing]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [query, statusFilter, pageSize]);
-
+  /* ---------- 4.3 Lookups (country flags) ---------- */
   const loadFlags = () =>
     countryFlagsService
       .list()
@@ -236,19 +318,91 @@ export default function NationalitiesManager() {
     loadFlags();
   }, []);
 
-  const flagMap = useMemo(
-    () => new Map(flags.map((f) => [f.id, tr(f.name)])),
-    [flags],
-  );
-  const flagNameMap = (id) => {
-    const f = flags.find((item) => item.id === id);
-    return f ? tr(f.name) : "—";
+  const flagMap = new Map(flags.map((f) => [f.id, f]));
+
+  // SVG flag image + country name (same look as ExchangeRate / Currencies)
+  const FlagBadge = ({ flag, size = "md" }) => {
+    const svgUrl = flag?.svg ? assetUrl(flag.svg) : null;
+    const box = size === "sm" ? "w-6 h-4" : "w-8 h-6";
+    return (
+      <div className="flex items-center gap-3">
+        {svgUrl ? (
+          <img
+            src={svgUrl}
+            alt=""
+            className={`${box} object-contain rounded bg-slate-100 dark:bg-slate-800 p-0.5 shadow-sm`}
+          />
+        ) : (
+          <div
+            className={`${box} rounded bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] text-slate-400`}
+          >
+            —
+          </div>
+        )}
+        <span className="text-slate-700 dark:text-slate-300">
+          {flag ? getLocalizedValue(flag.name) : "—"}
+        </span>
+      </div>
+    );
   };
 
+  /* ---------- 4.4 Alerts (notice) ---------- */
+  const notify = (type, title, message, { returnToForm = false } = {}) =>
+    setNotice({ id: Date.now(), type, title, message, returnToForm });
+
+  // closing an alert that came from the form brings the form back
+  const dismissNotice = () => {
+    if (notice?.returnToForm) setModalHidden(false);
+    setNotice(null);
+  };
+
+  // green + yellow alerts disappear by themselves; red ones and "back to the form" ones stay
+  useEffect(() => {
+    if (!notice || notice.type === "error" || notice.returnToForm) return;
+    const timer = setTimeout(() => setNotice(null), 5000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  // make sure the alert is visible (the page may be scrolled)
+  useEffect(() => {
+    if (notice)
+      noticeRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+  }, [notice]);
+
+  /* ---------- 4.5 View modal helpers ---------- */
+  const closeView = () => setViewing(null);
+
+  // Esc closes the view modal
+  useEffect(() => {
+    if (!viewing) return;
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      setViewing(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [viewing]);
+
+  /* ---------- 4.6 Pagination reset ---------- */
+  // search / filters / page size / sort changed -> start again from page 1
+  useEffect(() => {
+    setPage(1);
+  }, [query, statusFilter, pageSize, sortMode]);
+
+  /* ---------- 4.7 Add / Edit form ---------- */
   const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const openNew = () => {
-    setForm(emptyForm);
+    // new nationality goes to the end of the list by default
+    const nextSort =
+      nationalities.reduce(
+        (max, n) => Math.max(max, Number(n.sort_num) || 0),
+        0,
+      ) + 1;
+    setForm({ ...emptyForm, sort_num: nextSort });
     setNotice(null);
     setModalHidden(false);
     setEditing("new");
@@ -276,12 +430,13 @@ export default function NationalitiesManager() {
       });
     };
 
-    if (!form.nationality.en?.trim())
-      return warn("The English nationality name is required.");
+    const nameEn = String(parseI18n(form.nationality).en ?? "").trim();
+    if (!nameEn) return warn("The English nationality name is required.");
 
     const isNew = editing === "new";
-    const itemName = form.nationality.en.trim();
+    const itemName = nameEn;
 
+    // editing but nothing was touched
     if (!isNew) {
       const textChanged =
         fingerprint(form) !== fingerprint(formFromNationality(editing));
@@ -297,14 +452,7 @@ export default function NationalitiesManager() {
 
     setSaving(true);
     try {
-      const payload = {
-        nationality: cleanI18n(form.nationality),
-        nation_code: form.nation_code,
-        country_flags_id:
-          form.country_flags_id === "" ? null : Number(form.country_flags_id),
-        status: Number(form.status) === 1 ? 1 : 0,
-        sort_num: Number(form.sort_num) || 0,
-      };
+      const payload = buildNationalityPayload(form);
 
       if (isNew) await nationalitiesService.create(payload);
       else await nationalitiesService.update(editing.id, payload);
@@ -334,24 +482,23 @@ export default function NationalitiesManager() {
     }
   };
 
+  /* ---------- 4.8 Status switch ---------- */
+  // updates ONLY the status (every other field, including sort_num, is sent again so nothing is lost)
   const toggleStatus = async (n) => {
     const next = Number(n.status) === 0 ? 1 : 0;
     setTogglingId(n.id);
     try {
-      await nationalitiesService.update(n.id, {
-        nationality: n.nationality,
-        nation_code: n.nation_code,
-        country_flags_id: n.country_flags_id,
-        status: next,
-        sort_num: n.sort_num,
-      });
+      await nationalitiesService.update(
+        n.id,
+        buildNationalityPayload(n, { status: next }),
+      );
       await reload();
       notify(
         "success",
         "Nationality updated",
         next === 0
-          ? `"${tr(n.nationality)}" is now active.`
-          : `"${tr(n.nationality)}" is now hidden.`,
+          ? `"${getLocalizedValue(n.nationality)}" was updated successfully. It is now active.`
+          : `"${getLocalizedValue(n.nationality)}" was updated successfully. It is now hidden.`,
       );
     } catch (err) {
       notify(
@@ -364,87 +511,432 @@ export default function NationalitiesManager() {
     }
   };
 
+  /* ---------- 4.9 Refresh ---------- */
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([reload(), loadFlags()]);
-      notify(
-        "success",
-        "Nationalities refreshed",
-        "Data reloaded successfully.",
-      );
+      const [ok] = await Promise.all([reload(), loadFlags()]);
+      if (ok !== false)
+        notify(
+          "success",
+          "Nationalities refreshed",
+          "The nationalities were reloaded from the database.",
+        );
     } finally {
       setRefreshing(false);
     }
   };
 
-  const handleDelete = async (n) => {
-    if (!window.confirm(`Delete nationality "${tr(n.nationality)}"?`)) return;
+  /* ---------- 4.10 Delete (with confirmation modal) ---------- */
+  const handleDelete = (n) => {
+    setDeleting(n);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting || deletingLoading) return;
+
+    const item = deleting;
+    setDeletingLoading(true);
+
     try {
-      await nationalitiesService.remove(n.id);
+      await nationalitiesService.remove(item.id);
+      setDeleting(null);
       await reload();
       notify(
         "success",
         "Nationality deleted",
-        `"${tr(n.nationality)}" was deleted successfully.`,
+        `"${getLocalizedValue(item.nationality)}" was deleted successfully.`,
       );
     } catch (err) {
+      setDeleting(null);
       notify(
         "error",
         "Failed to delete nationality",
         err.message || "Something went wrong. Please try again.",
       );
+    } finally {
+      setDeletingLoading(false);
     }
   };
 
+  /* ---------- 4.11 Filters ---------- */
   const activeFilters = statusFilter !== "all" ? 1 : 0;
   const clearFilters = () => setStatusFilter("all");
   const countBy = (fn) => nationalities.filter(fn).length;
 
-  const shown = [...nationalities].sort(bySort).filter((n) => {
-    if (statusFilter !== "all" && Number(n.status) !== statusFilter)
-      return false;
-    return Object.values(n.nationality || {})
-      .join(" ")
-      .toLowerCase()
-      .includes(query.toLowerCase());
+  /* ---------- 4.12 Order state (saved order + unsaved chevron moves) ---------- */
+  // saved order from the database, and the order including unsaved chevron moves
+  const baseOrder = [...nationalities].sort(bySort);
+  const baseIndex = new Map(baseOrder.map((x, i) => [String(x.id), i]));
+
+  const orderIds = (() => {
+    if (!pendingOrder) return baseOrder.map((x) => x.id);
+    const existing = new Set(nationalities.map((x) => String(x.id)));
+    const kept = pendingOrder.filter((id) => existing.has(String(id)));
+    const keptSet = new Set(kept.map(String));
+    const extra = baseOrder
+      .filter((x) => !keptSet.has(String(x.id)))
+      .map((x) => x.id);
+    return [...kept, ...extra];
+  })();
+  const orderIndex = new Map(orderIds.map((id, i) => [String(id), i]));
+  const movedCount = orderIds.filter(
+    (id, i) => String(id) !== String(baseOrder[i]?.id),
+  ).length;
+  const orderDirty = movedCount > 0;
+
+  // the saved order changed (saved here, saved in the Order modal, item added or deleted)
+  // -> forget the unsaved chevron moves
+  const orderSignature = nationalities
+    .map((n) => `${n.id}:${n.sort_num}`)
+    .join("|");
+  useEffect(() => {
+    setPendingOrder(null);
+  }, [orderSignature]);
+
+  /* ---------- 4.13 Sort, search, filter, paginate ---------- */
+  const sortedNationalities = [...nationalities].sort((a, b) => {
+    switch (sortMode) {
+      case "name_asc":
+        return getLocalizedValue(a.nationality).localeCompare(
+          getLocalizedValue(b.nationality),
+          langKey,
+          { sensitivity: "base", numeric: true },
+        );
+
+      case "name_desc":
+        return getLocalizedValue(b.nationality).localeCompare(
+          getLocalizedValue(a.nationality),
+          langKey,
+          { sensitivity: "base", numeric: true },
+        );
+
+      case "date_newest":
+        return (
+          new Date(b.created_at || 0).getTime() -
+          new Date(a.created_at || 0).getTime()
+        );
+
+      case "date_oldest":
+        return (
+          new Date(a.created_at || 0).getTime() -
+          new Date(b.created_at || 0).getTime()
+        );
+
+      // default = saved sort_num order + any unsaved chevron moves
+      default:
+        return (
+          (orderIndex.get(String(a.id)) ?? 0) -
+          (orderIndex.get(String(b.id)) ?? 0)
+        );
+    }
   });
 
-  const totalPages = Math.max(1, Math.ceil(shown.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const paginatedShown =
-    pageSize === "all"
-      ? shown
-      : shown.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  // search (name in every language + nation code) + filter
+  const shown = sortedNationalities.filter((n) => {
+    if (statusFilter !== "all" && Number(n.status) !== statusFilter)
+      return false;
+    const searchable = `${Object.values(parseI18n(n.nationality)).join(" ")} ${
+      n.nation_code || ""
+    }`.toLowerCase();
+    return searchable.includes(query.toLowerCase());
+  });
 
-  const lightboxInfo = viewing ? (
-    <div className="space-y-3 text-sm">
-      <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-500">
-          Nationality Name
-        </span>
-        <p className="mt-1 font-medium">{tr(viewing.nationality)}</p>
-      </div>
-      <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-500">
-          Nation Code
-        </span>
-        <p className="mt-1 text-slate-300 text-xs">
-          {viewing.nation_code || "—"}
-        </p>
-      </div>
-    </div>
-  ) : null;
+  // one row of the sort menu
+  const sortOption = ([value, label]) => (
+    <button
+      key={value}
+      type="button"
+      onClick={() => {
+        setSortMode(value);
+        setShowSortMenu(false);
+        setPage(1);
+      }}
+      className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+        sortMode === value
+          ? "bg-amber-50 font-semibold text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
+          : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+      }`}
+    >
+      {label}
+      {sortMode === value && <span className="float-right">✓</span>}
+    </button>
+  );
 
+  // pagination: `shown` is the full filtered list, `paginatedShown` is the current page
+  const effectivePageSize =
+    pageSize === "all" ? Math.max(shown.length, 1) : Number(pageSize);
+  const totalPages = Math.max(1, Math.ceil(shown.length / effectivePageSize));
+  const currentPage = Math.min(page, totalPages); // e.g. deleted the last item of the last page
+  const paginatedShown = shown.slice(
+    (currentPage - 1) * effectivePageSize,
+    currentPage * effectivePageSize,
+  );
+
+  /* ---------- 4.14 Order modal: drag & drop ---------- */
+  const openOrderModal = () => {
+    // Start with the current database order, not the filtered results.
+    setOrderItems([...nationalities].sort(bySort));
+    setDraggedId(null);
+    setShowOrderModal(true);
+  };
+
+  const handleOrderDragStart = (e, id) => {
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(id));
+  };
+
+  const handleOrderDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleOrderDrop = (e, targetId) => {
+    e.preventDefault();
+
+    const sourceId = draggedId ?? e.dataTransfer.getData("text/plain");
+
+    if (
+      sourceId === "" ||
+      sourceId === null ||
+      String(sourceId) === String(targetId)
+    ) {
+      setDraggedId(null);
+      return;
+    }
+
+    setOrderItems((current) => {
+      const updated = [...current];
+      const fromIndex = updated.findIndex(
+        (item) => String(item.id) === String(sourceId),
+      );
+      const toIndex = updated.findIndex(
+        (item) => String(item.id) === String(targetId),
+      );
+      if (fromIndex === -1 || toIndex === -1) return current;
+
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return updated;
+    });
+
+    setDraggedId(null);
+  };
+
+  // "Save Order" button of the Order modal
+  const saveOrder = async () => {
+    if (orderSaving) return;
+    setOrderSaving(true);
+
+    try {
+      // Save each nationality's new position using the existing update API.
+      for (let index = 0; index < orderItems.length; index++) {
+        const item = orderItems[index];
+        await nationalitiesService.update(
+          item.id,
+          buildNationalityPayload(item, { sortNum: index + 1 }),
+        );
+      }
+
+      setShowOrderModal(false);
+      await reload();
+
+      notify(
+        "success",
+        "Order saved",
+        "The nationalities display order has been updated successfully.",
+      );
+    } catch (err) {
+      console.error("Failed to save nationality order:", err);
+      notify(
+        "error",
+        "Failed to save order",
+        err.message || "Could not save the order. Please try again.",
+      );
+      // Reload because some items might already have been updated.
+      await reload();
+    } finally {
+      setOrderSaving(false);
+    }
+  };
+
+  /* ---------- 4.15 Chevron Up & Down order ---------- */
+  // direction: -1 = up, +1 = down. Only changes the screen, nothing is saved yet.
+  const moveNationality = (n, direction) => {
+    if (reorderSaving || sortMode !== "default") return;
+
+    const neighbor = shown[shown.indexOf(n) + direction];
+    if (!neighbor) return;
+
+    const next = [...orderIds];
+    const a = next.findIndex((id) => String(id) === String(n.id));
+    const b = next.findIndex((id) => String(id) === String(neighbor.id));
+    if (a === -1 || b === -1) return;
+    [next[a], next[b]] = [next[b], next[a]];
+
+    setPendingOrder(next);
+  };
+
+  const cancelPendingOrder = () => setPendingOrder(null);
+
+  // the "Save order" button: writes all moves at once (only nationalities whose number changed)
+  const savePendingOrder = async () => {
+    if (reorderSaving || !orderDirty) return;
+
+    const byId = new Map(nationalities.map((x) => [String(x.id), x]));
+    const changed = orderIds
+      .map((id, i) => ({ item: byId.get(String(id)), sortNum: i + 1 }))
+      .filter(({ item, sortNum }) => item && Number(item.sort_num) !== sortNum);
+
+    setReorderSaving(true);
+    try {
+      for (const { item, sortNum } of changed) {
+        await nationalitiesService.update(
+          item.id,
+          buildNationalityPayload(item, { sortNum }),
+        );
+      }
+      setPendingOrder(null);
+      await reload();
+      notify(
+        "success",
+        "Order saved",
+        "The nationalities display order has been updated successfully.",
+      );
+    } catch (err) {
+      console.error("Failed to save nationality order:", err);
+      notify(
+        "error",
+        "Failed to save order",
+        err.message || "Could not save the order. Please try again.",
+      );
+      await reload(); // some nationalities may already have been saved
+    } finally {
+      setReorderSaving(false);
+    }
+  };
+
+  /* ---------- 4.16 Excel / CSV export ---------- */
+  // Export the complete filtered result, not just the current page.
+  const getExportData = () =>
+    shown.map((n) => {
+      const name = parseI18n(n.nationality);
+      const flag = flagMap.get(n.country_flags_id);
+      return {
+        ID: n.id,
+        "Sort Order": n.sort_num ?? 0,
+        Nationality: name.en || "",
+        "Nationality (Khmer)": name.km || "",
+        "Nationality (Chinese)": name.zh || "",
+        "Nationality (Lao)": name.lo || "",
+        "Nationality (Japanese)": name.ja || "",
+        "Nationality (Vietnamese)": name.vi || "",
+        "Nation Code": n.nation_code || "",
+        "Country Flag": flag ? pickText(flag.name, "en") : "",
+        "Country Flag ID": n.country_flags_id ?? "",
+        Status: isActiveStatus(n) ? "Active" : "Not Active",
+        "Created At": n.created_at ?? "",
+        "Updated At": n.updated_at ?? "",
+      };
+    });
+
+  const exportFileName = (ext) =>
+    `nationalities-${new Date().toISOString().slice(0, 10)}.${ext}`;
+
+  const exportToCSV = () => {
+    if (shown.length === 0) {
+      notify(
+        "warning",
+        "Nothing to export",
+        "No nationalities match your current filters.",
+      );
+      return;
+    }
+
+    const rows = getExportData();
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const csv = XLSX.utils.sheet_to_csv(worksheet);
+
+    // UTF-8 BOM helps Excel display Khmer, Lao, Thai, and other scripts.
+    const blob = new Blob(["\uFEFF", csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = exportFileName("csv");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    notify(
+      "success",
+      "CSV exported",
+      `${rows.length} nationality(ies) exported successfully.`,
+    );
+  };
+
+  const exportToExcel = () => {
+    if (shown.length === 0) {
+      notify(
+        "warning",
+        "Nothing to export",
+        "No nationalities match your current filters.",
+      );
+      return;
+    }
+
+    const rows = getExportData();
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+
+    worksheet["!cols"] = Object.keys(rows[0]).map((key) => ({
+      wch: Math.min(
+        Math.max(
+          key.length + 2,
+          ...rows.map((row) => String(row[key] ?? "").length + 2),
+        ),
+        35,
+      ),
+    }));
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Nationalities");
+    XLSX.writeFile(workbook, exportFileName("xlsx"));
+
+    notify(
+      "success",
+      "Excel exported",
+      `${rows.length} nationality(ies) exported successfully.`,
+    );
+  };
+
+  /* ========================================================================
+     5. RENDER
+     ======================================================================== */
   return (
     <div className="space-y-6">
       <style>{`
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(203, 213, 225, 0.6); border-radius: 9999px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.8); }
+        /* Thin & Rounded Custom Scrollbar styling */
+        ::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: rgba(203, 213, 225, 0.6);
+          border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: rgba(148, 163, 184, 0.8);
+        }
       `}</style>
 
+      {/* ===== 5.1 PAGE HEADER: title + Excel / CSV / Refresh / Add ===== */}
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
         <div>
           <h1 className="text-2xl font-extrabold">Nationalities Manager</h1>
@@ -452,8 +944,31 @@ export default function NationalitiesManager() {
             Manage multilingual nationalities and link them with country flags.
           </p>
         </div>
-        <div className="flex gap-2 self-start">
+        <div className="flex flex-wrap gap-2 self-start">
           <button
+            type="button"
+            onClick={exportToExcel}
+            disabled={loading || shown.length === 0}
+            title="Export filtered nationalities to Excel"
+            className="px-3 py-2 text-sm rounded-xl border border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400 flex items-center gap-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 disabled:opacity-50 transition-colors"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Excel</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={exportToCSV}
+            disabled={loading || shown.length === 0}
+            title="Export filtered nationalities to CSV"
+            className="px-3 py-2 text-sm rounded-xl border border-sky-300 text-sky-700 dark:border-sky-800 dark:text-sky-400 flex items-center gap-2 hover:bg-sky-50 dark:hover:bg-sky-950/30 disabled:opacity-50 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            <span>CSV</span>
+          </button>
+
+          <button
+            type="button"
             onClick={handleRefresh}
             disabled={refreshing}
             className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 disabled:opacity-60 transition-colors"
@@ -464,6 +979,7 @@ export default function NationalitiesManager() {
             Refresh
           </button>
           <button
+            type="button"
             onClick={openNew}
             className="px-4 py-2 text-sm font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-2 transition-colors shadow-sm"
           >
@@ -472,6 +988,7 @@ export default function NationalitiesManager() {
         </div>
       </div>
 
+      {/* ===== 5.2 TOOLBAR: search + filters + sort + order ===== */}
       <div className="flex flex-wrap items-center gap-2">
         <input
           value={query}
@@ -493,8 +1010,81 @@ export default function NationalitiesManager() {
             </span>
           )}
         </button>
+
+        {/* Sort */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowSortMenu((v) => !v)}
+            aria-expanded={showSortMenu}
+            className={`px-4 py-2 text-sm font-medium rounded-xl border flex items-center gap-2 transition-colors ${
+              sortMode !== "default"
+                ? "border-amber-500 text-amber-600"
+                : "border-slate-300 dark:border-slate-700 hover:border-amber-500"
+            }`}
+          >
+            <ArrowDownAZ className="h-4 w-4" />
+            Sort
+          </button>
+
+          {showSortMenu && (
+            <>
+              <button
+                type="button"
+                aria-label="Close sort menu"
+                className="fixed inset-0 z-10 cursor-default"
+                onClick={() => setShowSortMenu(false)}
+              />
+
+              <div className="absolute left-0 top-full z-20 mt-2 w-60 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                <p className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Sort by Name
+                </p>
+                {[
+                  ["name_asc", "Name: A–Z"],
+                  ["name_desc", "Name: Z–A"],
+                ].map(sortOption)}
+
+                <div className="my-2 border-t border-slate-200 dark:border-slate-700" />
+
+                <p className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Sort by Date Created
+                </p>
+                {[
+                  ["date_newest", "Newest first"],
+                  ["date_oldest", "Oldest first"],
+                ].map(sortOption)}
+
+                <div className="my-2 border-t border-slate-200 dark:border-slate-700" />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSortMode("default");
+                    setShowSortMenu(false);
+                    setPage(1);
+                  }}
+                  className="w-full rounded-lg px-3 py-2 text-left text-sm text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  Reset to default order
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Drag & drop order modal */}
+        <button
+          type="button"
+          onClick={openOrderModal}
+          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 hover:text-amber-600 transition-colors"
+        >
+          <ArrowUpDown className="w-4 h-4" />
+          Order
+        </button>
       </div>
 
+      {/* ===== 5.3 FILTER PANEL ===== */}
       {showFilters && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-4 shadow-sm">
           <div className="space-y-2">
@@ -504,7 +1094,7 @@ export default function NationalitiesManager() {
                 active={statusFilter === "all"}
                 onClick={() => setStatusFilter("all")}
               >
-                All
+                {t("all")}
               </Chip>
               <Chip
                 active={statusFilter === 0}
@@ -532,6 +1122,7 @@ export default function NationalitiesManager() {
         </div>
       )}
 
+      {/* ===== 5.4 ALERTS: between the search/filters and the table ===== */}
       {notice && (
         <div ref={noticeRef}>
           <Alert
@@ -570,11 +1161,41 @@ export default function NationalitiesManager() {
         </Alert>
       )}
 
+      {/* ===== 5.5 SAVE BAR: appears after moving rows with the chevrons ===== */}
+      {orderDirty && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+          <span>
+            <b>{formatNum(movedCount)}</b> nationality(ies) moved. The new order
+            is not saved yet.
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={cancelPendingOrder}
+              disabled={reorderSaving}
+              className="px-4 py-1.5 rounded-xl border border-amber-400 font-semibold hover:bg-amber-100 dark:hover:bg-amber-950/50 disabled:opacity-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={savePendingOrder}
+              disabled={reorderSaving}
+              className="px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold disabled:opacity-60 flex items-center gap-2 transition-colors"
+            >
+              {reorderSaving && <RotateCcw className="w-4 h-4 animate-spin" />}
+              {reorderSaving ? "Saving..." : "Save order"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== 5.6 TABLE ===== */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto shadow-sm">
         <table className="w-full text-sm">
           <thead className="text-left text-xs uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-800">
             <tr>
-              <th className="p-4">Sort #</th>
+              <th className="p-4">#</th>
               <th className="p-4">Nationality Name</th>
               <th className="p-4">Nation Code</th>
               <th className="p-4">Country Flag</th>
@@ -601,22 +1222,40 @@ export default function NationalitiesManager() {
             )}
             {!loading &&
               paginatedShown.map((n) => {
-                const isActive = Number(n.status) === 0;
+                const isActive = isActiveStatus(n);
+                const flag = flagMap.get(n.country_flags_id);
+                const pos = shown.indexOf(n);
+                const reorderLocked = sortMode !== "default" || reorderSaving;
+                const isMoved =
+                  orderDirty &&
+                  baseIndex.get(String(n.id)) !== orderIndex.get(String(n.id));
+
                 return (
                   <tr
                     key={n.id}
-                    className="border-b last:border-0 border-slate-100 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors"
+                    className={`border-b last:border-0 border-slate-100 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors ${
+                      isMoved ? "bg-amber-50/70 dark:bg-amber-950/20" : ""
+                    }`}
                   >
-                    <td className="p-4 font-mono text-xs text-slate-500">
-                      {n.sort_num ?? 0}
+                    {/* sort number */}
+                    <td className="p-4 font-medium">{Number(n.sort_num) || 0}</td>
+
+                    {/* nationality name */}
+                    <td className="p-4 font-semibold">
+                      {getLocalizedValue(n.nationality)}
                     </td>
-                    <td className="p-4 font-semibold">{tr(n.nationality)}</td>
+
+                    {/* nation code */}
                     <td className="p-4 font-mono text-xs">
                       {n.nation_code || "—"}
                     </td>
-                    <td className="p-4 text-slate-600 dark:text-slate-300">
-                      {flagNameMap(n.country_flags_id)}
+
+                    {/* country flag (SVG + name) */}
+                    <td className="p-4">
+                      <FlagBadge flag={flag} />
                     </td>
+
+                    {/* status badge + switch (0 = Active, 1 = Not Active) */}
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <span
@@ -640,9 +1279,40 @@ export default function NationalitiesManager() {
                         />
                       </div>
                     </td>
+
+                    {/* actions: chevrons, view, edit, delete */}
                     <td className="p-4">
                       <div className="flex justify-end gap-2">
                         <button
+                          type="button"
+                          onClick={() => moveNationality(n, -1)}
+                          disabled={reorderLocked || pos === 0}
+                          title={
+                            sortMode !== "default"
+                              ? "Reset sort to default to reorder"
+                              : "Move up"
+                          }
+                          aria-label="Move up"
+                          className="p-2 rounded-lg text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:text-slate-300 dark:disabled:text-slate-600 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveNationality(n, 1)}
+                          disabled={reorderLocked || pos === shown.length - 1}
+                          title={
+                            sortMode !== "default"
+                              ? "Reset sort to default to reorder"
+                              : "Move down"
+                          }
+                          aria-label="Move down"
+                          className="p-2 rounded-lg text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:text-slate-300 dark:disabled:text-slate-600 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setViewing(n)}
                           title="View"
                           aria-label="View details"
@@ -651,6 +1321,7 @@ export default function NationalitiesManager() {
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
+                          type="button"
                           onClick={() => openEdit(n)}
                           title="Edit"
                           aria-label="Edit"
@@ -659,6 +1330,7 @@ export default function NationalitiesManager() {
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleDelete(n)}
                           title="Delete"
                           aria-label="Delete"
@@ -675,7 +1347,16 @@ export default function NationalitiesManager() {
         </table>
       </div>
 
-      {/* ===== VIEW modal ===== */}
+      {/* ===== 5.7 PAGINATION: below the table ===== */}
+      <Pagination
+        page={currentPage}
+        pageSize={pageSize}
+        total={shown.length}
+        onPage={setPage}
+        onPageSize={setPageSize}
+      />
+
+      {/* ===== 5.8 VIEW modal (read-only) ===== */}
       {viewing && (
         <div
           className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
@@ -701,6 +1382,22 @@ export default function NationalitiesManager() {
             </div>
 
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
+              {/* title + status */}
+              <div className="flex items-start justify-between gap-3">
+                <h4 className="text-xl font-extrabold">
+                  {getLocalizedValue(viewing.nationality)}
+                </h4>
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                    isActiveStatus(viewing)
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-slate-200 text-slate-600"
+                  }`}
+                >
+                  {isActiveStatus(viewing) ? "Active" : "Not Active"}
+                </span>
+              </div>
+
               <section className="space-y-2">
                 <h5 className="text-xs font-bold uppercase tracking-wider text-amber-600">
                   Nationality Name
@@ -710,15 +1407,18 @@ export default function NationalitiesManager() {
 
               <section className="grid grid-cols-2 gap-4">
                 <Field label="Nation Code">{viewing.nation_code || "—"}</Field>
+                <Field label="Sort Number">
+                  {formatNum(Number(viewing.sort_num) || 0)}
+                </Field>
                 <Field label="Country Flag">
-                  {flagNameMap(viewing.country_flags_id)}
+                  <FlagBadge
+                    flag={flagMap.get(viewing.country_flags_id)}
+                    size="sm"
+                  />
                 </Field>
-                <Field label="Sort Number">{viewing.sort_num ?? 0}</Field>
-                <Field label="Status">
-                  {Number(viewing.status) === 0 ? "Active" : "Not Active"}
-                </Field>
-                <Field label="Created">{fmtDateTime(viewing.created_at)}</Field>
-                <Field label="Updated">{fmtDateTime(viewing.updated_at)}</Field>
+                <div />
+                <Field label="Created">{dateTime(viewing.created_at)}</Field>
+                <Field label="Updated">{dateTime(viewing.updated_at)}</Field>
               </section>
             </div>
 
@@ -746,7 +1446,7 @@ export default function NationalitiesManager() {
         </div>
       )}
 
-      {/* ===== ADD / EDIT modal ===== */}
+      {/* ===== 5.9 ADD / EDIT modal ===== */}
       {editing && (
         <div
           className={`fixed inset-0 z-50 bg-black/50 backdrop-blur-sm items-center justify-center p-4 ${
@@ -757,6 +1457,7 @@ export default function NationalitiesManager() {
             onSubmit={save}
             className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col relative"
           >
+            {/* Sticky Header */}
             <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-slate-900 z-10 border-b border-slate-100 dark:border-slate-800 shrink-0">
               <h3 className="text-lg font-bold">
                 {editing === "new" ? "Add nationality" : "Edit nationality"}
@@ -770,7 +1471,9 @@ export default function NationalitiesManager() {
               </button>
             </div>
 
+            {/* Scrollable Content Container */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
+              {/* nationality name */}
               <section className="space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
                   Nationality Name (all languages)
@@ -785,6 +1488,7 @@ export default function NationalitiesManager() {
                 />
               </section>
 
+              {/* nation code + country flag */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <section className="space-y-2">
                   <label className="block text-xs font-bold uppercase tracking-wider text-amber-600">
@@ -803,23 +1507,40 @@ export default function NationalitiesManager() {
                   <label className="block text-xs font-bold uppercase tracking-wider text-amber-600">
                     Country Flag
                   </label>
-                  <select
-                    className={`${inputCls} w-full`}
+                  <CustomSelect
                     value={form.country_flags_id}
-                    onChange={(e) =>
-                      setField("country_flags_id", e.target.value)
-                    }
-                  >
-                    <option value="">-- None --</option>
-                    {flags.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {tr(f.name)}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => setField("country_flags_id", v)}
+                    options={[
+                      { value: "", label: "No country flag" },
+                      ...flags.map((f) => {
+                        const flagSvgUrl = f.svg ? assetUrl(f.svg) : null;
+                        return {
+                          value: f.id,
+                          label: (
+                            <span className="flex items-center gap-2">
+                              {flagSvgUrl ? (
+                                <img
+                                  src={flagSvgUrl}
+                                  alt=""
+                                  className="w-5 h-4 object-contain rounded bg-slate-100 dark:bg-slate-800 p-0.5 shrink-0"
+                                />
+                              ) : (
+                                <span className="w-5 h-4 rounded bg-slate-200 dark:bg-slate-800 inline-block shrink-0" />
+                              )}
+                              <span className="truncate">
+                                {getLocalizedValue(f.name)}
+                              </span>
+                            </span>
+                          ),
+                        };
+                      }),
+                    ]}
+                    placeholder="Select Country Flag..."
+                  />
                 </section>
               </div>
 
+              {/* sort number + status */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <section className="space-y-2">
                   <label className="block text-xs font-bold uppercase tracking-wider text-amber-600">
@@ -838,18 +1559,19 @@ export default function NationalitiesManager() {
                   <label className="block text-xs font-bold uppercase tracking-wider text-amber-600">
                     Status
                   </label>
-                  <select
-                    className={`${inputCls} w-full`}
+                  <CustomSelect
                     value={form.status}
-                    onChange={(e) => setField("status", Number(e.target.value))}
-                  >
-                    <option value={0}>Active</option>
-                    <option value={1}>Not Active</option>
-                  </select>
+                    onChange={(v) => setField("status", Number(v))}
+                    options={[
+                      { value: 0, label: "Active" },
+                      { value: 1, label: "Not Active" },
+                    ]}
+                  />
                 </section>
               </div>
             </div>
 
+            {/* Buttons */}
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
               <button
                 type="button"
@@ -868,6 +1590,237 @@ export default function NationalitiesManager() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ===== 5.10 DELETE CONFIRMATION modal ===== */}
+      {deleting && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => {
+            if (!deletingLoading) setDeleting(null);
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-modal-title"
+            aria-describedby="delete-modal-description"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+          >
+            {/* Icon + Heading */}
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400">
+                <Trash2 className="h-6 w-6" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h3
+                  id="delete-modal-title"
+                  className="text-lg font-bold text-slate-900 dark:text-white"
+                >
+                  Delete nationality?
+                </h3>
+
+                <p
+                  id="delete-modal-description"
+                  className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400"
+                >
+                  Are you sure you want to delete{" "}
+                  <span className="font-semibold text-slate-900 dark:text-slate-200">
+                    "{getLocalizedValue(deleting.nationality)}"
+                  </span>
+                  ? This action cannot be undone.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setDeleting(null)}
+                disabled={deletingLoading}
+                aria-label="Close delete confirmation"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-7 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleting(null)}
+                disabled={deletingLoading}
+                className="rounded-xl border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deletingLoading}
+                className="flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deletingLoading ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== 5.11 NATIONALITY ORDER modal (drag & drop) ===== */}
+      {showOrderModal && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => {
+            if (!orderSaving) setShowOrderModal(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="nationality-order-title"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between gap-4 border-b border-slate-200 p-5 dark:border-slate-800">
+              <div>
+                <h2
+                  id="nationality-order-title"
+                  className="text-xl font-bold text-slate-900 dark:text-white"
+                >
+                  Arrange Nationality Order
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Drag nationalities to change their display order.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowOrderModal(false)}
+                disabled={orderSaving}
+                aria-label="Close order modal"
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Instructions */}
+            <div className="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950/40">
+              <span className="font-semibold">Top = first displayed.</span> Drag
+              a row using its handle. Save your changes when finished.
+            </div>
+
+            {/* Draggable list */}
+            <div className="flex-1 space-y-2 overflow-y-auto p-4">
+              {orderItems.length === 0 ? (
+                <div className="py-10 text-center text-sm text-slate-500">
+                  No nationalities available to arrange.
+                </div>
+              ) : (
+                orderItems.map((item, index) => {
+                  const isDragging = String(draggedId) === String(item.id);
+                  const flag = flagMap.get(item.country_flags_id);
+                  const flagSvgUrl = flag?.svg ? assetUrl(flag.svg) : null;
+
+                  return (
+                    <div
+                      key={item.id}
+                      draggable={!orderSaving}
+                      onDragStart={(e) => handleOrderDragStart(e, item.id)}
+                      onDragOver={handleOrderDragOver}
+                      onDrop={(e) => handleOrderDrop(e, item.id)}
+                      onDragEnd={() => setDraggedId(null)}
+                      className={`flex items-center gap-3 rounded-xl border p-3 transition-colors ${
+                        isDragging
+                          ? "border-amber-500 bg-amber-50 opacity-50 dark:bg-amber-950/20"
+                          : "border-slate-200 bg-white hover:border-amber-300 dark:border-slate-700 dark:bg-slate-900"
+                      } ${
+                        orderSaving
+                          ? "cursor-wait"
+                          : "cursor-grab active:cursor-grabbing"
+                      }`}
+                    >
+                      <GripVertical className="h-5 w-5 shrink-0 text-slate-400" />
+
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        {index + 1}
+                      </span>
+
+                      {flagSvgUrl ? (
+                        <img
+                          src={flagSvgUrl}
+                          alt=""
+                          draggable={false}
+                          className="h-8 w-12 shrink-0 rounded border border-slate-200 bg-slate-100 object-contain p-0.5 dark:border-slate-700 dark:bg-slate-800"
+                        />
+                      ) : (
+                        <div className="flex h-8 w-12 shrink-0 items-center justify-center rounded bg-slate-100 text-xs text-slate-400 dark:bg-slate-800">
+                          —
+                        </div>
+                      )}
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                          {getLocalizedValue(item.nationality) ||
+                            "Unnamed nationality"}
+                          {item.nation_code && (
+                            <span className="ml-2 font-mono text-xs text-amber-600">
+                              ({item.nation_code})
+                            </span>
+                          )}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Current sort number: {item.sort_num ?? 0}
+                        </p>
+                      </div>
+
+                      <span className="shrink-0 text-xs font-medium text-slate-400">
+                        #{index + 1}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-200 p-5 sm:flex-row sm:justify-end dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowOrderModal(false)}
+                disabled={orderSaving}
+                className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={saveOrder}
+                disabled={orderSaving || orderItems.length === 0}
+                className="flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {orderSaving ? (
+                  <>
+                    <RotateCcw className="h-4 w-4 animate-spin" />
+                    Saving Order...
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpDown className="h-4 w-4" />
+                    Save Order
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
