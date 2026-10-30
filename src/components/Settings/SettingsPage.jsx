@@ -1,11 +1,22 @@
 // src/pages/SettingsPage.jsx
 import React, { useState, useEffect } from "react";
-import { Sun, Moon, Monitor, Check, Languages, Hash, Hourglass, Play } from "lucide-react";
+import {
+  Sun,
+  Moon,
+  Monitor,
+  Check,
+  Languages,
+  Hash,
+  Hourglass,
+  Play,
+  Palette,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import LoadingScreen, { Loader } from "../Loading/Loading.jsx";
 import { LOADING_STYLES, useLoadingStyle } from "../../utils/loadingStyle.js";
+import { ACCENTS, useAccent } from "../../utils/accent.js";
 
 const themeOptions = [
   { value: "light", labelKey: "light", descriptionKey: "lightDescription", icon: Sun },
@@ -35,6 +46,8 @@ const flagImages = {
   de: "https://flagcdn.com/w40/de.png",
   ja: "https://flagcdn.com/w40/jp.png",
   vi: "https://flagcdn.com/w40/vn.png",
+  my: "https://flagcdn.com/w40/mm.png",
+  ko: "https://flagcdn.com/w40/kr.png",
 };
 
 export default function SettingsPage() {
@@ -45,6 +58,9 @@ export default function SettingsPage() {
   // Loading screen style: the same store Settings.jsx uses, so both pages always agree
   const [loadingStyle, setLoadingStyle] = useLoadingStyle();
   const [previewing, setPreviewing] = useState(false);
+
+  // Accent color: the same store Settings.jsx uses
+  const [accent, setAccent] = useAccent();
 
   // Sync state with localStorage & trigger custom event for live cross-component sync
   const [digitStyle, setDigitStyle] = useState(() => {
@@ -84,28 +100,28 @@ export default function SettingsPage() {
   }, [previewing]);
 
   const activeCard =
-    "border-amber-600 bg-amber-50/70 dark:border-amber-500 dark:bg-amber-950/30 shadow-sm";
+    "border-accent-600 bg-accent-50/70 dark:border-accent-500 dark:bg-accent-950/30 shadow-sm";
 
   const inactiveCard =
-    "border-amber-100 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-700 bg-white dark:bg-slate-900/50";
+    "border-accent-100 dark:border-slate-800 hover:border-accent-400 dark:hover:border-accent-700 bg-white dark:bg-slate-900/50";
 
   const focusStyle =
-    "focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900";
+    "focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900";
 
   return (
-    <div className="min-h-screen bg-amber-50/40 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    <div className="min-h-screen bg-accent-50/40 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
       {/* ================= NAVBAR SECTION ================= */}
-      <nav className="sticky top-0 z-40 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-b border-amber-100 dark:border-slate-800">
+      <nav className="sticky top-0 z-40 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-b border-accent-100 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div
             className="flex items-center space-x-3 cursor-pointer"
             onClick={() => navigate("/dashboard")}
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-800 to-amber-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-accent-700 to-accent-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
               ⚙️
             </div>
 
-            <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-amber-900 to-amber-600 dark:from-amber-400 dark:to-amber-500 bg-clip-text text-transparent">
+            <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-accent-950 to-accent-600 dark:from-accent-400 dark:to-accent-500 bg-clip-text text-transparent">
               SM Solar Plus Settings
             </span>
           </div>
@@ -113,7 +129,7 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={() => navigate("/")}
-            className={`px-4 py-2 text-sm font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-xl border border-amber-200 dark:border-amber-800 transition-all ${focusStyle}`}
+            className={`px-4 py-2 text-sm font-semibold text-accent-700 dark:text-accent-400 bg-accent-50 dark:bg-accent-950/40 hover:bg-accent-100 dark:hover:bg-accent-950/60 rounded-xl border border-accent-400/40 dark:border-accent-700 transition-all ${focusStyle}`}
           >
             &larr; Back to Homepage
           </button>
@@ -135,7 +151,7 @@ export default function SettingsPage() {
 
         <div className="space-y-6">
           {/* Appearance Section Card */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-amber-100 dark:border-slate-800 space-y-4">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-slate-800 space-y-4">
             <div>
               <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-1">
                 {t("appearance") || "Appearance"}
@@ -162,7 +178,7 @@ export default function SettingsPage() {
                     }`}
                   >
                     {active && (
-                      <span className="absolute top-4 right-4 w-5 h-5 rounded-full bg-amber-600 dark:bg-amber-500 flex items-center justify-center shadow-md">
+                      <span className="absolute top-4 right-4 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center shadow-md">
                         <Check className="w-3.5 h-3.5 text-white" />
                       </span>
                     )}
@@ -171,7 +187,7 @@ export default function SettingsPage() {
                       <Icon
                         className={`w-6 h-6 mb-3 ${
                           active
-                            ? "text-amber-800 dark:text-amber-400"
+                            ? "text-accent-700 dark:text-accent-400"
                             : "text-slate-500 dark:text-slate-400"
                         }`}
                       />
@@ -190,10 +206,62 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Language Section Card */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-amber-100 dark:border-slate-800 space-y-4">
+          {/* Accent Color Card */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-slate-800 space-y-4">
             <div className="flex items-center space-x-2">
-              <Languages className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+              <Palette className="w-4 h-4 text-accent-700 dark:text-accent-400" />
+
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                  {t("accentColor") || "Accent Color"}
+                </h3>
+
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {t("accentColorDescription") ||
+                    "Pick the highlight color used across the app."}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+              {ACCENTS.map(({ value, label, swatch }) => {
+                const active = accent === value;
+
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setAccent(value)}
+                    aria-pressed={active}
+                    className={`relative p-5 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center justify-center space-y-3 ${focusStyle} ${
+                      active ? activeCard : inactiveCard
+                    }`}
+                  >
+                    {active && (
+                      <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center shadow-md">
+                        <Check className="w-3.5 h-3.5 text-white" />
+                      </span>
+                    )}
+
+                    {/* inline hex on purpose: each swatch shows its own color, not the active accent */}
+                    <span
+                      className="block w-8 h-8 rounded-full shadow-sm"
+                      style={{ background: swatch }}
+                    />
+
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">
+                      {label}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Language Section Card */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-slate-800 space-y-4">
+            <div className="flex items-center space-x-2">
+              <Languages className="w-4 h-4 text-accent-700 dark:text-accent-400" />
 
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
@@ -225,13 +293,13 @@ export default function SettingsPage() {
                     }`}
                   >
                     {active && (
-                      <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-amber-600 dark:bg-amber-500 flex items-center justify-center shadow-md">
+                      <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center shadow-md">
                         <Check className="w-3.5 h-3.5 text-white" />
                       </span>
                     )}
 
                     {/* Language flag */}
-                    <div className="w-7 h-5 rounded shadow-sm overflow-hidden flex items-center justify-center bg-amber-50 dark:bg-slate-800 flex-shrink-0">
+                    <div className="w-7 h-5 rounded shadow-sm overflow-hidden flex items-center justify-center bg-accent-50 dark:bg-slate-800 flex-shrink-0">
                       <img
                         src={flagUrl}
                         alt={`${nativeLabel} flag`}
@@ -262,9 +330,9 @@ export default function SettingsPage() {
           </div>
 
           {/* Number Digits System Card */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-amber-100 dark:border-slate-800 space-y-4">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-slate-800 space-y-4">
             <div className="flex items-center space-x-2">
-              <Hash className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+              <Hash className="w-4 h-4 text-accent-700 dark:text-accent-400" />
 
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
@@ -293,12 +361,12 @@ export default function SettingsPage() {
                     }`}
                   >
                     {active && (
-                      <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-amber-600 dark:bg-amber-500 flex items-center justify-center shadow-md">
+                      <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center shadow-md">
                         <Check className="w-3.5 h-3.5 text-white" />
                       </span>
                     )}
 
-                    <p className="text-xl font-extrabold text-amber-700 dark:text-amber-400">
+                    <p className="text-xl font-extrabold text-accent-700 dark:text-accent-400">
                       {sample}
                     </p>
 
@@ -312,9 +380,9 @@ export default function SettingsPage() {
           </div>
 
           {/* Loading Screen Card */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-amber-100 dark:border-slate-800 space-y-4">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-slate-800 space-y-4">
             <div className="flex items-center space-x-2">
-              <Hourglass className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+              <Hourglass className="w-4 h-4 text-accent-700 dark:text-accent-400" />
 
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
@@ -342,7 +410,7 @@ export default function SettingsPage() {
                     }`}
                   >
                     {active && (
-                      <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-amber-600 dark:bg-amber-500 flex items-center justify-center shadow-md">
+                      <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center shadow-md">
                         <Check className="w-3.5 h-3.5 text-white" />
                       </span>
                     )}
@@ -355,7 +423,7 @@ export default function SettingsPage() {
                     <p
                       className={`text-xs font-bold ${
                         active
-                          ? "text-amber-700 dark:text-amber-400"
+                          ? "text-accent-700 dark:text-accent-400"
                           : "text-slate-900 dark:text-white"
                       }`}
                     >
@@ -369,7 +437,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => setPreviewing(true)}
-              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-amber-600 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors cursor-pointer ${focusStyle}`}
+              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-accent-600 text-accent-700 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-950/30 transition-colors cursor-pointer ${focusStyle}`}
             >
               <Play className="w-4 h-4" /> Preview full screen
             </button>

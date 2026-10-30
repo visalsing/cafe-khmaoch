@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import {
   User,
   Shield,
@@ -25,12 +25,15 @@ import {
   Coffee,
   RotateCcw,
 } from "lucide-react";
+import { useLanguage } from "../context/LanguageContext.jsx";
+import useLocalized, { localize } from "../hooks/useLocalized";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { assetUrl, orderService, profileService } from "../services/api";
 import { dual } from "../utils/currency";
 import ReceiptModal from "../components/Dashboard/Receipt";
 import ImageLightbox from "../components/Dashboard/ImageLightbox";
+import LogoutModal from "../components/Auth/LogoutModal";
 
 /* <pure> */
 const OTP_LENGTH = 6;
@@ -84,21 +87,21 @@ const inputClass =
   "w-full rounded-xl border border-stone-200 dark:border-stone-700 " +
   "bg-white dark:bg-stone-950 px-4 py-2.5 text-sm " +
   "text-stone-900 dark:text-white placeholder:text-stone-400 outline-none transition " +
-  "focus:border-amber-500 focus:ring-4 focus:ring-amber-500/15 " +
+  "focus:border-accent-500 focus:ring-4 focus:ring-accent-500/15 " +
   "disabled:cursor-not-allowed disabled:bg-stone-100 dark:disabled:bg-stone-900 disabled:text-stone-500";
 
 const primaryButton =
   "inline-flex items-center justify-center gap-2 rounded-xl " +
-  "bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm " +
-  "transition hover:bg-amber-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-500/30 " +
+  "bg-accent-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm " +
+  "transition hover:bg-accent-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent-500/30 " +
   "disabled:cursor-not-allowed disabled:opacity-60";
 
 const secondaryButton =
   "inline-flex items-center justify-center gap-2 rounded-xl " +
   "border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 px-5 py-2.5 " +
   "text-sm font-semibold text-stone-700 dark:text-stone-200 " +
-  "transition hover:border-amber-500 hover:text-amber-700 dark:hover:text-amber-400 " +
-  "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-500/20 " +
+  "transition hover:border-accent-500 hover:text-accent-700 dark:hover:text-accent-400 " +
+  "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent-500/20 " +
   "disabled:cursor-not-allowed disabled:opacity-60";
 
 const emptyPasswordForm = {
@@ -211,7 +214,7 @@ function PanelHeader({ icon: Icon, title, description, aside }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-stone-100 px-6 py-5 dark:border-stone-800">
       <div className="flex items-start gap-3.5">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900/50">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-50 text-accent-600 ring-1 ring-accent-100 dark:bg-accent-950/40 dark:text-accent-400 dark:ring-accent-900/50">
           <Icon className="h-5 w-5" />
         </span>
         <div>
@@ -244,7 +247,7 @@ function Stepper({ steps, current }) {
                 done
                   ? "bg-emerald-500 text-white"
                   : active
-                    ? "bg-amber-600 text-white ring-4 ring-amber-500/20"
+                    ? "bg-accent-600 text-white ring-4 ring-accent-500/20"
                     : "bg-stone-100 text-stone-400 dark:bg-stone-800"
               }`}
             >
@@ -354,9 +357,9 @@ function OtpInput({ value, onChange, disabled, autoFocus = false, label }) {
           disabled={disabled}
           className={`h-12 w-10 rounded-xl border bg-white text-center font-mono text-lg font-bold text-stone-900 outline-none transition dark:bg-stone-950 dark:text-white sm:h-14 sm:w-12 sm:text-xl ${
             value[i]
-              ? "border-amber-500 ring-4 ring-amber-500/10"
+              ? "border-accent-500 ring-4 ring-accent-500/10"
               : "border-stone-200 dark:border-stone-700"
-          } focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 disabled:opacity-60`}
+          } focus:border-accent-500 focus:ring-4 focus:ring-accent-500/20 disabled:opacity-60`}
         />
       ))}
     </div>
@@ -413,14 +416,14 @@ const STRENGTH_STYLE = [
   "",
   "bg-rose-500",
   "bg-orange-500",
-  "bg-amber-500",
+  "bg-accent-500",
   "bg-emerald-500",
 ];
 const STRENGTH_TEXT = [
   "",
   "text-rose-600",
   "text-orange-600",
-  "text-amber-600",
+  "text-accent-600",
   "text-emerald-600",
 ];
 
@@ -478,7 +481,7 @@ function VerifiedPill({ verified }) {
       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
         verified
           ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900"
-          : "bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900"
+          : "bg-accent-50 text-accent-700 ring-1 ring-accent-200 dark:bg-accent-950/40 dark:text-accent-300 dark:ring-accent-900"
       }`}
     >
       {verified ? (
@@ -503,7 +506,7 @@ const ACTIVE_STATUSES = ["pending", "preparing", "ready"];
 const ORDER_STATUS = {
   pending: {
     label: "Received",
-    cls: "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900",
+    cls: "bg-accent-50 text-accent-700 ring-accent-200 dark:bg-accent-950/40 dark:text-accent-300 dark:ring-accent-900",
   },
   preparing: {
     label: "Preparing",
@@ -524,6 +527,33 @@ const ORDER_STATUS = {
 };
 const pillBase =
   "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1";
+
+// size key -> the translation keys you already use in the shop
+const SIZE_KEY = { price: "regular", big: "big", small: "small" };
+
+function localizeItem(item, lang, t) {
+  const name =
+    localize(item.productName, lang) || item.productTitle || item.title || "";
+  const opt = item.options || {};
+  const details = [
+    opt.size ? t(SIZE_KEY[item.size] || "regular") : null, // the size is only listed when the drink has several sizes
+    localize(opt.sugar, lang),
+    localize(opt.ice, lang),
+    localize(opt.coffee, lang),
+  ].filter(Boolean);
+  const detailTitle = details.length ? `(${details.join(", ")})` : "";
+  return {
+    ...item,
+    productTitle: name,
+    detailTitle,
+    title: detailTitle ? `${name} ${detailTitle}` : name,
+  };
+}
+
+const localizeOrder = (order, lang, t) => ({
+  ...order,
+  items: (order.items || []).map((item) => localizeItem(item, lang, t)),
+});
 
 function OrderCard({ order, onReceipt }) {
   const status = ORDER_STATUS[order.status] || ORDER_STATUS.pending;
@@ -580,7 +610,7 @@ function OrderCard({ order, onReceipt }) {
                   i <= step
                     ? step === ORDER_STEPS.length - 1
                       ? "bg-emerald-500"
-                      : "bg-amber-500"
+                      : "bg-accent-500"
                     : "bg-stone-200 dark:bg-stone-700"
                 }`}
               />
@@ -612,7 +642,7 @@ function OrderCard({ order, onReceipt }) {
           <p className="text-xs text-stone-400">
             {count} item{count === 1 ? "" : "s"}
           </p>
-          <p className="text-lg font-extrabold text-amber-600 dark:text-amber-400">
+          <p className="text-lg font-extrabold text-accent-600 dark:text-accent-400">
             {total.riel}
           </p>
           <p className="text-xs text-stone-400">{total.usd}</p>
@@ -631,10 +661,10 @@ function OrderCard({ order, onReceipt }) {
 }
 
 export default function Profile() {
-  // const { currentUser, logout, loading, refreshUser } = useAuth();
+  const { language, t } = useLanguage();
+  const tr = useLocalized();
   const {
     currentUser,
-    logout,
     loading,
     refreshUser,
     isImpersonating,
@@ -743,6 +773,12 @@ export default function Profile() {
     return () => clearInterval(id);
   }, [activeTab, userId, hasActiveOrder, loadOrders]);
 
+  // the order lines in the language chosen on the site
+  const localizedOrders = useMemo(
+    () => orders.map((order) => localizeOrder(order, language || "en", t)),
+    [orders, language, t],
+  );
+
   if (loading || !currentUser) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-stone-500">
@@ -753,6 +789,8 @@ export default function Profile() {
   }
 
   const me = normalizeUser(currentUser);
+  // roles are stored in every language: {"en":"Customer","km":"..."}. The code is only the fallback
+  const roleLabel = tr(pick(currentUser, "roleTitle", "role_title")) || me.role;
   const displayName =
     [me.firstName, me.lastName].filter(Boolean).join(" ") || "Customer";
   const initial = (me.firstName || me.email || "U")[0].toUpperCase();
@@ -767,16 +805,6 @@ export default function Profile() {
     setActiveTab(tab);
     clearNotice();
   };
-
-  // const handleConfirmLogout = async () => {
-  //   setShowLogoutModal(false);
-
-  //   try {
-  //     await logout();
-  //   } finally {
-  //     navigate("/");
-  //   }
-  // };
 
   const updatePasswordField = (field, value) => {
     setPasswordForm((previous) => ({
@@ -996,8 +1024,7 @@ export default function Profile() {
     <div className="space-y-6">
       {/* identity card */}
       <Panel className="overflow-hidden">
-        {/* <div className="relative h-28 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 sm:h-32"> */}
-        <div className="relative z-0 h-28 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 sm:h-32">
+        <div className="relative z-0 h-28 bg-gradient-to-r from-accent-500 via-orange-500 to-accent-600 sm:h-32">
           <div className="absolute -right-10 -top-12 h-44 w-44 rounded-full bg-white/10" />
           <div className="absolute right-24 top-10 h-24 w-24 rounded-full bg-white/10" />
           <div className="absolute -bottom-16 left-1/3 h-40 w-40 rounded-full bg-black/10" />
@@ -1011,7 +1038,7 @@ export default function Profile() {
                   type="button"
                   onClick={() => setShowAvatarLightbox(true)}
                   aria-label="View profile picture"
-                  className="relative z-20 shrink-0 cursor-zoom-in rounded-2xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-500/40"
+                  className="relative z-20 shrink-0 cursor-zoom-in rounded-2xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent-500/40"
                 >
                   <img
                     src={assetUrl(me.avatar)}
@@ -1020,7 +1047,7 @@ export default function Profile() {
                   />
                 </button>
               ) : (
-                <div className="relative z-20 flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-gradient-to-br from-amber-500 to-orange-600 text-4xl font-extrabold text-white shadow-md dark:border-stone-900 sm:h-28 sm:w-28">
+                <div className="relative z-20 flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-gradient-to-br from-accent-500 to-orange-600 text-4xl font-extrabold text-white shadow-md dark:border-stone-900 sm:h-28 sm:w-28">
                   {initial}
                 </div>
               )}
@@ -1042,7 +1069,7 @@ export default function Profile() {
             </h2>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-semibold capitalize text-stone-600 ring-1 ring-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:ring-stone-700">
-                {me.role}
+                {roleLabel}
               </span>
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${
@@ -1111,9 +1138,9 @@ export default function Profile() {
             key={title}
             type="button"
             onClick={() => goTo("security")}
-            className="group flex items-center gap-4 rounded-2xl border border-stone-200 bg-white p-5 text-left shadow-sm transition hover:border-amber-400 hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
+            className="group flex items-center gap-4 rounded-2xl border border-stone-200 bg-white p-5 text-left shadow-sm transition hover:border-accent-400 hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 transition group-hover:bg-amber-600 group-hover:text-white dark:bg-amber-950/40 dark:text-amber-400">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-50 text-accent-600 transition group-hover:bg-accent-600 group-hover:text-white dark:bg-accent-950/40 dark:text-accent-400">
               <Icon className="h-5 w-5" />
             </span>
             <span className="min-w-0 flex-1">
@@ -1122,7 +1149,7 @@ export default function Profile() {
               </span>
               <span className="block text-xs text-stone-500">{text}</span>
             </span>
-            <ChevronRight className="h-4 w-4 text-stone-300 transition group-hover:translate-x-0.5 group-hover:text-amber-600" />
+            <ChevronRight className="h-4 w-4 text-stone-300 transition group-hover:translate-x-0.5 group-hover:text-accent-600" />
           </button>
         ))}
       </div>
@@ -1141,7 +1168,7 @@ export default function Profile() {
     return (
       <div className="space-y-6">
         {isImpersonating && (
-          <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+          <div className="flex items-start gap-3 rounded-2xl border border-accent-200 bg-accent-50 p-4 text-sm text-accent-900 dark:border-accent-900/60 dark:bg-accent-950/30 dark:text-accent-200">
             <Lock className="mt-0.5 h-4 w-4 shrink-0" />
             <p>
               Email and password changes are turned off while you are
@@ -1205,7 +1232,7 @@ export default function Profile() {
                 </label>
 
                 {emailCodeSent && (
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-5 dark:border-amber-900/50 dark:bg-amber-950/20">
+                  <div className="rounded-2xl border border-accent-200 bg-accent-50/60 p-5 dark:border-accent-900/50 dark:bg-accent-950/20">
                     <p className="text-sm font-semibold text-stone-900 dark:text-white">
                       Enter the 6-digit code
                     </p>
@@ -1364,7 +1391,7 @@ export default function Profile() {
                       </div>
                     </div>
 
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-5 dark:border-amber-900/50 dark:bg-amber-950/20">
+                    <div className="rounded-2xl border border-accent-200 bg-accent-50/60 p-5 dark:border-accent-900/50 dark:bg-accent-950/20">
                       <p className="text-sm font-semibold text-stone-900 dark:text-white">
                         Enter the 6-digit code
                       </p>
@@ -1493,7 +1520,7 @@ export default function Profile() {
         ) : orders.length === 0 ? (
           !ordersError && (
             <div className="py-10 text-center">
-              <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-500 ring-1 ring-amber-100 dark:bg-amber-950/30 dark:ring-amber-900/50">
+              <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-accent-50 text-accent-500 ring-1 ring-accent-100 dark:bg-accent-950/30 dark:ring-accent-900/50">
                 <Coffee className="h-7 w-7" />
               </span>
               <p className="mt-5 text-base font-bold text-stone-900 dark:text-white">
@@ -1515,7 +1542,7 @@ export default function Profile() {
         ) : (
           <>
             <ul className="space-y-4">
-              {orders.slice(0, visibleOrders).map((order) => (
+              {localizedOrders.slice(0, visibleOrders).map((order) => (
                 <OrderCard
                   key={order.id}
                   order={order}
@@ -1553,37 +1580,7 @@ export default function Profile() {
 
   const activeItem = NAV_ITEMS.find((n) => n.id === activeTab) || NAV_ITEMS[0];
 
-  /* ---------- Impersonation ---------- */
-  const handleConfirmLogout = async () => {
-    if (exitingImpersonation) return;
-
-    setShowLogoutModal(false);
-
-    try {
-      if (isImpersonating) {
-        setExitingImpersonation(true);
-
-        await stopImpersonation();
-
-        navigate("/dashboard", { replace: true });
-      } else {
-        await logout();
-
-        navigate("/", { replace: true });
-      }
-    } catch (error) {
-      console.error("Profile session action failed:", error);
-
-      notify(
-        "error",
-        isImpersonating ? "Could not exit impersonation" : "Could not log out",
-        getErrorMessage(error),
-      );
-    } finally {
-      setExitingImpersonation(false);
-    }
-  };
-
+  /* ---------- Impersonation (the banner button) ---------- */
   const handleExitImpersonation = async () => {
     if (!isImpersonating || exitingImpersonation) return;
 
@@ -1603,13 +1600,16 @@ export default function Profile() {
     }
   };
 
+  // Normal mode: "Log out". Impersonation mode only: "Exit impersonation".
+  const sessionLabel = isImpersonating ? "Exit impersonation" : "Log out";
+
   return (
     <>
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
         {isImpersonating && (
           <div
             role="status"
-            className="mb-8 overflow-hidden rounded-2xl border border-amber-300 bg-amber-50 shadow-sm dark:border-amber-800 dark:bg-amber-950/30"
+            className="mb-8 overflow-hidden rounded-2xl border border-accent-300 bg-accent-50 shadow-sm dark:border-accent-800 dark:bg-accent-950/30"
           >
             {/* hazard stripe */}
             <div
@@ -1622,17 +1622,17 @@ export default function Profile() {
             />
             <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <div className="flex min-w-0 items-start gap-3.5">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-900/50 dark:text-amber-300 dark:ring-amber-800">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-100 text-accent-700 ring-1 ring-accent-200 dark:bg-accent-900/50 dark:text-accent-300 dark:ring-accent-800">
                   <Eye className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400">
+                  <p className="text-xs font-bold uppercase tracking-widest text-accent-700 dark:text-accent-400">
                     Impersonation mode
                   </p>
-                  <h2 className="mt-0.5 break-words text-base font-bold text-amber-950 dark:text-amber-100">
+                  <h2 className="mt-0.5 break-words text-base font-bold text-accent-950 dark:text-accent-100">
                     Viewing as {displayName}
                   </h2>
-                  <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
+                  <p className="mt-1 text-sm text-accent-800 dark:text-accent-300">
                     You are signed in as <b className="break-all">{me.email}</b>
                     . Changing the email or password is turned off while you are
                     here.
@@ -1644,7 +1644,7 @@ export default function Profile() {
                 type="button"
                 onClick={handleExitImpersonation}
                 disabled={exitingImpersonation}
-                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-accent-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-accent-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent-500/30 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {exitingImpersonation ? (
                   <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -1664,13 +1664,13 @@ export default function Profile() {
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-stone-500 transition hover:text-amber-600"
+            className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-stone-500 transition hover:text-accent-600"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to home
+            {t("back_to_home")}
           </button>
-          <p className="text-xs font-bold uppercase tracking-widest text-amber-600">
-            My account
+          <p className="text-xs font-bold uppercase tracking-widest text-accent-600">
+            {t("my_account")}
           </p>
           <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-stone-900 dark:text-white">
             {activeItem.label}
@@ -1678,52 +1678,6 @@ export default function Profile() {
           <p className="mt-1 text-sm text-stone-500">{activeItem.hint}</p>
         </div>
 
-        {/* Impersonation banner */}
-        {/* {isImpersonating && (
-          <div className="mb-8 flex flex-col gap-4 rounded-2xl border border-amber-200 bg-amber-50/80 p-5 shadow-sm dark:border-amber-800/60 dark:bg-amber-950/20 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-start gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
-                <ShieldCheck className="h-5 w-5" />
-              </span>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-sm font-bold text-amber-950 dark:text-amber-200">
-                    Impersonation mode
-                  </h2>
-
-                  <span className="rounded-full bg-amber-200/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
-                    Admin session
-                  </span>
-                </div>
-
-                <p className="mt-1 text-sm leading-relaxed text-amber-800/90 dark:text-amber-300/90">
-                  You are viewing this profile as another user. Exit
-                  impersonation to return to your administrator account.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleExitImpersonation}
-              disabled={exitingImpersonation}
-              className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-500/30 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-            >
-              {exitingImpersonation ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-              ) : (
-                <Shield className="h-4 w-4" />
-              )}
-
-              {exitingImpersonation
-                ? "Returning to admin..."
-                : "Exit impersonation"}
-            </button>
-          </div>
-        )} */}
-
-        <div className="flex flex-col gap-8 lg:flex-row"></div>
         <div className="flex flex-col gap-8 lg:flex-row">
           {/* navigation */}
           <aside className="w-full shrink-0 lg:w-72">
@@ -1736,7 +1690,7 @@ export default function Profile() {
                     className="h-12 w-12 rounded-xl object-cover"
                   />
                 ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-lg font-bold text-white">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-accent-500 to-orange-600 text-lg font-bold text-white">
                     {initial}
                   </div>
                 )}
@@ -1764,8 +1718,8 @@ export default function Profile() {
                       aria-current={active ? "page" : undefined}
                       className={`group relative flex shrink-0 items-center gap-3 rounded-2xl px-4 py-3 text-left transition lg:w-full ${
                         active
-                          ? "bg-amber-600 text-white shadow-md shadow-amber-600/20"
-                          : "border border-stone-200 bg-white text-stone-600 hover:border-amber-400 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300 lg:border-transparent lg:bg-transparent lg:hover:bg-stone-100 dark:lg:hover:bg-stone-800"
+                          ? "bg-accent-600 text-white shadow-md shadow-accent-600/20"
+                          : "border border-stone-200 bg-white text-stone-600 hover:border-accent-400 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300 lg:border-transparent lg:bg-transparent lg:hover:bg-stone-100 dark:lg:hover:bg-stone-800"
                       }`}
                     >
                       <Icon className="h-[18px] w-[18px] shrink-0" />
@@ -1798,8 +1752,7 @@ export default function Profile() {
                   className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 dark:hover:bg-rose-950/30"
                 >
                   <LogOut className="h-[18px] w-[18px]" />
-                  {/* Log out */}
-                  {isImpersonating ? "Exit Impersonation" : "Log out"}
+                  {sessionLabel}
                 </button>
               </div>
             </div>
@@ -1816,76 +1769,19 @@ export default function Profile() {
                 onClick={() => setShowLogoutModal(true)}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 px-4 py-3 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-900/60 dark:hover:bg-rose-950/30"
               >
-                {/* <LogOut className="h-4 w-4" />
-                Log out */}
                 <LogOut className="h-4 w-4" />
-                {isImpersonating ? "Exit impersonation" : "Log out"}
+                {sessionLabel}
               </button>
             </div>
           </section>
         </div>
       </main>
 
-      {/* Logout confirmation modal */}
-
-      {showLogoutModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setShowLogoutModal(false);
-            }
-          }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="logout-title"
-            className="w-full max-w-sm space-y-4 rounded-3xl border border-stone-200 bg-white p-6 text-stone-900 shadow-2xl dark:border-stone-800 dark:bg-stone-900 dark:text-white"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 dark:bg-rose-950/40">
-              <LogOut className="h-5 w-5" />
-            </div>
-
-            <div>
-              <h3 id="logout-title" className="text-lg font-bold">
-                {/* Log out? */}
-                {isImpersonating ? "Exit impersonation?" : "Log out?"}
-              </h3>
-              <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-                {/* You will need to sign in again to see your account. */}
-                {isImpersonating
-                  ? "You will return to your administrator account."
-                  : "You will need to sign in again to see your account."}
-              </p>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowLogoutModal(false)}
-                className={secondaryButton}
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={handleConfirmLogout}
-                disabled={exitingImpersonation}
-                className="inline-flex items-center justify-center rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-500/30"
-              >
-                {/* Yes, log out */}
-                {exitingImpersonation
-                  ? "Please wait..."
-                  : isImpersonating
-                    ? "Return to Admin"
-                    : "Yes, log out"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* The same confirmation window as the dashboard sidebar */}
+      <LogoutModal
+        open={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+      />
 
       {showAvatarLightbox && me.avatar && (
         <ImageLightbox

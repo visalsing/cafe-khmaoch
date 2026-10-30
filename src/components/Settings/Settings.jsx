@@ -1,14 +1,40 @@
 import React, { useState, useEffect } from "react";
-import { Sun, Moon, Monitor, Check, Languages, Hash, Hourglass, Play } from "lucide-react";
+import {
+  Sun,
+  Moon,
+  Monitor,
+  Check,
+  Languages,
+  Hash,
+  Hourglass,
+  Play,
+  Palette,
+} from "lucide-react";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import LoadingScreen, { Loader } from "../Loading/Loading.jsx";
 import { LOADING_STYLES, useLoadingStyle } from "../../utils/loadingStyle.js";
+import { ACCENTS, useAccent } from "../../utils/accent.js";
 
 const themeOptions = [
-  { value: "light", labelKey: "light", descriptionKey: "lightDescription", icon: Sun },
-  { value: "dark", labelKey: "dark", descriptionKey: "darkDescription", icon: Moon },
-  { value: "system", labelKey: "system", descriptionKey: "systemDescription", icon: Monitor },
+  {
+    value: "light",
+    labelKey: "light",
+    descriptionKey: "lightDescription",
+    icon: Sun,
+  },
+  {
+    value: "dark",
+    labelKey: "dark",
+    descriptionKey: "darkDescription",
+    icon: Moon,
+  },
+  {
+    value: "system",
+    labelKey: "system",
+    descriptionKey: "systemDescription",
+    icon: Monitor,
+  },
 ];
 
 // Number digit formatting styles options
@@ -32,12 +58,15 @@ const flagImages = {
   de: "https://flagcdn.com/w40/de.png",
   ja: "https://flagcdn.com/w40/jp.png",
   vi: "https://flagcdn.com/w40/vn.png",
+  my: "https://flagcdn.com/w40/mm.png",
+  ko: "https://flagcdn.com/w40/kr.png",
 };
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t, languages = [] } = useLanguage();
   const [loadingStyle, setLoadingStyle] = useLoadingStyle();
+  const [accent, setAccent] = useAccent();
   const [previewing, setPreviewing] = useState(false);
 
   // State for digit format preference (persisted in localStorage)
@@ -64,16 +93,16 @@ export default function Settings() {
   }, [previewing]);
 
   const activeCard =
-    "border-amber-600 bg-amber-50 dark:border-amber-500 dark:bg-amber-500/10";
+    "border-accent-600 bg-accent-50 dark:border-accent-500 dark:bg-accent-500/10";
 
   const inactiveCard =
-    "border-slate-200 dark:border-slate-700 hover:bg-amber-50/60 dark:hover:bg-amber-950/20";
+    "border-slate-200 dark:border-slate-700 hover:bg-accent-50/60 dark:hover:bg-accent-950/20";
 
   const focusStyle =
-    "focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900";
+    "focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900";
 
   return (
-    <div className="p-8 bg-white dark:bg-slate-900 rounded-2xl border border-amber-100 dark:border-slate-700 space-y-8">
+    <div className="p-8 bg-white dark:bg-slate-900 rounded-2xl border border-accent-100 dark:border-slate-700 space-y-8">
       <div>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
           {t("settings")}
@@ -93,33 +122,81 @@ export default function Settings() {
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {themeOptions.map(({ value, labelKey, descriptionKey, icon: Icon }) => {
-            const active = theme === value;
+          {themeOptions.map(
+            ({ value, labelKey, descriptionKey, icon: Icon }) => {
+              const active = theme === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setTheme(value)}
+                  aria-pressed={active}
+                  className={`relative text-left p-4 rounded-xl border transition-all ${focusStyle} ${
+                    active ? activeCard : inactiveCard
+                  }`}
+                >
+                  {active && (
+                    <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center">
+                      <Check className="w-3.5 h-3.5 text-white" />
+                    </span>
+                  )}
+                  <Icon
+                    className={`w-5 h-5 mb-3 ${
+                      active
+                        ? "text-accent-700 dark:text-accent-400"
+                        : "text-slate-500 dark:text-slate-400"
+                    }`}
+                  />
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                    {t(labelKey)}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    {t(descriptionKey)}
+                  </p>
+                </button>
+              );
+            },
+          )}
+        </div>
+      </div>
+
+      {/* Accent color section */}
+      <div>
+        <div className="flex items-center space-x-2 mb-1">
+          <Palette className="w-4 h-4 text-accent-700 dark:text-accent-400" />
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Accent Color
+          </h3>
+        </div>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          Pick the highlight color used across the app.
+        </p>
+
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {ACCENTS.map(({ value, label, swatch }) => {
+            const active = accent === value;
             return (
               <button
                 key={value}
                 type="button"
-                onClick={() => setTheme(value)}
+                onClick={() => setAccent(value)}
                 aria-pressed={active}
                 className={`relative text-left p-4 rounded-xl border transition-all ${focusStyle} ${
                   active ? activeCard : inactiveCard
                 }`}
               >
                 {active && (
-                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-amber-600 dark:bg-amber-500 flex items-center justify-center">
+                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center">
                     <Check className="w-3.5 h-3.5 text-white" />
                   </span>
                 )}
-                <Icon
-                  className={`w-5 h-5 mb-3 ${
-                    active ? "text-amber-700 dark:text-amber-400" : "text-slate-500 dark:text-slate-400"
-                  }`}
+                {/* inline hex on purpose: each swatch shows its own color, not the active accent */}
+                <span
+                  className="block w-7 h-7 rounded-full mb-3"
+                  style={{ background: swatch }}
                 />
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">
-                  {t(labelKey)}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  {t(descriptionKey)}
+                  {label}
                 </p>
               </button>
             );
@@ -130,7 +207,7 @@ export default function Settings() {
       {/* Language section */}
       <div>
         <div className="flex items-center space-x-2 mb-1">
-          <Languages className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+          <Languages className="w-4 h-4 text-accent-700 dark:text-accent-400" />
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             {t("language")}
           </h3>
@@ -143,7 +220,8 @@ export default function Settings() {
           {languages.map(({ code, label, nativeLabel }) => {
             const active = language === code;
             const flagUrl =
-              flagImages[code] || `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
+              flagImages[code] ||
+              `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
 
             return (
               <button
@@ -156,11 +234,11 @@ export default function Settings() {
                 }`}
               >
                 {active && (
-                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-amber-600 dark:bg-amber-500 flex items-center justify-center">
+                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center">
                     <Check className="w-3.5 h-3.5 text-white" />
                   </span>
                 )}
-                <div className="w-7 h-5 rounded shadow-sm overflow-hidden flex items-center justify-center bg-amber-50 dark:bg-slate-800 mb-3 flex-shrink-0">
+                <div className="w-7 h-5 rounded shadow-sm overflow-hidden flex items-center justify-center bg-accent-50 dark:bg-slate-800 mb-3 flex-shrink-0">
                   <img
                     src={flagUrl}
                     alt={`${nativeLabel} flag`}
@@ -190,13 +268,14 @@ export default function Settings() {
       {/* Number Digits System section */}
       <div>
         <div className="flex items-center space-x-2 mb-1">
-          <Hash className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+          <Hash className="w-4 h-4 text-accent-700 dark:text-accent-400" />
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Number Digits Style
           </h3>
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          Choose between standard numbers or localized traditional digit systems (e.g., Khmer, Lao, Burmese).
+          Choose between standard numbers or localized traditional digit systems
+          (e.g., Khmer, Lao, Burmese).
         </p>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -213,12 +292,12 @@ export default function Settings() {
                 }`}
               >
                 {active && (
-                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-amber-600 dark:bg-amber-500 flex items-center justify-center">
+                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center">
                     <Check className="w-3.5 h-3.5 text-white" />
                   </span>
                 )}
                 <div>
-                  <p className="text-lg font-bold text-amber-700 dark:text-amber-400 mb-2">
+                  <p className="text-lg font-bold text-accent-700 dark:text-accent-400 mb-2">
                     {sample}
                   </p>
                   <p className="text-sm font-semibold text-slate-800 dark:text-white">
@@ -234,13 +313,14 @@ export default function Settings() {
       {/* Loading Screen section */}
       <div>
         <div className="flex items-center space-x-2 mb-1">
-          <Hourglass className="w-4 h-4 text-amber-700 dark:text-amber-400" />
+          <Hourglass className="w-4 h-4 text-accent-700 dark:text-accent-400" />
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Loading Screen
           </h3>
         </div>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          Choose the animation shown while a page or your account is loading. It is saved in this browser.
+          Choose the animation shown while a page or your account is loading. It
+          is saved in this browser.
         </p>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -257,7 +337,7 @@ export default function Settings() {
                 }`}
               >
                 {active && (
-                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-amber-600 dark:bg-amber-500 flex items-center justify-center">
+                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center">
                     <Check className="w-3.5 h-3.5 text-white" />
                   </span>
                 )}
@@ -266,7 +346,9 @@ export default function Settings() {
                 </div>
                 <p
                   className={`text-sm font-semibold text-center ${
-                    active ? "text-amber-700 dark:text-amber-400" : "text-slate-800 dark:text-white"
+                    active
+                      ? "text-accent-700 dark:text-accent-400"
+                      : "text-slate-800 dark:text-white"
                   }`}
                 >
                   {label}
@@ -279,7 +361,7 @@ export default function Settings() {
         <button
           type="button"
           onClick={() => setPreviewing(true)}
-          className={`mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-amber-600 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors ${focusStyle}`}
+          className={`mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-accent-600 text-accent-700 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-500/10 transition-colors ${focusStyle}`}
         >
           <Play className="w-4 h-4" /> Preview full screen
         </button>
