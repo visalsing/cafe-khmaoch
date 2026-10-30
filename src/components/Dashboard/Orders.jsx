@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   RotateCcw,
   Search,
@@ -7,6 +7,9 @@ import {
   CreditCard,
   QrCode,
   X,
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { orderService } from "../../services/api";
 import { dual } from "../../utils/currency";
@@ -23,6 +26,339 @@ const statusCls = {
   completed: "bg-emerald-100 text-emerald-700",
   cancelled: "bg-rose-100 text-rose-700",
 };
+
+/* =========================================================
+   Dates: "26 Oct 2026" + the calendar pop-up
+   ========================================================= */
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS_LONG = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+const WEEK_STARTS_ON = 1; // 0 = the week starts on Sunday, 1 = on Monday
+const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const WEEKDAYS = [...DAY_LABELS.slice(WEEK_STARTS_ON), ...DAY_LABELS.slice(0, WEEK_STARTS_ON)];
+
+const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const endOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
+const addMonths = (d, n) => new Date(d.getFullYear(), d.getMonth() + n, 1);
+const sameDay = (a, b) =>
+  Boolean(a && b) &&
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
+// 26 Oct 2026  (change this one line if you want "26 October 2026" or "26/10/2026")
+const fmtDay = (d) => (d ? `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}` : "");
+
+// the 42 cells (6 weeks) of one month; null = a day that belongs to the next / previous month
+function monthCells(year, month) {
+  const lead = (new Date(year, month, 1).getDay() - WEEK_STARTS_ON + 7) % 7;
+  const days = new Date(year, month + 1, 0).getDate();
+  const cells = [
+    ...Array(lead).fill(null),
+    ...Array.from({ length: days }, (_, i) => new Date(year, month, i + 1)),
+  ];
+  while (cells.length < 42) cells.push(null);
+  return cells;
+}
+
+const BAND = "bg-accent-100 dark:bg-accent-500/15";
+
+// one month of the calendar
+function MonthView({ month, from, to, picking, hover, onPick, onHover }) {
+  const today = startOfDay(new Date());
+  // while the end date is being picked, preview the range up to the day under the mouse
+  const rangeEnd = to || (picking === "to" && from && hover && hover >= from ? hover : null);
+  const cells = monthCells(month.getFullYear(), month.getMonth());
+
+  return (
+    <div className="w-[17.5rem] shrink-0">
+      <p className="mb-2 text-center text-sm font-bold text-slate-800 dark:text-slate-100">
+        {MONTHS_LONG[month.getMonth()]} {month.getFullYear()}
+      </p>
+      <div className="grid grid-cols-7">
+        {WEEKDAYS.map((w) => (
+          <span key={w} className="h-8 flex items-center justify-center text-[11px] font-semibold uppercase text-slate-400">
+            {w}
+          </span>
+        ))}
+        {cells.map((date, i) => {
+          if (!date) return <span key={`blank-${i}`} className="h-9" />;
+
+          const isStart = sameDay(date, from);
+          const isEnd = sameDay(date, rangeEnd);
+          const inside = Boolean(from && rangeEnd && date > from && date < rangeEnd);
+          const hasRange = Boolean(from && rangeEnd && !sameDay(from, rangeEnd));
+          const col = i % 7;
+
+          let band = "";
+          if (hasRange) {
+            if (isStart) band = `${BAND} rounded-l-full`;
+            else if (isEnd) band = `${BAND} rounded-r-full`;
+            else if (inside)
+              band = `${BAND} ${col === 0 ? "rounded-l-full" : ""} ${col === 6 ? "rounded-r-full" : ""}`;
+          }
+
+          const edge = isStart || isEnd;
+          return (
+            <div key={date.getDate()} className={`h-9 flex items-center justify-center ${band}`}>
+              <button
+                type="button"
+                onClick={() => onPick(date)}
+                onMouseEnter={() => onHover(date)}
+                aria-label={fmtDay(date)}
+                aria-pressed={edge}
+                className={`h-9 w-9 rounded-full text-sm transition-colors ${
+                  edge
+                    ? "bg-accent-600 text-white font-bold"
+                    : `text-slate-700 dark:text-slate-200 hover:bg-accent-200/70 dark:hover:bg-accent-500/25 ${
+                        sameDay(date, today) ? "ring-1 ring-inset ring-accent-500 font-semibold" : ""
+                      }`
+                }`}
+              >
+                {date.getDate()}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// "From [date]  To [date]" with a calendar pop-up (click the start day, then the end day)
+function DateRangePicker({ from, to, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [picking, setPicking] = useState("from"); // which end the next click sets
+  const [hover, setHover] = useState(null);
+  const [view, setView] = useState(() => startOfMonth(from || new Date()));
+  const boxRef = useRef(null);
+
+  const close = () => {
+    setOpen(false);
+    setHover(null);
+  };
+
+  // click outside or Esc closes the pop-up
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (e) => {
+      if (boxRef.current && !boxRef.current.contains(e.target)) close();
+    };
+    const onKey = (e) => e.key === "Escape" && close();
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const openFor = (field) => {
+    const target = field === "to" && from ? "to" : "from";
+    if (open && picking === target) return close();
+    setPicking(target);
+    setView(startOfMonth(target === "to" ? to || from : from || to || new Date()));
+    setHover(null);
+    setOpen(true);
+  };
+
+  const pick = (d) => {
+    if (picking === "to" && from) {
+      onChange(d < from ? { from: d, to: from } : { from, to: d });
+      close();
+    } else if (to && d <= to) {
+      // only the start date is being changed
+      onChange({ from: d, to });
+      close();
+    } else {
+      onChange({ from: d, to: null });
+      setPicking("to");
+    }
+  };
+
+  const preset = (start, end) => {
+    onChange({ from: start, to: end });
+    setView(startOfMonth(start));
+    close();
+  };
+
+  const today = startOfDay(new Date());
+  const presets = [
+    ["Today", () => preset(today, today)],
+    ["Yesterday", () => preset(addDays(today, -1), addDays(today, -1))],
+    ["Last 7 days", () => preset(addDays(today, -6), today)],
+    ["Last 30 days", () => preset(addDays(today, -29), today)],
+    [
+      "This month",
+      () => preset(startOfMonth(today), new Date(today.getFullYear(), today.getMonth() + 1, 0)),
+    ],
+    [
+      "Last month",
+      () =>
+        preset(
+          new Date(today.getFullYear(), today.getMonth() - 1, 1),
+          new Date(today.getFullYear(), today.getMonth(), 0),
+        ),
+    ],
+  ];
+
+  const thisYear = today.getFullYear();
+  const firstYear = Math.min(thisYear - 6, view.getFullYear());
+  const lastYear = Math.max(thisYear + 1, view.getFullYear());
+  const years = Array.from({ length: lastYear - firstYear + 1 }, (_, i) => firstYear + i);
+
+  const fieldBtn = (field, value) => {
+    const active = open && picking === field;
+    return (
+      <button
+        type="button"
+        onClick={() => openFor(field)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={field === "from" ? "Start date" : "End date"}
+        className={`inline-flex items-center gap-2 px-3 py-2 text-sm rounded-xl border bg-white dark:bg-slate-900 min-w-[9.5rem] transition-colors ${
+          active
+            ? "border-accent-500 ring-2 ring-accent-500/20"
+            : "border-slate-300 dark:border-slate-700 hover:border-accent-500"
+        }`}
+      >
+        <CalendarIcon className="w-4 h-4 text-slate-400 shrink-0" />
+        {value ? (
+          <span className="font-medium">{fmtDay(value)}</span>
+        ) : (
+          <span className="text-slate-400">Select date</span>
+        )}
+      </button>
+    );
+  };
+
+  return (
+    <div ref={boxRef} className="relative">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium text-slate-500">From</span>
+        {fieldBtn("from", from)}
+        <span className="text-sm font-medium text-slate-500">To</span>
+        {fieldBtn("to", to)}
+        {(from || to) && (
+          <button
+            type="button"
+            onClick={() => {
+              onChange({ from: null, to: null });
+              close();
+            }}
+            className="inline-flex items-center gap-1 px-2.5 py-2 text-sm text-slate-500 hover:text-rose-600 transition-colors"
+          >
+            <X className="w-4 h-4" /> Clear
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <div
+          role="dialog"
+          aria-label="Choose a date range"
+          className="absolute left-0 top-full mt-2 z-40 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl"
+        >
+          <div className="flex flex-col md:flex-row">
+            {/* shortcuts */}
+            <div className="flex md:flex-col gap-1.5 overflow-x-auto md:overflow-visible p-3 md:w-40 border-b md:border-b-0 md:border-r border-slate-100 dark:border-slate-800">
+              {presets.map(([label, run]) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={run}
+                  className="shrink-0 text-left whitespace-nowrap px-3 py-1.5 text-sm rounded-lg text-slate-700 dark:text-slate-200 hover:bg-accent-50 dark:hover:bg-accent-500/10 hover:text-accent-700 dark:hover:text-accent-300 transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* calendar */}
+            <div className="p-4 overflow-x-auto">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setView(addMonths(view, -1))}
+                  aria-label="Previous month"
+                  className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={view.getMonth()}
+                    onChange={(e) => setView(new Date(view.getFullYear(), Number(e.target.value), 1))}
+                    aria-label="Month"
+                    className="px-2 py-1 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                  >
+                    {MONTHS_LONG.map((m, i) => (
+                      <option key={m} value={i}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={view.getFullYear()}
+                    onChange={(e) => setView(new Date(Number(e.target.value), view.getMonth(), 1))}
+                    aria-label="Year"
+                    className="px-2 py-1 text-sm rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                  >
+                    {years.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setView(addMonths(view, 1))}
+                  aria-label="Next month"
+                  className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="flex gap-6" onMouseLeave={() => setHover(null)}>
+                <MonthView
+                  month={view}
+                  from={from}
+                  to={to}
+                  picking={picking}
+                  hover={hover}
+                  onPick={pick}
+                  onHover={setHover}
+                />
+                <div className="hidden md:block">
+                  <MonthView
+                    month={addMonths(view, 1)}
+                    from={from}
+                    to={to}
+                    picking={picking}
+                    hover={hover}
+                    onPick={pick}
+                    onHover={setHover}
+                  />
+                </div>
+              </div>
+
+              <p className="mt-3 text-xs text-slate-500" aria-live="polite">
+                {picking === "to" && from
+                  ? `Now pick the end date (start: ${fmtDay(from)}).`
+                  : "Pick the start date, then the end date."}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // two lines: riel on top, dollars under it
 function Money({ value, className = "" }) {
@@ -89,9 +425,9 @@ function PayModal({ order, onClose, onPaid }) {
           </button>
         </div>
 
-        <p className="text-3xl font-extrabold text-center text-amber-600 dark:text-amber-400">
+        <p className="text-3xl font-extrabold text-center text-accent-600 dark:text-accent-400">
           {dual(total).riel}
-          <span className="block text-sm font-medium text-amber-500/70">
+          <span className="block text-sm font-medium text-accent-500/70">
             {dual(total).usd}
           </span>
         </p>
@@ -107,7 +443,7 @@ function PayModal({ order, onClose, onPaid }) {
               onClick={() => setMethod(id)}
               className={`py-3 rounded-xl border text-sm font-semibold flex flex-col items-center gap-1 ${
                 method === id
-                  ? "border-amber-600 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300"
+                  ? "border-accent-600 bg-accent-50 dark:bg-accent-950/30 text-accent-700 dark:text-accent-300"
                   : "border-slate-200 dark:border-slate-700"
               }`}
             >
@@ -187,6 +523,8 @@ export default function Orders() {
   const [busyId, setBusyId] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState(null); // first day (a Date) or null
+  const [dateTo, setDateTo] = useState(null); // last day (a Date) or null
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -227,7 +565,7 @@ export default function Orders() {
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, sourceFilter, query, pageSize]);
+  }, [statusFilter, sourceFilter, query, pageSize, dateFrom, dateTo]);
 
   const replaceOrder = (updated) =>
     setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
@@ -288,16 +626,23 @@ export default function Orders() {
   ];
 
   const q = query.trim().toLowerCase();
-  const shown = orders.filter(
-    (o) =>
+  // the whole first day (00:00) up to the end of the last day (23:59:59), in this computer's time zone
+  const fromMs = dateFrom ? startOfDay(dateFrom).getTime() : null;
+  const toMs = dateTo ? endOfDay(dateTo).getTime() : null;
+  const shown = orders.filter((o) => {
+    const t = new Date(o.createdAt).getTime();
+    return (
       (statusFilter === "all" || o.status === statusFilter) &&
       (sourceFilter === "all" || o.source === sourceFilter) &&
+      (fromMs === null || t >= fromMs) &&
+      (toMs === null || t <= toMs) &&
       (!q ||
         [o.orderNumber, o.customer?.name, o.customer?.phone, o.table]
           .join(" ")
           .toLowerCase()
-          .includes(q)),
-  );
+          .includes(q))
+    );
+  });
 
   const totalPages = Math.max(1, Math.ceil(shown.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -319,7 +664,7 @@ export default function Orders() {
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 disabled:opacity-60 transition-colors self-start"
+          className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 disabled:opacity-60 transition-colors self-start"
         >
           <RotateCcw
             className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
@@ -365,6 +710,16 @@ export default function Orders() {
         ))}
       </div>
 
+      {/* date range: From [date] To [date] */}
+      <DateRangePicker
+        from={dateFrom}
+        to={dateTo}
+        onChange={({ from, to }) => {
+          setDateFrom(from);
+          setDateTo(to);
+        }}
+      />
+
       <div className="flex flex-wrap gap-2">
         {["all", ...STATUSES].map((s) => (
           <Chip
@@ -377,6 +732,19 @@ export default function Orders() {
           </Chip>
         ))}
       </div>
+
+      {(dateFrom || dateTo) && (
+        <p className="text-sm text-slate-500" aria-live="polite">
+          {dateFrom && dateTo
+            ? sameDay(dateFrom, dateTo)
+              ? `Orders on ${fmtDay(dateFrom)}`
+              : `Orders from ${fmtDay(dateFrom)} to ${fmtDay(dateTo)}`
+            : dateFrom
+              ? `Orders from ${fmtDay(dateFrom)} onwards`
+              : `Orders up to ${fmtDay(dateTo)}`}
+          : <b>{shown.length}</b>
+        </p>
+      )}
 
       {notice && (
         <Alert
@@ -485,7 +853,6 @@ export default function Orders() {
                         Refunded
                       </span>
                     ) : (
-                      // <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Unpaid</span>
                       <>
                         <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
                           Unpaid
@@ -521,7 +888,7 @@ export default function Orders() {
                         o.status !== "cancelled" && (
                           <button
                             onClick={() => setPayTarget(o)}
-                            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-1.5"
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-accent-600 hover:bg-accent-700 text-white flex items-center gap-1.5"
                           >
                             <Banknote className="w-3.5 h-3.5" /> Take payment
                           </button>

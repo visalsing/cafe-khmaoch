@@ -117,9 +117,9 @@ function Stars({ value = 0 }) {
           key={star}
           className={
             rating >= star + 1
-              ? "text-amber-400"
+              ? "text-accent-400"
               : rating > star
-                ? "text-amber-300"
+                ? "text-accent-300"
                 : "text-stone-300 dark:text-stone-600"
           }
         >
@@ -140,8 +140,8 @@ function SizeChips({ options, active, onPick }) {
           onClick={() => onPick(option.key)}
           className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-colors ${
             active === option.key
-              ? "bg-amber-600 border-amber-600 text-white"
-              : "bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:border-amber-500"
+              ? "bg-accent-600 border-accent-600 text-white"
+              : "bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:border-accent-500"
           }`}
         >
           {option.label}
@@ -158,8 +158,8 @@ function FilterChip({ active, onClick, children }) {
       onClick={onClick}
       className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${
         active
-          ? "bg-amber-600 border-amber-600 text-white"
-          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-500"
+          ? "bg-accent-600 border-accent-600 text-white"
+          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-accent-500"
       }`}
     >
       {children}
@@ -811,7 +811,7 @@ export default function POS() {
   };
 
   const inputCls =
-    "w-full px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-amber-500";
+    "w-full px-3 py-2 text-sm rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-accent-500";
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
@@ -823,7 +823,7 @@ export default function POS() {
             {pendingOnline > 0 && (
               <button
                 onClick={() => navigate("/dashboard/orders")}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-100 text-accent-700 text-xs font-bold"
               >
                 <Bell className="w-3.5 h-3.5" /> {pendingOnline} online order
                 {pendingOnline > 1 ? "s" : ""} waiting
@@ -845,7 +845,7 @@ export default function POS() {
               disabled={loading}
               title="Reload the menu"
               aria-label="Reload the menu"
-              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-amber-500 disabled:opacity-60 transition-colors"
+              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-accent-500 disabled:opacity-60 transition-colors"
             >
               <RotateCcw
                 className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
@@ -859,25 +859,25 @@ export default function POS() {
             type="button"
             onClick={() => setShowFilters((value) => !value)}
             aria-expanded={showFilters}
-            className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center gap-2 hover:border-amber-500 transition-colors"
+            className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center gap-2 hover:border-accent-500 transition-colors"
           >
             <SlidersHorizontal className="w-4 h-4" />
             {showFilters ? "Hide Filters" : "Show Filters"}
             {activeFilters > 0 && (
-              <span className="px-1.5 rounded-full bg-amber-600 text-white text-xs leading-5">
+              <span className="px-1.5 rounded-full bg-accent-600 text-white text-xs leading-5">
                 {activeFilters}
               </span>
             )}
           </button>
           {catFilter !== "all" && (
-            <span className="px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 text-xs font-medium">
+            <span className="px-3 py-1.5 rounded-full bg-accent-100 text-accent-800 dark:bg-accent-950/40 dark:text-accent-300 text-xs font-medium">
               Category:{" "}
               {tr(cats.find((c) => Number(c.id) === Number(catFilter))?.name) ||
                 "Selected"}
             </span>
           )}
           {typeFilter !== "all" && (
-            <span className="px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 text-xs font-medium">
+            <span className="px-3 py-1.5 rounded-full bg-accent-100 text-accent-800 dark:bg-accent-950/40 dark:text-accent-300 text-xs font-medium">
               Type:{" "}
               {tr(
                 types.find((t) => Number(t.id) === Number(typeFilter))?.name,
@@ -940,7 +940,7 @@ export default function POS() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="text-sm text-amber-600 font-medium underline"
+                className="text-sm text-accent-600 font-medium underline"
               >
                 Clear filters
               </button>
@@ -988,7 +988,7 @@ export default function POS() {
               return (
                 <div
                   key={item.id}
-                  className="group relative bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 hover:shadow-xl hover:border-amber-500/50 transition-all duration-300 flex flex-col justify-between overflow-hidden"
+                  className="group relative bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 hover:shadow-xl hover:border-accent-500/50 transition-all duration-300 flex flex-col justify-between overflow-hidden"
                 >
                   <div>
                     <div className="relative h-56 overflow-hidden bg-stone-100 dark:bg-stone-800">
@@ -1018,7 +1018,7 @@ export default function POS() {
                     </div>
 
                     <div className="p-5 space-y-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      <span className="text-xs font-bold uppercase tracking-wider text-accent-600 dark:text-accent-400">
                         {tr(
                           cats.find((cat) => cat.id === item.category_id)?.name,
                         )}
@@ -1056,7 +1056,7 @@ export default function POS() {
                             onClick={() =>
                               setShowOptionsId(isExpanded ? null : item.id)
                             }
-                            className="w-full flex items-center justify-between text-xs font-semibold text-amber-600 dark:text-amber-400 py-1.5 px-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 transition-colors"
+                            className="w-full flex items-center justify-between text-xs font-semibold text-accent-600 dark:text-accent-400 py-1.5 px-3 rounded-lg bg-accent-50 dark:bg-accent-950/30 hover:bg-accent-100 transition-colors"
                           >
                             <span>Show more options</span>
                             {isExpanded ? (
@@ -1096,7 +1096,7 @@ export default function POS() {
                                         {group.levels.map((level) => (
                                           <label
                                             key={level.id}
-                                            className="flex items-center gap-2 cursor-pointer text-stone-700 dark:text-stone-300 hover:text-amber-600"
+                                            className="flex items-center gap-2 cursor-pointer text-stone-700 dark:text-stone-300 hover:text-accent-600"
                                           >
                                             <input
                                               type="radio"
@@ -1112,7 +1112,7 @@ export default function POS() {
                                                   level,
                                                 )
                                               }
-                                              className="accent-amber-600 cursor-pointer"
+                                              className="accent-accent-600 cursor-pointer"
                                             />
                                             <span>
                                               {tr(level.name)}
@@ -1180,7 +1180,7 @@ export default function POS() {
                           ? "bg-stone-300 dark:bg-stone-700 text-stone-500 cursor-not-allowed opacity-60"
                           : addedId === item.id
                             ? "bg-emerald-600"
-                            : "bg-amber-600 hover:bg-amber-700"
+                            : "bg-accent-600 hover:bg-accent-700"
                       }`}
                       title={
                         !canAdd
@@ -1205,7 +1205,7 @@ export default function POS() {
       </div>
 
       {/* RIGHT: current order */}
-      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-5 space-y-4 xl:sticky xl:top-0 xl:max-h-[calc(100vh-7rem)] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] dark:[scrollbar-color:#475569_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:my-2 [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-amber-500">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-5 space-y-4 xl:sticky xl:top-0 xl:max-h-[calc(100vh-7rem)] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] dark:[scrollbar-color:#475569_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:my-2 [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-accent-500">
         {/* <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-5 space-y-4 xl:sticky xl:top-0 xl:max-h-[calc(100vh-7rem)] overflow-y-auto"> */}
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">Current Order</h2>
@@ -1227,7 +1227,7 @@ export default function POS() {
               <button
                 key={h.id}
                 onClick={() => recallOrder(h)}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs hover:border-amber-500"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs hover:border-accent-500"
               >
                 <span>
                   {h.cart.reduce((n, l) => n + l.qty, 0)} items ·{" "}
@@ -1237,7 +1237,7 @@ export default function POS() {
                   })}
                   {h.table ? ` · Table ${h.table}` : ""}
                 </span>
-                <Play className="w-3.5 h-3.5 text-amber-600" />
+                <Play className="w-3.5 h-3.5 text-accent-600" />
               </button>
             ))}
           </div>
@@ -1249,7 +1249,7 @@ export default function POS() {
             <button
               key={t.id}
               onClick={() => setOrderType(t.id)}
-              className={`py-2 rounded-xl text-xs font-semibold ${orderType === t.id ? "bg-amber-600 text-white" : "bg-slate-100 dark:bg-slate-900"}`}
+              className={`py-2 rounded-xl text-xs font-semibold ${orderType === t.id ? "bg-accent-600 text-white" : "bg-slate-100 dark:bg-slate-900"}`}
             >
               {t.label}
             </button>
@@ -1366,7 +1366,7 @@ export default function POS() {
                                 [l.id]: !prev[l.id],
                               }))
                             }
-                            className="ml-1 text-amber-600 dark:text-amber-400 font-medium whitespace-nowrap"
+                            className="ml-1 text-accent-600 dark:text-accent-400 font-medium whitespace-nowrap"
                           >
                             {isExpanded ? "see less" : "see more...)"}
                           </button>
@@ -1527,9 +1527,9 @@ export default function POS() {
           </div>
           <div className="flex justify-between gap-3 text-lg font-extrabold pt-1">
             <span>Total</span>
-            <span className="text-right text-amber-600 dark:text-amber-400">
+            <span className="text-right text-accent-600 dark:text-accent-400">
               <span className="block">{formatPriceWithUSD(total).riel}</span>
-              <span className="block text-xs font-medium text-amber-500/70">
+              <span className="block text-xs font-medium text-accent-500/70">
                 {formatPriceWithUSD(total).usd}
               </span>
             </span>
@@ -1552,7 +1552,7 @@ export default function POS() {
           <button
             disabled={!canCharge}
             onClick={() => setPayOpen(true)}
-            className="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-lg transition-all"
+            className="flex-1 py-3 rounded-xl bg-accent-600 hover:bg-accent-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-lg transition-all"
           >
             Charge {formatPriceWithUSD(total).riel} (
             {formatPriceWithUSD(total).usd})
@@ -1594,10 +1594,10 @@ export default function POS() {
                     addToCart(sizePick, o, customizations[sizePick.id] || {});
                     setSizePick(null);
                   }}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20 font-semibold transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-accent-500 hover:bg-accent-50 dark:hover:bg-accent-950/20 font-semibold transition-colors"
                 >
                   <span>{o.label}</span>
-                  <span className="text-amber-600 dark:text-amber-400">
+                  <span className="text-accent-600 dark:text-accent-400">
                     {/* {money(o.unit)}
                     {Number(sizePick.discount_percent) > 0 && (
                       <span className="ml-2 text-xs font-normal line-through text-slate-400">
@@ -1629,13 +1629,13 @@ export default function POS() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            {/* <p className="text-3xl font-extrabold text-center text-amber-600 dark:text-amber-400">
+            {/* <p className="text-3xl font-extrabold text-center text-accent-600 dark:text-accent-400">
               {money(total)}
             </p> */}
             {/* // payment window: the big total */}
-            <p className="text-3xl font-extrabold text-center text-amber-600 dark:text-amber-400">
+            <p className="text-3xl font-extrabold text-center text-accent-600 dark:text-accent-400">
               {formatPriceWithUSD(total).riel}
-              <span className="block text-sm font-medium text-amber-500/70">
+              <span className="block text-sm font-medium text-accent-500/70">
                 {formatPriceWithUSD(total).usd}
               </span>
             </p>
@@ -1651,7 +1651,7 @@ export default function POS() {
                   onClick={() => setMethod(id)}
                   className={`py-3 rounded-xl border text-sm font-semibold flex flex-col items-center gap-1 ${
                     method === id
-                      ? "border-amber-600 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300"
+                      ? "border-accent-600 bg-accent-50 dark:bg-accent-950/30 text-accent-700 dark:text-accent-300"
                       : "border-slate-200 dark:border-slate-700"
                   }`}
                 >

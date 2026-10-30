@@ -7,12 +7,16 @@ import {
   X,
   SlidersHorizontal,
   RotateCcw,
+  GripVertical,
+  ArrowUpDown,
+  ArrowDownAZ,
 } from "lucide-react";
 import {
   sugarLevelService,
   levelsOptionsService,
   assetUrl,
 } from "../../services/api";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 import ImageUpload from "./ImageUpload";
 import ImageLightbox from "./ImageLightbox";
 import CustomSelect from "./CustomSelect";
@@ -22,7 +26,6 @@ import {
   I18nInput,
   useList,
   asList,
-  tr,
   cleanI18n,
   bySort,
   fmtDate,
@@ -73,8 +76,8 @@ function Chip({ active, onClick, children }) {
       onClick={onClick}
       className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
         active
-          ? "bg-amber-600 border-amber-600 text-white"
-          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-500"
+          ? "bg-accent-600 border-accent-600 text-white"
+          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-accent-500"
       }`}
     >
       {children}
@@ -93,7 +96,7 @@ function Toggle({ checked, onChange, disabled, label }) {
       title={label}
       disabled={disabled}
       onClick={onChange}
-      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 disabled:opacity-50 disabled:cursor-wait ${
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/50 disabled:opacity-50 disabled:cursor-wait ${
         checked ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"
       }`}
     >
@@ -105,6 +108,36 @@ function Toggle({ checked, onChange, disabled, label }) {
     </button>
   );
 }
+
+/* ---------- Translation helpers ---------- */
+
+// Turns whatever the database returned into a {en, km, ...} object.
+// Handles real objects, JSON strings like '{"en":"","km":""}', and plain strings.
+const parseI18n = (v) => {
+  if (!v) return {};
+  if (typeof v === "string") {
+    try {
+      const p = JSON.parse(v);
+      return p && typeof p === "object" ? p : { en: v };
+    } catch {
+      return { en: v };
+    }
+  }
+  return typeof v === "object" ? v : { en: String(v) };
+};
+
+// true when at least one language has text
+const hasAnyText = (o) =>
+  Object.values(parseI18n(o)).some((v) => String(v ?? "").trim());
+
+// first non-empty text of an i18n object (English first)
+const firstText = (o) => {
+  const obj = parseI18n(o);
+  return (
+    String(obj.en ?? "").trim() ||
+    String(Object.values(obj).find((v) => String(v ?? "").trim()) ?? "").trim()
+  );
+};
 
 /* ---------- Pieces used by the "View" modal ---------- */
 const LANG_LABELS = {
@@ -119,7 +152,7 @@ const fmtDateTime = (v) => (v ? new Date(v).toLocaleString() : "—");
 
 // all translations of one text, English first
 function TextByLang({ value }) {
-  const entries = Object.entries(value || {})
+  const entries = Object.entries(parseI18n(value))
     .filter(([, text]) => text)
     .sort(([a], [b]) =>
       a === "en" ? -1 : b === "en" ? 1 : a.localeCompare(b),
@@ -159,7 +192,7 @@ function LevelTag({ id, names }) {
     return <span className="text-slate-400">—</span>;
   const n = Number(id);
   return names.has(n) ? (
-    <span className="px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+    <span className="px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap bg-accent-100 text-accent-800 dark:bg-accent-950/40 dark:text-accent-300">
       {names.get(n)}
     </span>
   ) : (
@@ -184,8 +217,8 @@ const NO_IMAGE_CHANGE = { file: null, remove: false };
 
 // the form values for an existing sugar level (used when opening Edit and for the "nothing changed" check)
 const formFromLevel = (l) => ({
-  name: l.name || {},
-  description: l.description || {},
+  name: parseI18n(l.name),
+  description: parseI18n(l.description),
   levels_options_id: l.levels_options_id ?? "",
   status: l.status,
   sort_num: l.sort_num ?? 0,
@@ -194,7 +227,9 @@ const formFromLevel = (l) => ({
 // comparable version of a form: same value -> same text (ignores key order and extra spaces)
 const stableTexts = (o) =>
   Object.fromEntries(
-    Object.entries(cleanI18n(o)).sort(([a], [b]) => a.localeCompare(b)),
+    Object.entries(cleanI18n(parseI18n(o))).sort(([a], [b]) =>
+      a.localeCompare(b),
+    ),
   );
 const numOrNull = (v) =>
   v === "" || v === null || v === undefined ? null : Number(v);
@@ -208,6 +243,21 @@ const fingerprint = (f) =>
   });
 
 export default function SugarLevelManager() {
+  const { language, t } = useLanguage();
+
+  // text of an i18n value in the current language (falls back to English, then any language)
+  const getLocalizedValue = (value) => {
+    if (!value) return "";
+    const obj = parseI18n(value);
+    return (
+      obj[language] ||
+      obj.en ||
+      obj.km ||
+      Object.values(obj).find(Boolean) ||
+      ""
+    );
+  };
+
   const {
     list: levels,
     loading,
@@ -230,6 +280,20 @@ export default function SugarLevelManager() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10); // 10 | 20 | 30 | 40 | 50 | 100 | "all"
   const [togglingId, setTogglingId] = useState(null); // sugar level whose status switch is saving
+
+  // order modal
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [orderItems, setOrderItems] = useState([]);
+  const [draggedId, setDraggedId] = useState(null);
+  const [orderSaving, setOrderSaving] = useState(false);
+
+  // sort menu
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [sortMode, setSortMode] = useState("default");
+
+  // delete confirmation
+  const [deleting, setDeleting] = useState(null);
+  const [deletingLoading, setDeletingLoading] = useState(false);
 
   // ALL alerts are shown on the page, between the search/filters and the table
   const [notice, setNotice] = useState(null); // { id, type, title, message, returnToForm }
@@ -279,10 +343,10 @@ export default function SugarLevelManager() {
     return () => window.removeEventListener("keydown", onKey);
   }, [viewing]);
 
-  // search / filters / page size changed -> start again from page 1
+  // search / filters / page size / sort changed -> start again from page 1
   useEffect(() => {
     setPage(1);
-  }, [query, statusFilter, optionFilter, pageSize]);
+  }, [query, statusFilter, optionFilter, pageSize, sortMode]);
 
   const loadLookups = () =>
     levelsOptionsService
@@ -294,9 +358,11 @@ export default function SugarLevelManager() {
     loadLookups();
   }, []);
 
+  // rebuilt when the language changes so the tag names switch language too
   const optionName = useMemo(
-    () => new Map(levelOptions.map((o) => [o.id, tr(o.name)])),
-    [levelOptions],
+    () => new Map(levelOptions.map((o) => [o.id, getLocalizedValue(o.name)])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [levelOptions, language],
   );
 
   const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -332,10 +398,12 @@ export default function SugarLevelManager() {
       });
     };
 
-    if (!form.name.en?.trim()) return warn("The English name is required.");
+    // a name in at least one language is enough (English is not forced)
+    if (!hasAnyText(form.name))
+      return warn("Enter the name in at least one language.");
 
     const isNew = editing === "new";
-    const itemName = form.name.en.trim();
+    const itemName = firstText(form.name);
 
     // editing but nothing was touched (no field changed, no image chosen/removed)
     if (!isNew) {
@@ -356,8 +424,11 @@ export default function SugarLevelManager() {
     try {
       // multipart form: text fields + the image file (server makes img + thumbnail from it)
       const fd = new FormData();
-      fd.append("name", JSON.stringify(cleanI18n(form.name)));
-      fd.append("description", JSON.stringify(cleanI18n(form.description)));
+      fd.append("name", JSON.stringify(cleanI18n(parseI18n(form.name))));
+      fd.append(
+        "description",
+        JSON.stringify(cleanI18n(parseI18n(form.description))),
+      );
       fd.append("levels_options_id", String(form.levels_options_id)); // "" = not linked
       fd.append("status", String(Number(form.status)));
       fd.append("sort_num", String(Number(form.sort_num) || 0));
@@ -404,8 +475,8 @@ export default function SugarLevelManager() {
         "success",
         "Sugar level updated",
         next === 1
-          ? `"${tr(l.name)}" was updated successfully. It is now active.`
-          : `"${tr(l.name)}" was updated successfully. It is now hidden.`,
+          ? `"${getLocalizedValue(l.name)}" was updated successfully. It is now active.`
+          : `"${getLocalizedValue(l.name)}" was updated successfully. It is now hidden.`,
       );
     } catch (err) {
       notify(
@@ -433,34 +504,80 @@ export default function SugarLevelManager() {
     }
   };
 
-  const handleDelete = async (l) => {
-    if (!window.confirm(`Delete sugar level "${tr(l.name)}"?`)) return;
+  /* ---------- delete (with confirmation modal) ---------- */
+  const handleDelete = (l) => {
+    setDeleting(l);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting || deletingLoading) return;
+
+    const item = deleting;
+    setDeletingLoading(true);
+
     try {
-      await sugarLevelService.remove(l.id);
+      await sugarLevelService.remove(item.id);
+      setDeleting(null);
       await reload();
       notify(
         "success",
         "Sugar level deleted",
-        `"${tr(l.name)}" was deleted successfully.`,
+        `"${getLocalizedValue(item.name)}" was deleted successfully.`,
       );
     } catch (err) {
+      setDeleting(null);
       notify(
         "error",
         "Failed to delete the sugar level",
         err.message || "Something went wrong. Please try again.",
       );
+    } finally {
+      setDeletingLoading(false);
     }
   };
 
-  const activeFilters =
-    (statusFilter !== "all") + (optionFilter !== "all");
+  const activeFilters = (statusFilter !== "all") + (optionFilter !== "all");
   const clearFilters = () => {
     setStatusFilter("all");
     setOptionFilter("all");
   };
   const countBy = (fn) => levels.filter(fn).length;
 
-  const shown = [...levels].sort(bySort).filter((l) => {
+  /* ---------- sort ---------- */
+  const sortedLevels = [...levels].sort((a, b) => {
+    switch (sortMode) {
+      case "name_asc":
+        return getLocalizedValue(a.name).localeCompare(
+          getLocalizedValue(b.name),
+          language,
+          { sensitivity: "base", numeric: true },
+        );
+
+      case "name_desc":
+        return getLocalizedValue(b.name).localeCompare(
+          getLocalizedValue(a.name),
+          language,
+          { sensitivity: "base", numeric: true },
+        );
+
+      case "date_newest":
+        return (
+          new Date(b.created_at || 0).getTime() -
+          new Date(a.created_at || 0).getTime()
+        );
+
+      case "date_oldest":
+        return (
+          new Date(a.created_at || 0).getTime() -
+          new Date(b.created_at || 0).getTime()
+        );
+
+      default:
+        return bySort(a, b);
+    }
+  });
+
+  const shown = sortedLevels.filter((l) => {
     if (statusFilter !== "all" && Number(l.status) !== statusFilter)
       return false;
     if (
@@ -468,7 +585,7 @@ export default function SugarLevelManager() {
       Number(l.levels_options_id) !== optionFilter
     )
       return false;
-    return Object.values(l.name || {})
+    return Object.values(parseI18n(l.name))
       .join(" ")
       .toLowerCase()
       .includes(query.toLowerCase());
@@ -491,28 +608,126 @@ export default function SugarLevelManager() {
     { value: "", label: "None" },
     ...[...levelOptions].sort(bySort).map((o) => ({
       value: o.id,
-      label: tr(o.name) + (Number(o.status) === 1 ? "" : " (hidden)"),
+      label:
+        getLocalizedValue(o.name) + (Number(o.status) === 1 ? "" : " (hidden)"),
     })),
     ...(chosenOptionId !== null && !optionName.has(chosenOptionId)
       ? [{ value: chosenOptionId, label: `#${chosenOptionId} (deleted)` }]
       : []),
   ];
 
+  /* ---------- order modal ---------- */
+  const openOrderModal = () => {
+    // Start with the current database order, not the filtered results.
+    setOrderItems([...levels].sort(bySort));
+    setDraggedId(null);
+    setShowOrderModal(true);
+  };
+
+  const handleOrderDragStart = (e, id) => {
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(id));
+  };
+
+  const handleOrderDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleOrderDrop = (e, targetId) => {
+    e.preventDefault();
+
+    const sourceId = draggedId ?? e.dataTransfer.getData("text/plain");
+
+    if (
+      sourceId === "" ||
+      sourceId === null ||
+      String(sourceId) === String(targetId)
+    ) {
+      setDraggedId(null);
+      return;
+    }
+
+    setOrderItems((current) => {
+      const updated = [...current];
+      const fromIndex = updated.findIndex(
+        (item) => String(item.id) === String(sourceId),
+      );
+      const toIndex = updated.findIndex(
+        (item) => String(item.id) === String(targetId),
+      );
+      if (fromIndex === -1 || toIndex === -1) return current;
+
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return updated;
+    });
+
+    setDraggedId(null);
+  };
+
+  const saveOrder = async () => {
+    if (orderSaving) return;
+    setOrderSaving(true);
+
+    try {
+      // Save each sugar level's new position using the existing update API.
+      for (let index = 0; index < orderItems.length; index++) {
+        const item = orderItems[index];
+        const fd = new FormData();
+
+        // Keep ALL existing data (original i18n objects, NOT the translated string) and change only sort_num.
+        fd.append("name", JSON.stringify(cleanI18n(parseI18n(item.name))));
+        fd.append(
+          "description",
+          JSON.stringify(cleanI18n(parseI18n(item.description))),
+        );
+        // the link to the levels option must be sent too, or the update could clear it
+        fd.append("levels_options_id", String(item.levels_options_id ?? ""));
+        fd.append("status", String(Number(item.status)));
+        fd.append("sort_num", String(index + 1));
+
+        await sugarLevelService.update(item.id, fd);
+      }
+
+      setShowOrderModal(false);
+      await reload();
+
+      notify(
+        "success",
+        "Order saved",
+        "The sugar levels display order has been updated successfully.",
+      );
+    } catch (err) {
+      console.error("Failed to save sugar level order:", err);
+      notify(
+        "error",
+        "Failed to save order",
+        err.message || "Could not save the order. Please try again.",
+      );
+      // Reload because some items might already have been updated.
+      await reload();
+    } finally {
+      setOrderSaving(false);
+    }
+  };
+
   // content of the lightbox "Info" popup (dark style, because the lightbox is dark)
   const lightboxInfo = viewing ? (
     <div className="space-y-3 text-sm">
       <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-500">
+        <span className="text-xs font-bold uppercase tracking-wider text-accent-500">
           Name
         </span>
-        <p className="mt-1 font-medium">{tr(viewing.name)}</p>
+        <p className="mt-1 font-medium">{getLocalizedValue(viewing.name)}</p>
       </div>
       <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-amber-500">
+        <span className="text-xs font-bold uppercase tracking-wider text-accent-500">
           Description
         </span>
         <p className="mt-1 text-slate-300 text-xs leading-relaxed">
-          {tr(viewing.description) || "No description provided."}
+          {getLocalizedValue(viewing.description) || "No description provided."}
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
@@ -531,6 +746,27 @@ export default function SugarLevelManager() {
       </div>
     </div>
   ) : null;
+
+  // one row of the sort menu
+  const sortOption = ([value, label]) => (
+    <button
+      key={value}
+      type="button"
+      onClick={() => {
+        setSortMode(value);
+        setShowSortMenu(false);
+        setPage(1);
+      }}
+      className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+        sortMode === value
+          ? "bg-accent-50 font-semibold text-accent-700 dark:bg-accent-950/30 dark:text-accent-400"
+          : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+      }`}
+    >
+      {label}
+      {sortMode === value && <span className="float-right">✓</span>}
+    </button>
+  );
 
   return (
     <div className="space-y-6">
@@ -564,7 +800,7 @@ export default function SugarLevelManager() {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 disabled:opacity-60 transition-colors"
+            className="px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 disabled:opacity-60 transition-colors"
           >
             <RotateCcw
               className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
@@ -573,7 +809,7 @@ export default function SugarLevelManager() {
           </button>
           <button
             onClick={openNew}
-            className="px-4 py-2 text-sm font-semibold rounded-xl bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-2 transition-colors shadow-sm"
+            className="px-4 py-2 text-sm font-semibold rounded-xl bg-accent-600 hover:bg-accent-700 text-white flex items-center gap-2 transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" /> Add sugar level
           </button>
@@ -591,15 +827,87 @@ export default function SugarLevelManager() {
           type="button"
           onClick={() => setShowFilters((v) => !v)}
           aria-expanded={showFilters}
-          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500 transition-colors"
+          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 transition-colors"
         >
           <SlidersHorizontal className="w-4 h-4" />
           {showFilters ? "Hide Filters" : "Show Filters"}
           {activeFilters > 0 && (
-            <span className="px-1.5 rounded-full bg-amber-600 text-white text-xs leading-5">
+            <span className="px-1.5 rounded-full bg-accent-600 text-white text-xs leading-5">
               {activeFilters}
             </span>
           )}
+        </button>
+
+        {/* Sort */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowSortMenu((v) => !v)}
+            aria-expanded={showSortMenu}
+            className={`px-4 py-2 text-sm font-medium rounded-xl border flex items-center gap-2 transition-colors ${
+              sortMode !== "default"
+                ? "border-accent-500 text-accent-600"
+                : "border-slate-300 dark:border-slate-700 hover:border-accent-500"
+            }`}
+          >
+            <ArrowDownAZ className="h-4 w-4" />
+            Sort
+          </button>
+
+          {showSortMenu && (
+            <>
+              <button
+                type="button"
+                aria-label="Close sort menu"
+                className="fixed inset-0 z-10 cursor-default"
+                onClick={() => setShowSortMenu(false)}
+              />
+
+              <div className="absolute left-0 top-full z-20 mt-2 w-60 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                <p className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Sort by Name
+                </p>
+                {[
+                  ["name_asc", "Name: A–Z"],
+                  ["name_desc", "Name: Z–A"],
+                ].map(sortOption)}
+
+                <div className="my-2 border-t border-slate-200 dark:border-slate-700" />
+
+                <p className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Sort by Date Created
+                </p>
+                {[
+                  ["date_newest", "Newest first"],
+                  ["date_oldest", "Oldest first"],
+                ].map(sortOption)}
+
+                <div className="my-2 border-t border-slate-200 dark:border-slate-700" />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSortMode("default");
+                    setShowSortMenu(false);
+                    setPage(1);
+                  }}
+                  className="w-full rounded-lg px-3 py-2 text-left text-sm text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  Reset to default order
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Order */}
+        <button
+          type="button"
+          onClick={openOrderModal}
+          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 hover:text-accent-600 transition-colors"
+        >
+          <ArrowUpDown className="w-4 h-4" />
+          Order
         </button>
       </div>
 
@@ -614,7 +922,7 @@ export default function SugarLevelManager() {
                 active={optionFilter === "all"}
                 onClick={() => setOptionFilter("all")}
               >
-                All
+                {t("all")}
               </Chip>
               {levelOptions.map((o) => (
                 <Chip
@@ -622,7 +930,7 @@ export default function SugarLevelManager() {
                   active={optionFilter === o.id}
                   onClick={() => setOptionFilter(o.id)}
                 >
-                  {tr(o.name)} (
+                  {getLocalizedValue(o.name)} (
                   {countBy((l) => Number(l.levels_options_id) === o.id)})
                 </Chip>
               ))}
@@ -636,19 +944,19 @@ export default function SugarLevelManager() {
                 active={statusFilter === "all"}
                 onClick={() => setStatusFilter("all")}
               >
-                All
+                {t("all")}
               </Chip>
               <Chip
                 active={statusFilter === 1}
                 onClick={() => setStatusFilter(1)}
               >
-                Active ({countBy((l) => Number(l.status) === 1)})
+                {t("active")} ({countBy((l) => Number(l.status) === 1)})
               </Chip>
               <Chip
                 active={statusFilter === 0}
                 onClick={() => setStatusFilter(0)}
               >
-                Hidden ({countBy((l) => Number(l.status) === 0)})
+                {t("hidden")} ({countBy((l) => Number(l.status) === 0)})
               </Chip>
             </div>
           </div>
@@ -657,9 +965,9 @@ export default function SugarLevelManager() {
             <button
               type="button"
               onClick={clearFilters}
-              className="text-sm text-amber-600 font-medium underline"
+              className="text-sm text-accent-600 font-medium underline"
             >
-              Clear filters
+              {t("clear_filters")}
             </button>
           )}
         </div>
@@ -756,11 +1064,13 @@ export default function SugarLevelManager() {
                             Img
                           </div>
                         )}
-                        <span className="font-semibold">{tr(l.name)}</span>
+                        <span className="font-semibold">
+                          {getLocalizedValue(l.name)}
+                        </span>
                       </div>
                     </td>
                     <td className="p-4 text-slate-500 truncate max-w-xs">
-                      {tr(l.description) || "—"}
+                      {getLocalizedValue(l.description) || "—"}
                     </td>
                     <td className="p-4">
                       <LevelTag id={l.levels_options_id} names={optionName} />
@@ -887,7 +1197,9 @@ export default function SugarLevelManager() {
                 )}
 
                 <div className="flex items-start justify-between gap-3">
-                  <h4 className="text-xl font-extrabold">{tr(viewing.name)}</h4>
+                  <h4 className="text-xl font-extrabold">
+                    {getLocalizedValue(viewing.name)}
+                  </h4>
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
                       Number(viewing.status) === 1
@@ -900,14 +1212,14 @@ export default function SugarLevelManager() {
                 </div>
 
                 <section className="space-y-2">
-                  <h5 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                  <h5 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                     Name
                   </h5>
                   <TextByLang value={viewing.name} />
                 </section>
 
                 <section className="space-y-2">
-                  <h5 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                  <h5 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                     Description
                   </h5>
                   <TextByLang value={viewing.description} />
@@ -945,7 +1257,7 @@ export default function SugarLevelManager() {
                     closeView();
                     openEdit(l);
                   }}
-                  className="py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
+                  className="py-2.5 rounded-xl bg-accent-600 hover:bg-accent-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
                 >
                   <Pencil className="w-4 h-4" /> Edit
                 </button>
@@ -957,8 +1269,8 @@ export default function SugarLevelManager() {
           {lightboxOpen && viewing.img && (
             <ImageLightbox
               src={assetUrl(viewing.img)}
-              alt={tr(viewing.name)}
-              title={tr(viewing.name)}
+              alt={getLocalizedValue(viewing.name)}
+              title={getLocalizedValue(viewing.name)}
               info={lightboxInfo}
               infoTitle="Sugar level details"
               onClose={() => setLightboxOpen(false)}
@@ -995,7 +1307,7 @@ export default function SugarLevelManager() {
             {/* Scrollable Content Container */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               <section className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Image
                 </h4>
                 <ImageUpload
@@ -1007,7 +1319,7 @@ export default function SugarLevelManager() {
               </section>
 
               <section className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Name &amp; description (all languages)
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
@@ -1034,7 +1346,7 @@ export default function SugarLevelManager() {
               </section>
 
               <section className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">
                   Display
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1086,13 +1398,236 @@ export default function SugarLevelManager() {
                 </button>
                 <button
                   disabled={saving}
-                  className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold transition-colors text-center shadow-sm"
+                  className="w-full py-2.5 rounded-xl bg-accent-600 hover:bg-accent-700 disabled:opacity-50 text-white font-semibold transition-colors text-center shadow-sm"
                 >
                   {saving ? "Saving..." : "Save sugar level"}
                 </button>
               </div>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ===== DELETE CONFIRMATION MODAL ===== */}
+      {deleting && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => {
+            if (!deletingLoading) setDeleting(null);
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-modal-title"
+            aria-describedby="delete-modal-description"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+          >
+            {/* Icon + Heading */}
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400">
+                <Trash2 className="h-6 w-6" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h3
+                  id="delete-modal-title"
+                  className="text-lg font-bold text-slate-900 dark:text-white"
+                >
+                  Delete sugar level?
+                </h3>
+
+                <p
+                  id="delete-modal-description"
+                  className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400"
+                >
+                  Are you sure you want to delete{" "}
+                  <span className="font-semibold text-slate-900 dark:text-slate-200">
+                    "{getLocalizedValue(deleting.name)}"
+                  </span>
+                  ? This action cannot be undone.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setDeleting(null)}
+                disabled={deletingLoading}
+                aria-label="Close delete confirmation"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Actions */}
+            <div className="mt-7 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleting(null)}
+                disabled={deletingLoading}
+                className="rounded-xl border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deletingLoading}
+                className="flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deletingLoading ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== SUGAR LEVEL ORDER MODAL ===== */}
+      {showOrderModal && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => {
+            if (!orderSaving) setShowOrderModal(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sugar-order-title"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between gap-4 border-b border-slate-200 p-5 dark:border-slate-800">
+              <div>
+                <h2
+                  id="sugar-order-title"
+                  className="text-xl font-bold text-slate-900 dark:text-white"
+                >
+                  Arrange Sugar Level Order
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Drag sugar levels to change their display order.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowOrderModal(false)}
+                disabled={orderSaving}
+                aria-label="Close order modal"
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Instructions */}
+            <div className="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950/40">
+              <span className="font-semibold">Top = first displayed.</span> Drag
+              a row using its handle. Save your changes when finished.
+            </div>
+
+            {/* Draggable list */}
+            <div className="flex-1 space-y-2 overflow-y-auto p-4">
+              {orderItems.length === 0 ? (
+                <div className="py-10 text-center text-sm text-slate-500">
+                  No sugar levels available to arrange.
+                </div>
+              ) : (
+                orderItems.map((item, index) => {
+                  const isDragging = String(draggedId) === String(item.id);
+
+                  return (
+                    <div
+                      key={item.id}
+                      draggable={!orderSaving}
+                      onDragStart={(e) => handleOrderDragStart(e, item.id)}
+                      onDragOver={handleOrderDragOver}
+                      onDrop={(e) => handleOrderDrop(e, item.id)}
+                      onDragEnd={() => setDraggedId(null)}
+                      className={`flex items-center gap-3 rounded-xl border p-3 transition-colors ${
+                        isDragging
+                          ? "border-accent-500 bg-accent-50 opacity-50 dark:bg-accent-950/20"
+                          : "border-slate-200 bg-white hover:border-accent-300 dark:border-slate-700 dark:bg-slate-900"
+                      } ${
+                        orderSaving
+                          ? "cursor-wait"
+                          : "cursor-grab active:cursor-grabbing"
+                      }`}
+                    >
+                      <GripVertical className="h-5 w-5 shrink-0 text-slate-400" />
+
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        {index + 1}
+                      </span>
+
+                      {item.img ? (
+                        <img
+                          src={assetUrl(item.img)}
+                          alt=""
+                          className="h-12 w-12 shrink-0 rounded-lg border border-slate-200 object-cover dark:border-slate-700"
+                        />
+                      ) : (
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs text-slate-400 dark:bg-slate-800">
+                          No img
+                        </div>
+                      )}
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                          {getLocalizedValue(item.name) ||
+                            "Unnamed sugar level"}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Current sort number: {item.sort_num ?? 0}
+                        </p>
+                      </div>
+
+                      <span className="shrink-0 text-xs font-medium text-slate-400">
+                        #{index + 1}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-200 p-5 sm:flex-row sm:justify-end dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowOrderModal(false)}
+                disabled={orderSaving}
+                className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={saveOrder}
+                disabled={orderSaving || orderItems.length === 0}
+                className="flex items-center justify-center gap-2 rounded-xl bg-accent-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {orderSaving ? (
+                  <>
+                    <RotateCcw className="h-4 w-4 animate-spin" />
+                    Saving Order...
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpDown className="h-4 w-4" />
+                    Save Order
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

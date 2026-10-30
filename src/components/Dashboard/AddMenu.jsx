@@ -16,8 +16,8 @@ function Chip({ active, onClick, children }) {
       onClick={onClick}
       className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
         active
-          ? "bg-amber-600 border-amber-600 text-white"
-          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-500"
+          ? "bg-accent-600 border-accent-600 text-white"
+          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-accent-500"
       }`}
     >
       {children}
@@ -187,12 +187,12 @@ export default function AddMenu() {
           type="button"
           onClick={() => setShowFilters((v) => !v)}
           aria-expanded={showFilters}
-          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-amber-500"
+          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500"
         >
           <SlidersHorizontal className="w-4 h-4" />
           {showFilters ? "Hide Filters" : "Show Filters"}
           {activeFilters > 0 && (
-            <span className="px-1.5 rounded-full bg-amber-600 text-white text-xs leading-5">{activeFilters}</span>
+            <span className="px-1.5 rounded-full bg-accent-600 text-white text-xs leading-5">{activeFilters}</span>
           )}
         </button>
       </div>
@@ -237,7 +237,7 @@ export default function AddMenu() {
           </div>
 
           {activeFilters > 0 && (
-            <button type="button" onClick={clearFilters} className="text-sm text-amber-600 font-medium underline">
+            <button type="button" onClick={clearFilters} className="text-sm text-accent-600 font-medium underline">
               Clear filters
             </button>
           )}
@@ -311,14 +311,14 @@ export default function AddMenu() {
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <h3 className="text-lg font-bold">{editing === "new" ? "Add menu item" : `Edit item: ${tr(editing.name)}`}</h3>
             {editing !== "new" && (
-              <button type="button" onClick={close} className="text-xs text-amber-600 font-semibold hover:underline">
+              <button type="button" onClick={close} className="text-xs text-accent-600 font-semibold hover:underline">
                 Cancel editing (Back to Add New)
               </button>
             )}
           </div>
 
           <section className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">Image</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">Image</h4>
             <ImageUpload
               key={editing === "new" ? "new" : editing.id}
               label="Image"
@@ -328,7 +328,7 @@ export default function AddMenu() {
           </section>
 
           <section className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">Name &amp; description (all languages)</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">Name &amp; description (all languages)</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <I18nInput expanded required label="Name" value={form.name} onChange={(v) => setField("name", v)} placeholder="e.g. Iced Latte" />
               <I18nInput expanded multiline label="Description" value={form.description} onChange={(v) => setField("description", v)} />
@@ -336,7 +336,7 @@ export default function AddMenu() {
           </section>
 
           <section className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">Classification</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">Classification</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="text-sm text-slate-600 dark:text-slate-400">
                 Category *
@@ -356,7 +356,7 @@ export default function AddMenu() {
           </section>
 
           <section className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">Pricing</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">Pricing</h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <label className="text-sm text-slate-600 dark:text-slate-400">
                 Price *
@@ -374,7 +374,7 @@ export default function AddMenu() {
           </section>
 
           <section className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-600">Display</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-accent-600">Display</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="text-sm text-slate-600 dark:text-slate-400">
                 Status
@@ -396,7 +396,7 @@ export default function AddMenu() {
                 Cancel
               </button>
             )}
-            <button disabled={saving} className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold">
+            <button disabled={saving} className="flex-1 py-2.5 rounded-xl bg-accent-600 hover:bg-accent-700 disabled:opacity-50 text-white font-semibold">
               {saving ? "Saving..." : editing === "new" ? "Save new item" : "Update item"}
             </button>
           </div>
