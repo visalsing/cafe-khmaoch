@@ -1,120 +1,124 @@
 import React, { useMemo, useState } from "react";
-import { BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Bar } from "recharts";
-import { money, round2 } from "../../utils/orderCalc";
-import { activeOrders, dayKey, daysAgo, sumTotal } from "./dashboardUtils";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { dual } from "../../utils/currency";
+import { compactKHR, dayLabel, formatChange, pctChange } from "../../utils/dashboardFormat";
+import ChartCard, { TipBox } from "./ChartCard.jsx";
 
-function RevenueChart({ orders = [] }) {
-  const [hoveredBar, setHoveredBar] = useState(null);
-  const [range, setRange] = useState("7d");
+function Tip({ active, payload, label, metric }) {
+  if (!active || !payload?.length) return null;
+  const pos = Number(payload.find((p) => p.dataKey === "pos")?.value) || 0;
+  const online = Number(payload.find((p) => p.dataKey === "online")?.value) || 0;
+  const show = (v) => {
+    if (metric !== "sales") return String(v);
+    const d = dual(v);
+    return `${d.riel} (${d.usd})`;
+  };
+  return (
+    <TipBox title={dayLabel(label)}>
+      <p className="text-amber-600">Counter: {show(pos)}</p>
+      <p className="text-sky-600">Online: {show(online)}</p>
+      <p className="mt-1 border-t border-slate-100 pt-1 font-semibold text-slate-800 dark:border-slate-700 dark:text-white">
+        Total: {show(pos + online)}
+      </p>
+    </TipBox>
+  );
+}
 
-  const data = useMemo(() => {
-    const days = range === "7d" ? 7 : 30;
-    const map = {};
-    for (let i = days - 1; i >= 0; i--) map[dayKey(daysAgo(i))] = { pos: 0, online: 0 };
+export default function RevenueChart({ trend = [], totals, range = 7 }) {
+  const [metric, setMetric] = useState("sales"); // "sales" | "orders"
+  const isSales = metric === "sales";
 
-    activeOrders(orders).forEach((o) => {
-      const k = dayKey(o.createdAt);
-      if (!map[k]) return;
-      const key = o.source === "online" ? "online" : "pos";
-      map[k][key] = round2(map[k][key] + o.total);
-    });
+  const data = useMemo(
+    () =>
+      trend.map((d) =>
+        isSales
+          ? { day: d.day, pos: d.posSales, online: d.onlineSales }
+          : { day: d.day, pos: d.posOrders, online: d.onlineOrders },
+      ),
+    [trend, isSales],
+  );
 
-    return Object.entries(map).map(([k, v]) => ({ label: k.slice(5), ...v })); // "MM-DD"
-  }, [orders, range]);
-
-  const total = round2(data.reduce((s, d) => s + d.pos + d.online, 0));
+  const current = (isSales ? totals?.sales : totals?.orders) || 0;
+  const previous = (isSales ? totals?.prevSales : totals?.prevOrders) || 0;
+  const change = pctChange(current, previous);
+  const up = change === null || change >= 0;
+  const empty = data.every((d) => d.pos + d.online === 0);
+  const amount = dual(current);
 
   return (
-    <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/50 dark:border-slate-700/50 p-6 shadow-xl transition-all duration-300">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-        <div>
-          <h3 className="text-xl font-bold text-slate-800 dark:text-white">Sales Overview</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            {money(total)} in the last {range === "7d" ? "7" : "30"} days
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-gradient-to-r from-amber-500 to-orange-600 rounded-full" />
-            <span className="text-sm text-slate-600 dark:text-slate-400">POS</span>
+    <ChartCard
+      title="Sales Overview"
+      subtitle={
+        <span className="inline-flex flex-wrap items-center gap-x-2">
+          <span>
+            {isSales ? `${amount.riel} ${amount.usd}` : `${current} orders`} in the last {range} days
+          </span>
+          <span className="inline-flex items-center gap-1">
+            {up ? <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" /> : <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />}
+            <span className={`font-semibold ${up ? "text-emerald-500" : "text-red-500"}`}>{formatChange(change)}</span>
+            <span className="text-slate-400">vs previous {range} days</span>
+          </span>
+        </span>
+      }
+      right={
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-600" />
+            <span className="text-sm text-slate-600 dark:text-slate-400">Counter</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-gradient-to-r from-sky-400 to-blue-500 rounded-full" />
+          <div className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded-full bg-gradient-to-r from-sky-400 to-blue-500" />
             <span className="text-sm text-slate-600 dark:text-slate-400">Online</span>
           </div>
-          <div className="flex rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 text-xs font-semibold">
-            {["7d", "30d"].map((r) => (
+          <div className="flex overflow-hidden rounded-lg border border-slate-200 text-xs font-semibold dark:border-slate-700" role="group" aria-label="Metric">
+            {[
+              ["sales", "Sales"],
+              ["orders", "Orders"],
+            ].map(([id, label]) => (
               <button
-                key={r}
-                onClick={() => setRange(r)}
-                className={`px-3 py-1.5 ${range === r ? "bg-amber-600 text-white" : "bg-transparent text-slate-600 dark:text-slate-300"}`}
+                key={id}
+                type="button"
+                onClick={() => setMetric(id)}
+                aria-pressed={metric === id}
+                className={`px-3 py-1.5 ${metric === id ? "bg-amber-600 text-white" : "text-slate-600 dark:text-slate-300"}`}
               >
-                {r === "7d" ? "7 days" : "30 days"}
+                {label}
               </button>
             ))}
           </div>
         </div>
-      </div>
-
-      <div className="h-80">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 20, right: 30, left: 10, bottom: 5 }} onMouseLeave={() => setHoveredBar(null)}>
-            <defs>
-              <linearGradient id="posGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#f59e0b" />
-                <stop offset="100%" stopColor="#ea580c" />
-              </linearGradient>
-              <linearGradient id="onlineGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#38bdf8" />
-                <stop offset="100%" stopColor="#3b82f6" />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.3} vertical={false} />
-            <XAxis dataKey="label" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} interval={range === "30d" ? 3 : 0} />
-            <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "rgba(255, 255, 255, 0.95)",
-                border: "none",
-                borderRadius: "12px",
-                boxShadow: "0 10px 40px rgba(0, 0, 0, 0.1)",
-              }}
-              cursor={{ fill: "transparent" }}
-              formatter={(value, name) => [money(value), name]}
-            />
-            {/* POS bar keeps your lift + shadow hover effect */}
-            <Bar
-              dataKey="pos"
-              name="POS"
-              fill="url(#posGradient)"
-              radius={[4, 4, 0, 0]}
-              maxBarSize={32}
-              shape={(props) => {
-                const { x, y, width, height, fill, index } = props;
-                const isHovered = hoveredBar === index;
-                return (
-                  <rect
-                    x={x}
-                    y={isHovered ? y - 6 : y}
-                    width={width}
-                    height={isHovered ? height + 6 : height}
-                    rx={4}
-                    ry={4}
-                    fill={fill}
-                    filter={isHovered ? "drop-shadow(0px 8px 12px rgba(245, 158, 11, 0.4))" : "none"}
-                    opacity={hoveredBar === null || isHovered ? 1 : 0.35}
-                    style={{ transition: "all 0.25s ease-in-out", cursor: "pointer" }}
-                    onMouseEnter={() => setHoveredBar(index)}
-                  />
-                );
-              }}
-            />
-            <Bar dataKey="online" name="Online" fill="url(#onlineGradient)" radius={[4, 4, 0, 0]} maxBarSize={32} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
+      }
+    >
+      {empty ? (
+        <div className="flex h-72 flex-col items-center justify-center text-sm text-slate-400">
+          <div className="mb-2 text-4xl">☕</div>
+          {isSales ? "No paid sales in this period" : "No orders in this period"}
+        </div>
+      ) : (
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="revPos" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#f59e0b" />
+                  <stop offset="100%" stopColor="#ea580c" />
+                </linearGradient>
+                <linearGradient id="revOnline" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#38bdf8" />
+                  <stop offset="100%" stopColor="#3b82f6" />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.3} vertical={false} />
+              <XAxis dataKey="day" tickFormatter={dayLabel} stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={24} />
+              <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} width={56} allowDecimals={false} tickFormatter={isSales ? compactKHR : (v) => v} />
+              <Tooltip content={<Tip metric={metric} />} cursor={{ fill: "rgba(245, 158, 11, 0.08)" }} />
+              <Bar dataKey="pos" name="Counter" stackId="sales" fill="url(#revPos)" maxBarSize={32} />
+              <Bar dataKey="online" name="Online" stackId="sales" fill="url(#revOnline)" radius={[4, 4, 0, 0]} maxBarSize={32} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </ChartCard>
   );
 }
-
-export default RevenueChart;
