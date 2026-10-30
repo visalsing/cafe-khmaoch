@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useEffect, useState } from "react";
 
 import Navbar from "./IndexPage/Navbar";
 import MobileMenu from "./IndexPage/MobileMenu";
@@ -12,26 +13,50 @@ import Gallery from "./IndexPage/Gallery";
 
 import { useCart } from "../context/CartContext";
 import { useMenu } from "../context/MenuContext";
+import {
+  PageLoadingProvider,
+  usePageLoading,
+} from "../context/PageLoadingContext";
 import LoadingScreen from "./Loading/Loading";
-
-const Loading = () => <LoadingScreen />;
 
 const STATS = [
   { label: "Cups Served", value: "250,000+", change: "+18%", positive: true },
   { label: "Coffee Origins", value: "12", change: "+3", positive: true },
-  { label: "Customer Satisfaction", value: "99.2%", change: "+0.5%", positive: true },
+  {
+    label: "Customer Satisfaction",
+    value: "99.2%",
+    change: "+0.5%",
+    positive: true,
+  },
   { label: "Café Locations", value: "6", change: "Open", positive: true },
 ];
 
-export default function IndexPage() {
-  const { availableItems: products = [], categories = [], loading } = useMenu();
+function IndexPageContent() {
+  const {
+    availableItems: products = [],
+    categories = [],
+    loading: menuLoading,
+  } = useMenu();
+
   const { addItem } = useCart();
+  const { isPageLoading } = usePageLoading();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [componentsMounted, setComponentsMounted] = useState(false);
 
-  if (loading) return <Loading />;
+  useEffect(() => {
+    // Allow child components to mount and register their loading tasks.
+    const frame = requestAnimationFrame(() => {
+      setComponentsMounted(true);
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const isLoading =
+    menuLoading || !componentsMounted || isPageLoading;
 
   const filteredProducts = products
     .filter((item) => {
@@ -48,34 +73,52 @@ export default function IndexPage() {
     .slice(0, 6);
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 transition-colors duration-300">
-      <Navbar setMobileMenuOpen={setMobileMenuOpen} />
+    <>
+      {isLoading && <LoadingScreen />}
 
-      <MobileMenu
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-      />
+      <div
+        className={
+          isLoading
+            ? "invisible h-0 overflow-hidden"
+            : "min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 transition-colors duration-300"
+        }
+      >
+        <Navbar setMobileMenuOpen={setMobileMenuOpen} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16 py-10">
-        <Hero />
-        <Stats stats={STATS} />
-
-        <Shop
-          categories={categories}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          filteredProducts={filteredProducts}
-          onAddToCart={addItem}
+        <MobileMenu
+          isOpen={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
         />
 
-        <Gallery />
-        <About />
-        <LocationSection />
-      </main>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16 py-10">
+          <Hero />
+          <Stats stats={STATS} />
 
-      <Footer />
-    </div>
+          <Shop
+            categories={categories}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            filteredProducts={filteredProducts}
+            onAddToCart={addItem}
+          />
+
+          <Gallery />
+          <About />
+          <LocationSection />
+        </main>
+
+        <Footer />
+      </div>
+    </>
+  );
+}
+
+export default function IndexPage() {
+  return (
+    <PageLoadingProvider>
+      <IndexPageContent />
+    </PageLoadingProvider>
   );
 }

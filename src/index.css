@@ -7,73 +7,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 
+
 html {
   scroll-behavior: smooth;
   line-height: 1.6;
 }
 
-/* Default font: English */
 :root {
-  font-family: 'Montserrat', sans-serif;
+  font-family:
+    "Montserrat",
+    "Noto Sans Khmer",
+    "Noto Serif Lao",
+    "Noto Sans SC",
+    "Noto Sans JP",
+    "Noto Sans",
+    sans-serif;
 }
 
+html,
 body {
   margin: 0;
-  font-family: 'Montserrat', sans-serif;
+  font-family: inherit;
   line-height: 1.6;
 }
 
-
-/* English */
-html[lang="en"],
-html[lang="en"] body {
-  font-family: 'Montserrat', sans-serif;
-}
-
-/* Khmer */
-html[lang="km"],
-html[lang="km"] body {
-  font-family: 'Noto Sans Khmer', sans-serif;
-}
-
-/* Lao */
-html[lang="lo"],
-html[lang="lo"] body {
-  font-family: 'Noto Serif Lao', serif;
-}
-
-/* Chinese - Simplified */
-html[lang="zh"],
-html[lang="zh"] body {
-  font-family: 'Noto Sans SC', sans-serif;
-}
-
-/* Japanese */
-html[lang="ja"],
-html[lang="ja"] body {
-  font-family: 'Noto Sans JP', sans-serif;
-}
-
-/* Vietnamese */
-html[lang="vi"],
-html[lang="vi"] body {
-  font-family: 'Noto Sans', sans-serif;
-}
-
-
-
-
-/* Base text settings */
-/* html {
-  line-height: 1.6;
-} */
-
-/* body {
-  margin: 0;
-  line-height: 1.6;
-} */
-
-/* Form controls inherit the current language font */
+/* Form controls inherit the same font fallback stack */
 button,
 input,
 textarea,
@@ -81,7 +39,7 @@ select {
   font: inherit;
 }
 
-/* Headings need extra vertical space for complex scripts */
+/* Allow enough vertical space for complex scripts */
 h1,
 h2,
 h3,
@@ -93,7 +51,6 @@ h6 {
   padding-bottom: 0.12em;
 }
 
-/* Multilingual text */
 p,
 span,
 a,
@@ -101,4 +58,61 @@ label,
 li,
 div {
   line-height: inherit;
+}
+
+
+
+
+
+/* 1. Palettes */
+:root,
+[data-accent="amber"] {
+  --accent-50: 255 251 235;  --accent-100: 254 243 199; --accent-400: 251 191 36;
+  --accent-500: 249 150 8;   --accent-600: 226 114 0;   --accent-700: 194 90 4;
+  --accent-800: 154 70 4;    --accent-900: 110 46 3;    --accent-950: 69 26 3;
+}
+[data-accent="yellow"] {
+  --accent-50: 255 253 224;  --accent-100: 255 248 175; --accent-400: 252 226 60;
+  --accent-500: 245 210 20;  --accent-600: 214 175 8;   --accent-700: 170 136 8;
+  --accent-800: 132 104 6;   --accent-900: 92 72 5;     --accent-950: 56 46 4;
+}
+[data-accent="orange"] {
+  --accent-50: 255 242 237;  --accent-100: 255 224 211; --accent-400: 255 140 80;
+  --accent-500: 255 120 40;  --accent-600: 240 90 10;   --accent-700: 200 68 8;
+  --accent-800: 154 50 8;    --accent-900: 106 34 6;    --accent-950: 66 22 8;
+}
+[data-accent="brown"] {
+  --accent-50: 250 244 238;  --accent-100: 238 224 210; --accent-400: 190 144 104;
+  --accent-500: 166 110 66;  --accent-600: 140 88 48;   --accent-700: 108 66 36;
+  --accent-800: 84 50 26;    --accent-900: 58 36 18;    --accent-950: 38 23 12;
+}
+[data-accent="caramel"] {
+  --accent-50: 253 246 236;  --accent-100: 248 230 205; --accent-400: 236 172 92;
+  --accent-500: 224 150 60;  --accent-600: 200 120 36;  --accent-700: 156 90 28;
+  --accent-800: 120 68 20;   --accent-900: 82 46 14;    --accent-950: 52 30 12;
+}
+[data-accent="honey"] {
+  --accent-50: 254 250 226;  --accent-100: 251 240 178; --accent-400: 248 204 60;
+  --accent-500: 240 185 30;  --accent-600: 214 150 14;  --accent-700: 168 112 12;
+  --accent-800: 130 84 10;   --accent-900: 90 58 8;     --accent-950: 54 38 6;
+}
+[data-accent="cinnamon"] {
+  --accent-50: 252 242 236;  --accent-100: 247 222 208; --accent-400: 228 140 96;
+  --accent-500: 214 108 60;  --accent-600: 190 84 40;   --accent-700: 148 62 32;
+  --accent-800: 114 46 22;   --accent-900: 78 32 16;    --accent-950: 48 22 12;
+}
+[data-accent="cherry"] {
+  --accent-50: 254 238 241;  --accent-100: 252 215 223; --accent-400: 248 100 130;
+  --accent-500: 240 60 96;   --accent-600: 214 30 70;   --accent-700: 168 22 56;
+  --accent-800: 130 16 42;   --accent-900: 92 10 30;    --accent-950: 62 8 22;
+}
+[data-accent="mocha"] {
+  --accent-50: 248 243 239;  --accent-100: 236 225 216; --accent-400: 198 168 144;
+  --accent-500: 176 138 110; --accent-600: 148 112 88;  --accent-700: 114 84 64;
+  --accent-800: 88 64 48;    --accent-900: 60 44 34;    --accent-950: 40 30 24;
+}
+[data-accent="chocolate"] {
+  --accent-50: 247 238 235;  --accent-100: 233 213 207; --accent-400: 176 112 94;
+  --accent-500: 140 76 56;   --accent-600: 108 54 38;   --accent-700: 80 38 28;
+  --accent-800: 60 28 20;    --accent-900: 42 20 14;    --accent-950: 30 14 10;
 }

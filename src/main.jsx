@@ -74,6 +74,9 @@ import { CartProvider } from "./context/CartContext.jsx";
 import { HeroProvider } from "./context/HeroContext.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 
+import { applyAccent, getSavedAccent } from "./utils/accent.js";
+applyAccent(getSavedAccent()); // before ReactDOM render, avoids a color flash
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <HelmetProvider>

@@ -77,6 +77,7 @@ import UsersManager from "./components/Dashboard/Users.jsx";
 import RolePermissions from "./components/Dashboard/RolePermissions.jsx";
 import ForgetPassword from "./components/Auth/ForgetPassword.jsx";
 import ProfileUser from "./components/Dashboard/Profile.jsx";
+import QrManagement from "./components/Dashboard/QrManagement.jsx";
 
 function DashboardLayout() {
   const [sideBarCollapsed, setSideBarCollapsed] = useState(false);
@@ -142,7 +143,10 @@ function DashboardLayout() {
                 />
                 <Route path="/add-menu" element={<AddMenu />} />
                 <Route path="/levels-options" element={<LevelsOptions />} />
-                <Route path="levels-options/sugar-level" element={<SugarLevel />} />
+                <Route
+                  path="/sugar-level"
+                  element={<SugarLevel />}
+                />
                 <Route path="/coffee-level" element={<CoffeeLevelManager />} />
                 <Route path="/ice-level" element={<IceLevelManager />} />
                 <Route path="/country-flags" element={<CountryFlags />} />
@@ -152,10 +156,16 @@ function DashboardLayout() {
                 <Route path="/positions" element={<PositionsManager />} />
                 <Route path="/permissions" element={<PermissionsManager />} />
                 <Route path="/genders" element={<GendersManager />} />
-                <Route path="/nationalities" element={<NationalitiesManager />} />
+                <Route
+                  path="/nationalities"
+                  element={<NationalitiesManager />}
+                />
                 <Route path="/users" element={<UsersManager />} />
                 {/* <Route path="/verify-email" element={<VerifyEmail />} /> */}
-                <Route path="/roles-permissions" element={<RolePermissions />} />
+                <Route
+                  path="/roles-permissions"
+                  element={<RolePermissions />}
+                />
                 <Route path="/profile" element={<ProfileUser />} />
                 {/* <Route
                   path="/lookup"
@@ -214,6 +224,8 @@ function DashboardLayout() {
                     </Guard>
                   }
                 />
+
+                <Route path="/qr-management" element={<QrManagement />} />
 
                 {/* Order Booking */}
                 <Route
