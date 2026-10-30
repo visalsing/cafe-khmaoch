@@ -13,7 +13,10 @@ import zh from "./lang/zh.js";
 import lo from "./lang/lo.js";
 import ja from "./lang/ja.js";
 import vi from "./lang/vi.js";
+import my from "./lang/my.js";
+import ko from "./lang/ko.js";
+import fr from "./lang/fr.js";
 
-const translations = { en, km, zh, lo, ja, vi };
+const translations = { en, km, zh, lo, ja, vi, my, ko, fr };
 
 export default translations;

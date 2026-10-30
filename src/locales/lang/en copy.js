@@ -1,0 +1,164 @@
+// src/locales/en.js
+// English translations. Add new keys here first — this file is the fallback
+// used whenever a key is missing from another language file.
+
+const en = {
+  // ---- Sidebar / nav ----
+  dashboard: "Dashboard",
+  settings: "Settings",
+  orderBooking: "Order Booking",
+
+  // ---- Header ----
+  searchAnything: "Search Anything",
+  welcomeBack: "Welcome back",
+
+  // ---- Settings page ----
+  systemPreferences: "System preferences and profile settings.",
+  appearance: "Appearance",
+  appearanceDescription: "Choose how the dashboard looks on this device.",
+  light: "Light",
+  lightDescription: "Bright background, dark text.",
+  dark: "Dark",
+  darkDescription: "Dark background, easy on the eyes at night.",
+  system: "System",
+  systemDescription: "Match your device's appearance setting.",
+  language: "Language",
+  languageDescription: "Choose the language used throughout the dashboard.",
+
+  // ---- Stock Allocation ----
+  sa_title_1: 'Search "Stock Allocation"',
+  sa_cap_1: "Stock Allocation | Image 1",
+  click_on_icon: "Click on icon",
+  sa_des_1:
+    'Then, click on the search bar and type "Stock Allocation" to search. When the menu is displayed, we click on it.',
+
+  sa_cap_2: "Stock Allocation | Image 2",
+  sa_title_2: "Unallocated Tab",
+  sa_des2_txt1: 'Tab "Unallocated" shows the order which is shortage.',
+  sa_des2_txt2:
+    "If we want to make it allocated (Unallocated to Allocated), we need to:",
+  sa_des2_txt3: "Select one row by clicking on it (it will highlight blue).",
+  sa_des2_txt4: 'And then click on button "Allocation"',
+
+  sa_cap_3: "Stock Allocation | Image 3",
+  sa_title_3: "Allocated Tab",
+  sa_des3_txt1: 'Tab "Allocated" shows the order which is enough.',
+  sa_des3_txt2:
+    "If we want to make it unallocated (Allocated to Unallocated), we need to:",
+  sa_des3_txt3: "Select one row by clicking on it (it will highlight blue).",
+  sa_des3_txt4: 'And then click on button "Unallocation"',
+
+  sa_cap_4: "Stock Allocation | Image 4",
+  sa_title_4: "Confirm Order Reserve",
+  sa_des4_txt1: 'If it is allocated, we see it in a table of tab "Allocated".',
+  sa_des4_txt2:
+    'If it is unallocated, we see it in a table of tab "Unallocated".',
+
+  tab_allocate_text: "Shows sales orders that have sufficient stock.",
+  attached_photos: "Attached Photos",
+
+  stock_allocation: "Stock Allocation",
+  stock_allocation_overview: "Stock Allocation Overview",
+  stock_allocation_txt:
+    "Stock Allocation is where we manage sales orders based on stock availability (shortage vs. sufficient stock).",
+  tab_allocated: 'Tab "Allocated":',
+  tab_allocated_text: "Shows sales orders that have sufficient stock.",
+  tab_unallocated: 'Tab "Unallocated":',
+  tab_unallocated_text: "Shows sales orders with stock shortages.",
+
+  editing_sale_order: "Editing Sale Order",
+  editing_sale_order_txt1: "To edit a sales order, it must be set to",
+  unallocated: " unallocated ",
+  first: " first.",
+  editing_sale_order_txt2: "Afterwards, the sales order will appear under ",
+  option_order_editing: "Option Order Editing.",
+  steps_edit_sale_order: "Steps to edit a sales order:",
+  navigate_to: "Navigate to ",
+  change_the_sales_order_status: "Change the sales order status from ",
+  unallocated_capital: "Unallocated",
+  allocated_capital: "Allocated",
+  once_completed_proceed_to: "Once completed, proceed to ",
+  view_as_slide: "View as Slide",
+  export_as_powerpoint: "Export as PowerPoint",
+  export_as_pdf: "Export as PDF",
+
+  // Order Editing
+  oe_title_1: 'Search "Order Editing"',
+  oe_cap_1: "Order Editing | Image 1",
+  oe_des_1:
+    'Then, click on the search bar and type "Order Editing" to search. When the menu is displayed, we click on it.',
+
+  oe_title_2: "Order Editing Header",
+  oe_cap_2: "Order Editing | Image 2",
+  oe_des2_txt1:
+    "Order Editing Header is a place where there are filters for us to fill for which sale order we want to edit.",
+  oe_des2_txt2:
+    "Its elements has PJP, Selling Category, Section, Outlet Name, Date From, Date To and SKU.",
+  oe_des2_txt3:
+    'There is table showing data below the Order Editing Header. Its elements has Document No, Document Date, Delivery Date, Outlet, Gross Amount, Discount, Tax, Net Amount, Received Amount, Balance Amout and Demand Channel. There is a "Show filter" below the table which used for searching data by each column.',
+  oe_des2_txt4:
+    "On the table, click on a row, and it will be highlighted blue.",
+
+  oe_title_3: "Edit Order",
+  oe_cap_3: "Order Editing | Image 3",
+  oe_des3_txt1: "There is an interterface we are going to edit order.",
+  oe_des3_txt2:
+    'We have to fill or select on elements of "Order Editing" such asDocument No, Outlet, Document Date, Delivery Date, PJP, Section and Selling Category.',
+  oe_des3_txt3: `On the table, we see Product Code, Batch, Current Stock, Price Value, Demand (CS, DZ, PC), Order (CS, DZ, PC), Gross Amount and Reason Type. If there is data existing, we see data in a row with "Edit". Click on "Edit"!`,
+
+  oe_title_4: "Edit Order",
+  oe_cap_4: "Order Editing | Image 4",
+  oe_des4_txt1: `We edit numbers in Order (CS, DZ, PC) and select one reason in Reason Type. If we want to save what we have edited, click on "Save". If we don't, click on "Cancel".`,
+
+  oe_cap_5: "Order Editing | Image 5",
+  oe_title_5: "Validate Edit Order",
+  oe_des5_txt1: 'Click on "Validation" button to complete edit order.',
+
+  oe_cap_6: "Order Editing | Image 6",
+  oe_title_6: "Save Edit Order",
+  oe_des6_txt1: 'Click on "Save" button to save and complete edit order.',
+
+  order_editing: "Order Editing",
+  order_editing_overview: "Order Editing Overview",
+  order_editing_txt: "Order Editing is a place where we edit the sale order.",
+
+  // Fresh Sales Order (Below 24h)
+  fresh_sales_return_below24h: "Fresh Sales Return (Below 24h)",
+  fresh_sales_return_below24h_overview:
+    "Fresh Sales Return (Below 24h) Overview",
+
+  // IndexPage/Shop.jsx
+  all: "All",
+  add_to_order: "Add to card",
+  cafe_khmaoch_menu: "Café Khmaoch Menu",
+  show_more_options: "Show more options",
+  see_full_menu: "See full menu",
+
+  // IndexPage/About.jsx | About Us, Our Story
+  about_us: "About Us",
+  about_us_subtitle:
+    "Discover our passion for crafting exceptional coffee and warm experiences.",
+  our_story: "Our Story",
+  about_us_text1: "Ethically Sourced Beans, Roasted with Love",
+  about_us_text2:
+    "Every cup at Bean & Blossom starts with single-origin beans from small farms, roasted in small batches and brewed by baristas who care. Pair it with a pastry baked fresh each morning.",
+  about_us_text3: "Fresh Pastries Daily",
+
+  // IndexPage/Map.jsx | Contact Us, Map
+  contact_us: "Contact Us",
+  contact_subtitle:
+    "Get in touch with us or drop by our café for a great cup of coffee!",
+  find_us: "Find Us",
+  location: "Location",
+  opening_hours: "Opening Hours",
+  phone: "Phone",
+  email: "Email",
+  follow_connect: "Follow & Connect",
+  get_directions: "Get Directions",
+  map_coming_soon: "Map coming soon",
+
+  // IndexPage/Contact.jsx | Contact Us, Map
+  send_us_a_message: "Send us a Messag",
+};
+
+export default en;

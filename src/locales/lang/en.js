@@ -3,10 +3,28 @@
 // used whenever a key is missing from another language file.
 
 const en = {
-  // ---- Sidebar / nav ----
+  // IndexPage/Navbar.jsx & IndexPage/MobileMenu.jsx | Navbar, MobbileMenu
+  home: "Home",
+  menu: "Menu",
+  gallery: "Gallery",
+  contact: "Contact",
+  login: "Login",
+  logout: "Logout",
+  are_you_sure_logout: "Are you sure you want to log out?",
+  cancel: "Cancel",
+  logout_exit_impersonate: "Logout / impersonation exit failed:",
+  session_act_failed: "The session action failed. Please try again.",
+  exit_impersonation: "Exit Impersonation",
+  confirm_logout: "Confirm Logout",
+  return_to_admin_acc: "Return to your administrator account?",
+  please_wait: "Please wait...",
+  return_to_amdin: "Return to Amdin",
+  yes_logout: "Yes, Log out!",
+  cart: "Cart",
+  my_profile: "My Profile",
+  profile: "Profile",
   dashboard: "Dashboard",
   settings: "Settings",
-  orderBooking: "Order Booking",
 
   // ---- Header ----
   searchAnything: "Search Anything",
@@ -24,108 +42,6 @@ const en = {
   systemDescription: "Match your device's appearance setting.",
   language: "Language",
   languageDescription: "Choose the language used throughout the dashboard.",
-
-  // ---- Stock Allocation ----
-  sa_title_1: 'Search "Stock Allocation"',
-  sa_cap_1: "Stock Allocation | Image 1",
-  click_on_icon: "Click on icon",
-  sa_des_1:
-    'Then, click on the search bar and type "Stock Allocation" to search. When the menu is displayed, we click on it.',
-
-  sa_cap_2: "Stock Allocation | Image 2",
-  sa_title_2: "Unallocated Tab",
-  sa_des2_txt1: 'Tab "Unallocated" shows the order which is shortage.',
-  sa_des2_txt2:
-    "If we want to make it allocated (Unallocated to Allocated), we need to:",
-  sa_des2_txt3: "Select one row by clicking on it (it will highlight blue).",
-  sa_des2_txt4: 'And then click on button "Allocation"',
-
-  sa_cap_3: "Stock Allocation | Image 3",
-  sa_title_3: "Allocated Tab",
-  sa_des3_txt1: 'Tab "Allocated" shows the order which is enough.',
-  sa_des3_txt2:
-    "If we want to make it unallocated (Allocated to Unallocated), we need to:",
-  sa_des3_txt3: "Select one row by clicking on it (it will highlight blue).",
-  sa_des3_txt4: 'And then click on button "Unallocation"',
-
-  sa_cap_4: "Stock Allocation | Image 4",
-  sa_title_4: "Confirm Order Reserve",
-  sa_des4_txt1: 'If it is allocated, we see it in a table of tab "Allocated".',
-  sa_des4_txt2:
-    'If it is unallocated, we see it in a table of tab "Unallocated".',
-
-  tab_allocate_text: "Shows sales orders that have sufficient stock.",
-  attached_photos: "Attached Photos",
-
-  stock_allocation: "Stock Allocation",
-  stock_allocation_overview: "Stock Allocation Overview",
-  stock_allocation_txt:
-    "Stock Allocation is where we manage sales orders based on stock availability (shortage vs. sufficient stock).",
-  tab_allocated: 'Tab "Allocated":',
-  tab_allocated_text: "Shows sales orders that have sufficient stock.",
-  tab_unallocated: 'Tab "Unallocated":',
-  tab_unallocated_text: "Shows sales orders with stock shortages.",
-
-  editing_sale_order: "Editing Sale Order",
-  editing_sale_order_txt1: "To edit a sales order, it must be set to",
-  unallocated: " unallocated ",
-  first: " first.",
-  editing_sale_order_txt2: "Afterwards, the sales order will appear under ",
-  option_order_editing: "Option Order Editing.",
-  steps_edit_sale_order: "Steps to edit a sales order:",
-  navigate_to: "Navigate to ",
-  change_the_sales_order_status: "Change the sales order status from ",
-  unallocated_capital: "Unallocated",
-  allocated_capital: "Allocated",
-  once_completed_proceed_to: "Once completed, proceed to ",
-  view_as_slide: "View as Slide",
-  export_as_powerpoint: "Export as PowerPoint",
-  export_as_pdf: "Export as PDF",
-
-  // Order Editing
-  oe_title_1: 'Search "Order Editing"',
-  oe_cap_1: "Order Editing | Image 1",
-  oe_des_1:
-    'Then, click on the search bar and type "Order Editing" to search. When the menu is displayed, we click on it.',
-
-  oe_title_2: "Order Editing Header",
-  oe_cap_2: "Order Editing | Image 2",
-  oe_des2_txt1:
-    "Order Editing Header is a place where there are filters for us to fill for which sale order we want to edit.",
-  oe_des2_txt2:
-    "Its elements has PJP, Selling Category, Section, Outlet Name, Date From, Date To and SKU.",
-  oe_des2_txt3:
-    'There is table showing data below the Order Editing Header. Its elements has Document No, Document Date, Delivery Date, Outlet, Gross Amount, Discount, Tax, Net Amount, Received Amount, Balance Amout and Demand Channel. There is a "Show filter" below the table which used for searching data by each column.',
-  oe_des2_txt4:
-    "On the table, click on a row, and it will be highlighted blue.",
-
-  oe_title_3: "Edit Order",
-  oe_cap_3: "Order Editing | Image 3",
-  oe_des3_txt1: "There is an interterface we are going to edit order.",
-  oe_des3_txt2:
-    'We have to fill or select on elements of "Order Editing" such asDocument No, Outlet, Document Date, Delivery Date, PJP, Section and Selling Category.',
-  oe_des3_txt3: `On the table, we see Product Code, Batch, Current Stock, Price Value, Demand (CS, DZ, PC), Order (CS, DZ, PC), Gross Amount and Reason Type. If there is data existing, we see data in a row with "Edit". Click on "Edit"!`,
-
-  oe_title_4: "Edit Order",
-  oe_cap_4: "Order Editing | Image 4",
-  oe_des4_txt1: `We edit numbers in Order (CS, DZ, PC) and select one reason in Reason Type. If we want to save what we have edited, click on "Save". If we don't, click on "Cancel".`,
-
-  oe_cap_5: "Order Editing | Image 5",
-  oe_title_5: "Validate Edit Order",
-  oe_des5_txt1: 'Click on "Validation" button to complete edit order.',
-
-  oe_cap_6: "Order Editing | Image 6",
-  oe_title_6: "Save Edit Order",
-  oe_des6_txt1: 'Click on "Save" button to save and complete edit order.',
-
-  order_editing: "Order Editing",
-  order_editing_overview: "Order Editing Overview",
-  order_editing_txt: "Order Editing is a place where we edit the sale order.",
-
-  // Fresh Sales Order (Below 24h)
-  fresh_sales_return_below24h: "Fresh Sales Return (Below 24h)",
-  fresh_sales_return_below24h_overview:
-    "Fresh Sales Return (Below 24h) Overview",
 
   // IndexPage/Shop.jsx
   all: "All",
@@ -159,6 +75,46 @@ const en = {
 
   // IndexPage/Contact.jsx | Contact Us, Map
   send_us_a_message: "Send us a Messag",
+
+  // Profile/Profile.jsx | Profile
+  back_to_home: "Back to Home",
+  my_account: "My Account",
+
+  // Dashboard/Layouts/Sidebar.jsx | Dashbard/Sidebar
+  // dashboard: "Dashboard",
+  // profile: "Profile",
+  point_of_sales_pos: "Point of Sales (POS)",
+  orders: "Orders",
+  menu_management: "Menu",
+  levels_customization: "Levels",
+  reports: "Reports",
+  pages: "Pages",
+  user_management: "Users Management",
+  system_customization: "Customization",
+  homepage: "Homepage",
+  settings: "Settings",
+
+  menu_items: "Café Menu Items",
+  drinks_categories: "Drinks Categories",
+  drinks_types: "Drinks Types",
+  level_options: "Level Options",
+  sugar_levels: "Sugar Levels",
+  ice_levels: "Ice Levels",
+  coffee_levels: "Coffee Levels",
+  page_overviews: "Page Overviews",
+  page_hero: "Page: Hero Banner",
+  page_map: "Page: Map",
+  users: "Users",
+  positions: "Positions",
+  roles: "Roles",
+  role_permissions: "Role Permissions",
+  permission_lists: "Permission Lists",
+  exchange_rate: "Exchange Rate",
+  currencies: "Currencies",
+  countries_flags: "Countries & Flags",
+  genders: "Genders",
+  nationalities: "Nationalities",
+  qr_website: "QR Website",
 };
 
 export default en;
