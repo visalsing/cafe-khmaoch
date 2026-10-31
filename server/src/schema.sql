@@ -153,13 +153,31 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS region TEXT NOT NULL DEFAULT '';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT '';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT '';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id INTEGER;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS position_id INTEGER REFERENCES positions(id) ON DELETE SET NULL;
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS position_id INTEGER REFERENCES positions(id) ON DELETE SET NULL;
+-- several positions per user; ids are checked by the server (arrays can't have a foreign key)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS position_ids INTEGER[] NOT NULL DEFAULT '{}';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS permission_id INTEGER REFERENCES permissions(id) ON DELETE SET NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_blocked SMALLINT NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_removed SMALLINT NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_thumbnail TEXT NOT NULL DEFAULT '';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 ALTER TABLE users ADD COLUMN IF NOT EXISTS removed_at TIMESTAMPTZ;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema()
+      AND table_name = 'users'
+      AND column_name = 'position_id'
+  ) THEN
+    UPDATE users
+       SET position_ids = ARRAY[position_id]
+     WHERE position_id IS NOT NULL
+       AND position_ids = '{}';
+    ALTER TABLE users DROP COLUMN position_id;   -- also drops users_position_id_fkey
+  END IF;
+END $$;
 
 -- Add the nationality foreign key only after nationalities exists.
 CREATE TABLE IF NOT EXISTS nationalities (
@@ -273,6 +291,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_email_active_idx
   ON users (lower(email)) WHERE is_removed = 0;
 CREATE INDEX IF NOT EXISTS users_role_idx ON users (role_id);
 CREATE INDEX IF NOT EXISTS users_flags_idx ON users (is_removed, is_blocked, status);
+CREATE INDEX IF NOT EXISTS users_position_ids_idx ON users USING GIN (position_ids);
 
 -- ---------------------------------------------------------------------------
 -- role_permissions: migrate old (role, permission) text pairs to foreign keys
@@ -1221,6 +1240,8 @@ CREATE TRIGGER qr_images_updated_at BEFORE UPDATE ON qr_images
 -- ====================================================================
 ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS daily_sales_goal  NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (daily_sales_goal >= 0);
 ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS daily_orders_goal INTEGER       NOT NULL DEFAULT 0 CHECK (daily_orders_goal >= 0);
+-- staff must take the payment before an order can be accepted (set to FALSE to switch the rule off)
+ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS require_payment_before_accept BOOLEAN NOT NULL DEFAULT TRUE;
 
 CREATE INDEX IF NOT EXISTS orders_payment_idx   ON orders   (payment_status, created_at DESC);
 CREATE INDEX IF NOT EXISTS payments_created_idx ON payments (created_at DESC);

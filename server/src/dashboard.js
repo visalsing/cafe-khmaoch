@@ -343,7 +343,8 @@ export async function getDashboard({ range, admin = false }) {
   const [kpiRows, queueRows, settingsRows, open, latest, insights, adminData] = await Promise.all([
     rows(KPI_SQL, [TZ]),
     rows(QUEUE_SQL),
-    rows("SELECT currency_code, daily_sales_goal, daily_orders_goal FROM store_settings WHERE id = 1"),
+    // rows("SELECT currency_code, daily_sales_goal, daily_orders_goal FROM store_settings WHERE id = 1"),
+    rows("SELECT currency_code, daily_sales_goal, daily_orders_goal, require_payment_before_accept FROM store_settings WHERE id = 1"),
     listOpenOrders(15),
     listOrders({ limit: 8 }),
     cached(`insights:${days}`, INSIGHTS_TTL_MS, () => loadInsights(days)),
@@ -365,6 +366,7 @@ export async function getDashboard({ range, admin = false }) {
     range: days,
     currency: settings.currency_code || "KHR",
     goals: { sales: money(settings.daily_sales_goal), orders: num(settings.daily_orders_goal) },
+    rules: { requirePaymentFirst: settings.require_payment_before_accept !== false },
     today: {
       orders: num(kpi.orders_today),
       ordersYesterday: num(kpi.orders_yesterday),

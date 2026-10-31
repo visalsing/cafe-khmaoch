@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -71,10 +70,7 @@ export default function Hero() {
       const allReady = imageUrls.every((url) => {
         const image = imageRefs.current.get(url);
 
-        return (
-          loadedImages.current.has(url) ||
-          (image && image.complete)
-        );
+        return loadedImages.current.has(url) || (image && image.complete);
       });
 
       if (allReady) {
@@ -99,10 +95,7 @@ export default function Hero() {
     const allReady = imageUrls.every((imageUrl) => {
       const image = imageRefs.current.get(imageUrl);
 
-      return (
-        loadedImages.current.has(imageUrl) ||
-        (image && image.complete)
-      );
+      return loadedImages.current.has(imageUrl) || (image && image.complete);
     });
 
     if (allReady) {
@@ -131,10 +124,7 @@ export default function Hero() {
   useEffect(() => {
     if (paused || count < 2) return;
 
-    const timer = setInterval(
-      () => setCurrent((c) => (c + 1) % count),
-      5000
-    );
+    const timer = setInterval(() => setCurrent((c) => (c + 1) % count), 5000);
 
     return () => clearInterval(timer);
   }, [paused, count]);
@@ -175,9 +165,17 @@ export default function Hero() {
   };
 
   return (
+    // <section
+    //   id="hero"
+    //   className="relative overflow-hidden rounded-3xl shadow-2xl h-[420px] sm:h-[520px] text-white"
+    //   onMouseEnter={() => setPaused(true)}
+    //   onMouseLeave={() => setPaused(false)}
+    //   onTouchStart={onTouchStart}
+    //   onTouchEnd={onTouchEnd}
+    // >
     <section
       id="hero"
-      className="relative overflow-hidden rounded-3xl shadow-2xl h-[420px] sm:h-[520px] text-white"
+      className="relative overflow-hidden rounded-3xl shadow-2xl h-[420px] sm:h-[500px] lg:h-[540px] text-white"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={onTouchStart}

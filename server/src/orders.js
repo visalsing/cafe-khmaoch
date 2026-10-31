@@ -678,17 +678,42 @@ export async function createOrder({ body, source, user }) {
 }
 
 /* =============== status + late payment (online orders paid at the counter) =============== */
+// export async function setStatus(ref, status) {
+//   if (!STATUSES.includes(status)) throw new OrderError("Invalid status.");
+//   const { col, val } = byRef(ref);
+//   const { rows } = await query(
+//     `UPDATE orders SET status = $1::text,
+//             completed_at = CASE WHEN $1::text = 'completed' THEN COALESCE(completed_at, now()) ELSE NULL END,
+//             cancelled_at = CASE WHEN $1::text = 'cancelled' THEN COALESCE(cancelled_at, now()) ELSE NULL END
+//       WHERE ${col} = $2 RETURNING *`,
+//     [status, val],
+//   );
+//   if (!rows[0]) throw new OrderError("Order not found.", 404);
+//   return (await hydrate(rows))[0];
+// }
 export async function setStatus(ref, status) {
   if (!STATUSES.includes(status)) throw new OrderError("Invalid status.");
   const { col, val } = byRef(ref);
+
+  const { rows: cfg } = await query("SELECT require_payment_before_accept FROM store_settings WHERE id = 1");
+  const mustPay = cfg[0]?.require_payment_before_accept !== false; // on unless the setting says otherwise
+
+  // one statement: an UNPAID order can only stay "pending" or be cancelled while the rule is on
   const { rows } = await query(
     `UPDATE orders SET status = $1::text,
             completed_at = CASE WHEN $1::text = 'completed' THEN COALESCE(completed_at, now()) ELSE NULL END,
             cancelled_at = CASE WHEN $1::text = 'cancelled' THEN COALESCE(cancelled_at, now()) ELSE NULL END
-      WHERE ${col} = $2 RETURNING *`,
-    [status, val],
+      WHERE ${col} = $2
+        AND ($3::boolean = false OR $1::text IN ('pending', 'cancelled') OR payment_status <> 'unpaid')
+      RETURNING *`,
+    [status, val, mustPay],
   );
-  if (!rows[0]) throw new OrderError("Order not found.", 404);
+
+  if (!rows[0]) {
+    const { rows: found } = await query(`SELECT id FROM orders WHERE ${col} = $1`, [val]);
+    if (!found[0]) throw new OrderError("Order not found.", 404);
+    throw new OrderError("Take the payment first, then you can accept this order.", 409, { code: "payment_required" });
+  }
   return (await hydrate(rows))[0];
 }
 
@@ -796,24 +821,38 @@ export async function checkPromo(code) {
 }
 
 // delivery choices + limits, read from the database
+// export async function getOptions() {
+//   const [settings, delivery] = await Promise.all([
+//     query(
+//       "SELECT currency_code, default_tax_percent, max_staff_discount_percent FROM store_settings WHERE id = 1",
+//     ),
+//     query(
+//       "SELECT code, name, fee FROM delivery_options WHERE status = 1 ORDER BY sort_num, id",
+//     ),
+//   ]);
+//   const s = settings.rows[0] || {};
+//   return {
+//     currency: s.currency_code || "KHR",
+//     defaultTaxPercent: Number(s.default_tax_percent || 0),
+//     maxStaffDiscountPercent: Number(s.max_staff_discount_percent ?? 20),
+//     delivery: delivery.rows.map((d) => ({
+//       code: d.code,
+//       name: pickName(d.name),
+//       fee: Number(d.fee),
+//     })),
+//   };
+// }
 export async function getOptions() {
   const [settings, delivery] = await Promise.all([
-    query(
-      "SELECT currency_code, default_tax_percent, max_staff_discount_percent FROM store_settings WHERE id = 1",
-    ),
-    query(
-      "SELECT code, name, fee FROM delivery_options WHERE status = 1 ORDER BY sort_num, id",
-    ),
+    query("SELECT currency_code, default_tax_percent, max_staff_discount_percent, require_payment_before_accept FROM store_settings WHERE id = 1"),
+    query("SELECT code, name, fee FROM delivery_options WHERE status = 1 ORDER BY sort_num, id"),
   ]);
   const s = settings.rows[0] || {};
   return {
     currency: s.currency_code || "KHR",
     defaultTaxPercent: Number(s.default_tax_percent || 0),
     maxStaffDiscountPercent: Number(s.max_staff_discount_percent ?? 20),
-    delivery: delivery.rows.map((d) => ({
-      code: d.code,
-      name: pickName(d.name),
-      fee: Number(d.fee),
-    })),
+    requirePaymentFirst: s.require_payment_before_accept !== false,
+    delivery: delivery.rows.map((d) => ({ code: d.code, name: pickName(d.name), fee: Number(d.fee) })),
   };
 }

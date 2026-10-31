@@ -93,6 +93,68 @@ function Chip({ active, onClick, children }) {
   );
 }
 
+// Several choices from a list: the selected ones show as chips, the list below has checkboxes.
+// value = array of ids, onChange receives the new array of ids.
+function MultiSelect({ value, onChange, options, placeholder = "None" }) {
+  const selected = (value || []).map(Number);
+
+  const toggle = (v) => {
+    const n = Number(v);
+    onChange(
+      selected.includes(n) ? selected.filter((x) => x !== n) : [...selected, n],
+    );
+  };
+
+  return (
+    <div className="mt-1 w-full space-y-2">
+      <div className="flex flex-wrap gap-1.5 min-h-[28px]">
+        {selected.length === 0 && (
+          <span className="text-sm text-slate-400">{placeholder}</span>
+        )}
+        {selected.map((id) => {
+          const opt = options.find((o) => Number(o.value) === id);
+          return (
+            <span
+              key={id}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-accent-100 text-accent-800 dark:bg-accent-950/40 dark:text-accent-300 text-xs font-semibold"
+            >
+              {opt?.label || `#${id}`}
+              <button
+                type="button"
+                onClick={() => toggle(id)}
+                aria-label="Remove"
+                className="hover:text-rose-600"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          );
+        })}
+      </div>
+
+      <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
+        {options.length === 0 && (
+          <p className="p-3 text-sm text-slate-400">No positions available.</p>
+        )}
+        {options.map((o) => (
+          <label
+            key={o.value}
+            className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
+          >
+            <input
+              type="checkbox"
+              checked={selected.includes(Number(o.value))}
+              onChange={() => toggle(o.value)}
+              className="accent-accent-600"
+            />
+            {o.label}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // on/off switch used in the Status column
 function Toggle({ checked, onChange, disabled, label }) {
   return (
@@ -265,6 +327,13 @@ const toBit = (v, fallback) => {
     return 0;
   return fallback;
 };
+// the positions of a user: always an array of numbers (also reads a single old positionId)
+const toIdList = (u) => {
+  const raw = pick(u, "positionIds", "position_ids");
+  if (Array.isArray(raw)) return raw.map(Number).filter(Number.isFinite);
+  const single = pick(u, "positionId", "position_id");
+  return single !== undefined && single !== "" ? [Number(single)] : [];
+};
 const normalizeUser = (u) => ({
   id: u.id,
   firstName: pick(u, "firstName", "first_name") ?? "",
@@ -277,7 +346,7 @@ const normalizeUser = (u) => ({
   roleId: pick(u, "roleId", "role_id") ?? "",
   genderId: pick(u, "genderId", "gender_id") ?? "",
   nationalityId: pick(u, "nationalityId", "nationality_id") ?? "",
-  positionId: pick(u, "positionId", "position_id") ?? "",
+  positionIds: toIdList(u),
   permissionId: pick(u, "permissionId", "permission_id") ?? "",
   address: pick(u, "address") ?? "",
   region: pick(u, "region") ?? "",
@@ -328,7 +397,7 @@ const emptyForm = {
   roleId: "",
   genderId: "",
   nationalityId: "",
-  positionId: "",
+  positionIds: [],
   permissionId: "",
   address: "",
   region: "",
@@ -351,7 +420,7 @@ const formFromUser = (u) => ({
   roleId: u.roleId,
   genderId: u.genderId,
   nationalityId: u.nationalityId,
-  positionId: u.positionId,
+  positionIds: [...u.positionIds],
   permissionId: u.permissionId,
   address: u.address,
   region: u.region,
@@ -375,7 +444,8 @@ const fingerprint = (f) =>
     roleId: String(f.roleId ?? ""),
     gender: idOrNull(f.genderId),
     nationality: idOrNull(f.nationalityId),
-    position: idOrNull(f.positionId),
+    // the order the positions were ticked in is not a change
+    positions: [...f.positionIds].map(Number).sort((a, b) => a - b),
     permission: idOrNull(f.permissionId),
     address: f.address.trim(),
     region: f.region.trim(),
@@ -395,7 +465,8 @@ export default function UsersManager() {
   const { currentUser } = useAuth();
   const currentUserId = currentUser?.id;
   // only an administrator may switch into another account
-  const canImpersonate = String(currentUser?.role || "").toLowerCase() === "admin";
+  const canImpersonate =
+    String(currentUser?.role || "").toLowerCase() === "admin";
   const [impersonationTarget, setImpersonationTarget] = useState(null);
 
   const [users, setUsers] = useState([]);
@@ -560,6 +631,17 @@ export default function UsersManager() {
     return item ? labelOf(item[key]) || "—" : `#${id}?`;
   };
 
+  // "Owner, Manager · Barista" for a user with several positions
+  const positionsLabel = (ids) =>
+    ids && ids.length
+      ? ids
+          .map((id) => {
+            const item = positions.find((x) => x.id === Number(id));
+            return item ? labelOf(item.position_title) || `#${id}` : `#${id}?`;
+          })
+          .join(" · ")
+      : "—";
+
   const openNew = () => {
     const customer = roleChoices.find((r) => r.code === "customer");
     setForm({ ...emptyForm, roleId: customer?.value ?? "" });
@@ -637,7 +719,8 @@ export default function UsersManager() {
         fd.append(rolesList.length ? "roleId" : "role", String(form.roleId));
       fd.append("genderId", String(form.genderId ?? ""));
       fd.append("nationalityId", String(form.nationalityId ?? ""));
-      fd.append("positionId", String(form.positionId ?? ""));
+      // several positions: sent as a JSON array, e.g. "[1,3]" ("[]" = no position)
+      fd.append("positionIds", JSON.stringify(form.positionIds.map(Number)));
       fd.append("permissionId", String(form.permissionId ?? ""));
       fd.append("address", form.address.trim());
       fd.append("region", form.region.trim());
@@ -993,6 +1076,11 @@ export default function UsersManager() {
     { value: "", label: "None" },
     ...list.map((x) => ({ value: x.id, label: labelOf(x[key]) || `#${x.id}` })),
   ];
+  // choices for the multi-select (no "None" row: an empty selection already means none)
+  const positionOptions = positions.map((x) => ({
+    value: x.id,
+    label: labelOf(x.position_title) || `#${x.id}`,
+  }));
 
   const labelCls = "text-sm text-slate-600 dark:text-slate-400 block w-full";
   const sectionTitle =
@@ -1280,7 +1368,8 @@ export default function UsersManager() {
                 const isVerified = u.isVerifiedEmail === 1;
                 const busy = busyId === u.id;
                 const isMe =
-                  currentUserId != null && String(u.id) === String(currentUserId);
+                  currentUserId != null &&
+                  String(u.id) === String(currentUserId);
                 return (
                   <tr
                     key={u.id}
@@ -1335,6 +1424,11 @@ export default function UsersManager() {
                       >
                         {roleLabel(u.role)}
                       </span>
+                      {u.positionIds.length > 0 && (
+                        <div className="mt-1 text-xs text-slate-400 break-words max-w-[12rem]">
+                          {positionsLabel(u.positionIds)}
+                        </div>
+                      )}
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
@@ -1417,7 +1511,10 @@ export default function UsersManager() {
                             title={`Impersonate ${fullName(u)}`}
                             aria-label={`Impersonate ${fullName(u)}`}
                             disabled={
-                              busy || isMe || u.status !== 1 || u.isBlocked === 1
+                              busy ||
+                              isMe ||
+                              u.status !== 1 ||
+                              u.isBlocked === 1
                             }
                             onClick={() => handleImpersonate(u)}
                             className="p-2 rounded-lg text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -1662,8 +1759,8 @@ export default function UsersManager() {
                   <h5 className={sectionTitle}>Access</h5>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     <Field label="Role">{roleLabel(viewing.role)}</Field>
-                    <Field label="Position">
-                      {nameIn(positions, viewing.positionId, "position_title")}
+                    <Field label="Positions">
+                      {positionsLabel(viewing.positionIds)}
                     </Field>
                     <Field label="Extra permission">
                       {nameIn(permissions, viewing.permissionId, "name")}
@@ -1896,17 +1993,6 @@ export default function UsersManager() {
                     </div>
                   </label>
                   <label className={labelCls}>
-                    Position
-                    <div className="relative mt-1 w-full">
-                      <CustomSelect
-                        value={form.positionId}
-                        onChange={(value) => setField("positionId", value)}
-                        placeholder="None"
-                        options={lookupOptions(positions, "position_title")}
-                      />
-                    </div>
-                  </label>
-                  <label className={`${labelCls} sm:col-span-2`}>
                     Extra permission
                     <div className="relative mt-1 w-full">
                       <CustomSelect
@@ -1917,6 +2003,17 @@ export default function UsersManager() {
                       />
                     </div>
                   </label>
+
+                  {/* a div (not a label) on purpose: a label would trigger its first checkbox on every click */}
+                  <div className={`${labelCls} sm:col-span-2`}>
+                    Positions (you can choose several)
+                    <MultiSelect
+                      value={form.positionIds}
+                      onChange={(value) => setField("positionIds", value)}
+                      options={positionOptions}
+                      placeholder="None"
+                    />
+                  </div>
                 </div>
               </section>
 

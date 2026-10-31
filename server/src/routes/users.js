@@ -15,10 +15,10 @@ const EMAIL_RE = /^\S+@\S+\.\S+$/;
 const VERIFY_PURPOSE = "email_verification";
 const bad = (res, status, error) => res.status(status).json({ error });
 
+// position_ids is an integer[] column, so it has no foreign key: positions are checked in checkPositionChoice()
 const FK_MESSAGES = {
   users_gender_id_fkey: "The selected gender does not exist.",
   users_nationality_id_fkey: "The selected nationality does not exist.",
-  users_position_id_fkey: "The selected position does not exist.",
   users_permission_id_fkey: "The selected permission does not exist.",
   users_role_id_fkey: "The selected role does not exist.",
 };
@@ -34,6 +34,29 @@ const idOrNull = (v) => { // blank -> null, valid -> number, invalid -> NaN
   if (v === undefined || v === null || String(v).trim() === "") return null;
   const n = Number(v);
   return Number.isInteger(n) && n > 0 ? n : NaN;
+};
+// list of ids: undefined = not provided, null = invalid, otherwise a de-duplicated array.
+// Accepts a JSON array string ("[1,2]"), a comma list ("1,2"), a real array, or a single id.
+const idList = (v) => {
+  if (v === undefined) return undefined;
+  let list = v;
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (!s) return [];
+    try {
+      list = JSON.parse(s);
+    } catch {
+      list = s.split(",");
+    }
+  }
+  if (!Array.isArray(list)) list = [list];
+  const out = [];
+  for (const x of list) {
+    const n = Number(x);
+    if (!Number.isInteger(n) || n <= 0) return null;
+    if (!out.includes(n)) out.push(n);
+  }
+  return out;
 };
 const bit = (v, fallback) => { // only real 1/0 values count; anything else keeps the fallback
   if (v === true || v === 1 || v === "1" || v === "true") return 1;
@@ -81,6 +104,17 @@ async function checkPermissionChoice(v) {
   return null;
 }
 
+// every selected position must exist (replaces the foreign key an integer[] column cannot have)
+async function checkPositionChoice(v) {
+  if (!v.positionIds.length) return null;
+  const { rows } = await query(
+    "SELECT count(*)::int AS n FROM positions WHERE id = ANY($1::int[])",
+    [v.positionIds],
+  );
+  if (rows[0].n !== v.positionIds.length) return [400, "One of the selected positions does not exist."];
+  return null;
+}
+
 /* ---------- email verification ----------
    Marks the address "unverified" and emails a 6-digit code to it.
    The account OWNER types the code after signing in (routes/emailVerification.js);
@@ -118,10 +152,14 @@ function readFields(body, e = null) {
   const pick = (key, current) => (body[key] === undefined ? (current ?? null) : idOrNull(body[key]));
   const genderId = pick("genderId", e?.gender_id);
   const nationalityId = pick("nationalityId", e?.nationality_id);
-  const positionId = pick("positionId", e?.position_id);
   const permissionId = pick("permissionId", e?.permission_id);
-  if ([genderId, nationalityId, positionId, permissionId].some(Number.isNaN))
+  if ([genderId, nationalityId, permissionId].some(Number.isNaN))
     return { error: "One of the selected options is invalid." };
+
+  // positions: not sent = keep the current ones, sent = replace them with the new list
+  const sentPositions = idList(body.positionIds);
+  if (sentPositions === null) return { error: "One of the selected positions is invalid." };
+  const positionIds = sentPositions === undefined ? (e?.position_ids ?? []) : sentPositions;
 
   return {
     v: {
@@ -134,7 +172,7 @@ function readFields(body, e = null) {
       region: text(body.region, e?.region, 100),
       country: text(body.country, e?.country, 100),
       description: text(body.description, e?.description, 2000),
-      genderId, nationalityId, positionId, permissionId,
+      genderId, nationalityId, positionIds, permissionId,
       status: bit(body.status, e?.status ?? 1),
       isBlocked: bit(body.isBlocked, e?.is_blocked ?? 0),
     },
@@ -165,6 +203,9 @@ router.post("/", uploadOne, async (req, res) => {
   const permProblem = await checkPermissionChoice(v);
   if (permProblem) return bad(res, permProblem[0], permProblem[1]);
 
+  const posProblem = await checkPositionChoice(v);
+  if (posProblem) return bad(res, posProblem[0], posProblem[1]);
+
   let files = { img: "", thumbnail: "" };
   let newId;
   try {
@@ -174,13 +215,13 @@ router.post("/", uploadOne, async (req, res) => {
       `INSERT INTO users
          (first_name, last_name, first_name_native, last_name_native, gender_id, nationality_id,
           address, region, country, description, email, phone, password_hash,
-          role_id, position_id, permission_id, status, is_blocked, avatar, avatar_thumbnail)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+          role_id, position_ids, permission_id, status, is_blocked, avatar, avatar_thumbnail)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::int[],$16,$17,$18,$19,$20)
        RETURNING id`,
       [
         v.firstName, v.lastName, v.firstNameNative, v.lastNameNative, v.genderId, v.nationalityId,
         v.address, v.region, v.country, v.description, v.email, v.phone, hash,
-        role.id, v.positionId, v.permissionId, v.status, v.isBlocked, files.img, files.thumbnail,
+        role.id, v.positionIds, v.permissionId, v.status, v.isBlocked, files.img, files.thumbnail,
       ],
     );
     newId = rows[0].id;
@@ -229,6 +270,9 @@ router.put("/:id", uploadOne, async (req, res) => {
   const permProblem = await checkPermissionChoice(v);
   if (permProblem) return bad(res, permProblem[0], permProblem[1]);
 
+  const posProblem = await checkPositionChoice(v);
+  if (posProblem) return bad(res, posProblem[0], posProblem[1]);
+
   let hash = target.password_hash;
   if (b.password) {
     if (String(b.password).length < 8) return bad(res, 400, "Password must be at least 8 characters.");
@@ -256,13 +300,13 @@ router.put("/:id", uploadOne, async (req, res) => {
       `UPDATE users SET
          first_name = $1, last_name = $2, first_name_native = $3, last_name_native = $4,
          gender_id = $5, nationality_id = $6, address = $7, region = $8, country = $9, description = $10,
-         email = $11, phone = $12, password_hash = $13, role_id = $14, position_id = $15, permission_id = $16,
+         email = $11, phone = $12, password_hash = $13, role_id = $14, position_ids = $15::int[], permission_id = $16,
          status = $17, is_blocked = $18, avatar = $19, avatar_thumbnail = $20
        WHERE id = $21`,
       [
         v.firstName, v.lastName, v.firstNameNative, v.lastNameNative,
         v.genderId, v.nationalityId, v.address, v.region, v.country, v.description,
-        v.email, v.phone, hash, next.role_id, v.positionId, v.permissionId,
+        v.email, v.phone, hash, next.role_id, v.positionIds, v.permissionId,
         v.status, v.isBlocked, avatar, avatarThumb, id,
       ],
     );

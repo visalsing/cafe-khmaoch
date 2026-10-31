@@ -131,7 +131,10 @@ router.put(
   })
 );
 
-/* ================= DELETE ================= */
+/* ================= DELETE =================
+   users.position_ids is an integer[] (no foreign key), so the deleted id is
+   removed from every user's array in the SAME statement. Either both
+   changes happen or neither. */
 router.delete(
   "/:id",
   ...guard,
@@ -139,7 +142,19 @@ router.delete(
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) return res.status(400).json({ error: "Invalid id." });
 
-    const { rows } = await pool.query("DELETE FROM positions WHERE id = $1 RETURNING *", [id]);
+    const { rows } = await pool.query(
+      `WITH deleted AS (
+         DELETE FROM positions WHERE id = $1 RETURNING *
+       ), cleaned AS (
+         UPDATE users
+            SET position_ids = array_remove(position_ids, $1::int)
+          WHERE $1::int = ANY(position_ids)
+            AND EXISTS (SELECT 1 FROM deleted)
+          RETURNING id
+       )
+       SELECT * FROM deleted`,
+      [id]
+    );
     if (!rows[0]) return res.status(404).json({ error: "Position not found." });
     res.json({ message: "Position deleted successfully", id });
   })

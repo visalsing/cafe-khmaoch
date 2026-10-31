@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 
 import Navbar from "./IndexPage/Navbar";
@@ -18,6 +17,7 @@ import {
   usePageLoading,
 } from "../context/PageLoadingContext";
 import LoadingScreen from "./Loading/Loading";
+import BackgroundEffect from "../../src/components/Dashboard/BackgroundEffect";
 
 const STATS = [
   { label: "Cups Served", value: "250,000+", change: "+18%", positive: true },
@@ -55,14 +55,12 @@ function IndexPageContent() {
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  const isLoading =
-    menuLoading || !componentsMounted || isPageLoading;
+  const isLoading = menuLoading || !componentsMounted || isPageLoading;
 
   const filteredProducts = products
     .filter((item) => {
       const matchesCategory =
-        selectedCategory === "All" ||
-        item.category === selectedCategory;
+        selectedCategory === "All" || item.category === selectedCategory;
 
       const matchesSearch = (item.title || "")
         .toLowerCase()
@@ -83,33 +81,36 @@ function IndexPageContent() {
             : "min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 transition-colors duration-300"
         }
       >
-        <Navbar setMobileMenuOpen={setMobileMenuOpen} />
+        <BackgroundEffect />
+        <div className="relative z-10">
+          <Navbar setMobileMenuOpen={setMobileMenuOpen} />
 
-        <MobileMenu
-          isOpen={mobileMenuOpen}
-          onClose={() => setMobileMenuOpen(false)}
-        />
-
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16 py-10">
-          <Hero />
-          <Stats stats={STATS} />
-
-          <Shop
-            categories={categories}
-            selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            filteredProducts={filteredProducts}
-            onAddToCart={addItem}
+          <MobileMenu
+            isOpen={mobileMenuOpen}
+            onClose={() => setMobileMenuOpen(false)}
           />
 
-          <Gallery />
-          <About />
-          <LocationSection />
-        </main>
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16 py-10">
+            <Hero />
+            <Stats stats={STATS} />
 
-        <Footer />
+            <Shop
+              categories={categories}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              filteredProducts={filteredProducts}
+              onAddToCart={addItem}
+            />
+
+            <Gallery />
+            <About />
+            <LocationSection />
+          </main>
+
+          <Footer />
+        </div>
       </div>
     </>
   );

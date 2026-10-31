@@ -10,6 +10,8 @@ import {
   Hourglass,
   Play,
   Palette,
+  Sparkles,
+  ComputerIcon,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext.jsx";
@@ -17,11 +19,31 @@ import { useLanguage } from "../../context/LanguageContext.jsx";
 import LoadingScreen, { Loader } from "../Loading/Loading.jsx";
 import { LOADING_STYLES, useLoadingStyle } from "../../utils/loadingStyle.js";
 import { ACCENTS, useAccent } from "../../utils/accent.js";
+import BackgroundEffect from "../Dashboard/BackgroundEffect.jsx";
+import {
+  BACKGROUND_STYLES,
+  useBackgroundStyle,
+} from "../../utils/background.js";
 
 const themeOptions = [
-  { value: "light", labelKey: "light", descriptionKey: "lightDescription", icon: Sun },
-  { value: "dark", labelKey: "dark", descriptionKey: "darkDescription", icon: Moon },
-  { value: "system", labelKey: "system", descriptionKey: "systemDescription", icon: Monitor },
+  {
+    value: "light",
+    labelKey: "light",
+    descriptionKey: "lightDescription",
+    icon: Sun,
+  },
+  {
+    value: "dark",
+    labelKey: "dark",
+    descriptionKey: "darkDescription",
+    icon: Moon,
+  },
+  {
+    value: "system",
+    labelKey: "system",
+    descriptionKey: "systemDescription",
+    icon: Monitor,
+  },
 ];
 
 // Number digit formatting styles options
@@ -54,6 +76,7 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t, languages = [] } = useLanguage();
+  const [backgroundStyle, setBackgroundStyle] = useBackgroundStyle();
 
   // Loading screen style: the same store Settings.jsx uses, so both pages always agree
   const [loadingStyle, setLoadingStyle] = useLoadingStyle();
@@ -153,9 +176,12 @@ export default function SettingsPage() {
           {/* Appearance Section Card */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-slate-800 space-y-4">
             <div>
+              <div className="flex items-center space-x-2">
+              <ComputerIcon className="w-4 h-4 text-accent-700 dark:text-accent-400" />
               <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-1">
                 {t("appearance") || "Appearance"}
               </h3>
+              </div>
 
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 {t("appearanceDescription") ||
@@ -164,45 +190,47 @@ export default function SettingsPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {themeOptions.map(({ value, labelKey, descriptionKey, icon: Icon }) => {
-                const active = theme === value;
+              {themeOptions.map(
+                ({ value, labelKey, descriptionKey, icon: Icon }) => {
+                  const active = theme === value;
 
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setTheme(value)}
-                    aria-pressed={active}
-                    className={`relative p-5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between text-left ${focusStyle} ${
-                      active ? activeCard : inactiveCard
-                    }`}
-                  >
-                    {active && (
-                      <span className="absolute top-4 right-4 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center shadow-md">
-                        <Check className="w-3.5 h-3.5 text-white" />
-                      </span>
-                    )}
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setTheme(value)}
+                      aria-pressed={active}
+                      className={`relative p-5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between text-left ${focusStyle} ${
+                        active ? activeCard : inactiveCard
+                      }`}
+                    >
+                      {active && (
+                        <span className="absolute top-4 right-4 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center shadow-md">
+                          <Check className="w-3.5 h-3.5 text-white" />
+                        </span>
+                      )}
 
-                    <div>
-                      <Icon
-                        className={`w-6 h-6 mb-3 ${
-                          active
-                            ? "text-accent-700 dark:text-accent-400"
-                            : "text-slate-500 dark:text-slate-400"
-                        }`}
-                      />
+                      <div>
+                        <Icon
+                          className={`w-6 h-6 mb-3 ${
+                            active
+                              ? "text-accent-700 dark:text-accent-400"
+                              : "text-slate-500 dark:text-slate-400"
+                          }`}
+                        />
 
-                      <p className="text-sm font-bold text-slate-900 dark:text-white">
-                        {t(labelKey)}
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">
+                          {t(labelKey)}
+                        </p>
+                      </div>
+
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                        {t(descriptionKey)}
                       </p>
-                    </div>
-
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                      {t(descriptionKey)}
-                    </p>
-                  </button>
-                );
-              })}
+                    </button>
+                  );
+                },
+              )}
             </div>
           </div>
 
@@ -250,6 +278,63 @@ export default function SettingsPage() {
                     />
 
                     <p className="text-xs font-bold text-slate-900 dark:text-white">
+                      {label}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Background Effect Card */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-slate-800 space-y-4">
+            <div className="flex items-center space-x-2">
+              <Sparkles className="w-4 h-4 text-accent-700 dark:text-accent-400" />
+
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                  Background Effect
+                </h3>
+
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Choose an animated effect behind the page. It follows your
+                  accent color and is saved in this browser.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {BACKGROUND_STYLES.map(({ value, label }) => {
+                const active = backgroundStyle === value;
+
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setBackgroundStyle(value)}
+                    aria-pressed={active}
+                    className={`relative p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${focusStyle} ${
+                      active ? activeCard : inactiveCard
+                    }`}
+                  >
+                    {active && (
+                      <span className="absolute top-3 right-3 z-10 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center shadow-md">
+                        <Check className="w-3.5 h-3.5 text-white" />
+                      </span>
+                    )}
+
+                    {/* Live background animation preview */}
+                    <div className="relative h-20 w-full rounded-lg overflow-hidden mb-3">
+                      <BackgroundEffect type={value} contained />
+                    </div>
+
+                    <p
+                      className={`text-xs font-bold text-center ${
+                        active
+                          ? "text-accent-700 dark:text-accent-400"
+                          : "text-slate-900 dark:text-white"
+                      }`}
+                    >
                       {label}
                     </p>
                   </button>
@@ -390,7 +475,8 @@ export default function SettingsPage() {
                 </h3>
 
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Choose the animation shown while a page or your account is loading. It is saved in this browser.
+                  Choose the animation shown while a page or your account is
+                  loading. It is saved in this browser.
                 </p>
               </div>
             </div>

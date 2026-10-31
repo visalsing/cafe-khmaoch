@@ -9,12 +9,19 @@ import {
   Hourglass,
   Play,
   Palette,
+  Sparkles,
+  Computer,
 } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import LoadingScreen, { Loader } from "../Loading/Loading.jsx";
 import { LOADING_STYLES, useLoadingStyle } from "../../utils/loadingStyle.js";
 import { ACCENTS, useAccent } from "../../utils/accent.js";
+import BackgroundEffect from "../Dashboard/BackgroundEffect.jsx";
+import {
+  BACKGROUND_STYLES,
+  useBackgroundStyle,
+} from "../../utils/background.js";
 
 const themeOptions = [
   {
@@ -68,6 +75,7 @@ export default function Settings() {
   const [loadingStyle, setLoadingStyle] = useLoadingStyle();
   const [accent, setAccent] = useAccent();
   const [previewing, setPreviewing] = useState(false);
+  const [backgroundStyle, setBackgroundStyle] = useBackgroundStyle();
 
   // State for digit format preference (persisted in localStorage)
   const [digitStyle, setDigitStyle] = useState(() => {
@@ -114,9 +122,12 @@ export default function Settings() {
 
       {/* Appearance section */}
       <div>
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">
-          {t("appearance")}
-        </h3>
+        <div className="flex items-center space-x-2 mb-1">
+          <Computer className="w-4 h-4 text-accent-700 dark:text-accent-400" />
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">
+            {t("appearance")}
+          </h3>
+        </div>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
           {t("appearanceDescription")}
         </p>
@@ -196,6 +207,55 @@ export default function Settings() {
                   style={{ background: swatch }}
                 />
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                  {label}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Background effect section */}
+      <div>
+        <div className="flex items-center space-x-2 mb-1">
+          <Sparkles className="w-4 h-4 text-accent-700 dark:text-accent-400" />
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Background Effect
+          </h3>
+        </div>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          Choose an animated effect behind the page. It follows your accent
+          color and is saved in this browser.
+        </p>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {BACKGROUND_STYLES.map(({ value, label }) => {
+            const active = backgroundStyle === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setBackgroundStyle(value)}
+                aria-pressed={active}
+                className={`relative text-left p-4 rounded-xl border transition-all flex flex-col justify-between ${focusStyle} ${
+                  active ? activeCard : inactiveCard
+                }`}
+              >
+                {active && (
+                  <span className="absolute top-3 right-3 z-10 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center">
+                    <Check className="w-3.5 h-3.5 text-white" />
+                  </span>
+                )}
+                <div className="relative h-20 rounded-lg overflow-hidden mb-3">
+                  <BackgroundEffect type={value} contained />
+                </div>
+                <p
+                  className={`text-sm font-semibold text-center ${
+                    active
+                      ? "text-accent-700 dark:text-accent-400"
+                      : "text-slate-800 dark:text-white"
+                  }`}
+                >
                   {label}
                 </p>
               </button>

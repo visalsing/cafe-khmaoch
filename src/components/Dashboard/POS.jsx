@@ -27,16 +27,40 @@ import {
   levelsOptionsService,
   assetUrl,
 } from "../../services/api";
-// import { calcTotals, promoPercent, round2, money } from "../../utils/orderCalc";
 import { calcTotals, round2 } from "../../utils/orderCalc";
-
-// delete the constant DELIVERY_OPTIONS = [...]
-
-// right under formatPriceWithUSD add
-const riel = (n) => formatPriceWithUSD(n).riel;
-import { tr, asList, bySort } from "./Shared.jsx";
+import { asList, bySort } from "./Shared.jsx";
 import ReceiptModal from "./Receipt";
+import { useLanguage } from "../../context/LanguageContext.jsx";
 
+/* ---------- database text: {"en": "...", "km": "..."} ---------- */
+const pickLang = (obj, lang) =>
+  obj[lang] ||
+  (lang === "km" ? obj.kh : lang === "kh" ? obj.km : "") ||
+  (lang === "tw" ? obj.zh : "") ||
+  obj.en ||
+  Object.values(obj).find(Boolean) ||
+  "";
+
+const trLang = (value, lang = "en") => {
+  if (value == null) return "";
+  if (typeof value === "object" && !Array.isArray(value)) {
+    return pickLang(value, lang);
+  }
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return pickLang(parsed, lang);
+      }
+    } catch {
+      // plain text from the database is already displayable
+    }
+    return value;
+  }
+  return String(value);
+};
+
+/* ---------- storage ---------- */
 const HELD_KEY = "bb_held_v1";
 const CURRENT_ORDER_KEY = "bb_pos_current_order_v1";
 const readCurrentOrder = () => {
@@ -55,21 +79,22 @@ const readHeld = () => {
 };
 
 const ORDER_TYPES = [
-  { id: "dine-in", label: "Dine-in" },
-  { id: "pickup", label: "Takeaway" },
-  { id: "delivery", label: "Delivery" },
+  { id: "dine-in", labelKey: "dine_in" },
+  { id: "pickup", labelKey: "takeaway" },
+  { id: "delivery", labelKey: "delivery" },
 ];
-// const DELIVERY_OPTIONS = [
-//   { id: "express", label: "Local Delivery · $3.50" },
-//   { id: "freight", label: "Catering Delivery · $8.00" },
-// ];
+
+const PAYMENT_METHODS = [
+  { id: "cash", labelKey: "cash", icon: Banknote },
+  { id: "card", labelKey: "card", icon: CreditCard },
+  { id: "qr", labelKey: "qr", icon: QrCode },
+];
+
 const emptyCustomer = { name: "", phone: "", address: "" };
 
-// Display Khmer Riel as the main price and an approximate USD amount underneath.
-// Keep POS order calculations unchanged; this helper only formats the product-card display.
+// Khmer Riel is the main price, with an approximate USD amount underneath.
 const EXCHANGE_RATE = 4100; // 1 USD ≈ 4100 KHR
 const formatPriceWithUSD = (rielValue) => {
-  const riel = (n) => formatPriceWithUSD(n).riel;
   const value = Number(rielValue) || 0;
   const usd = value / EXCHANGE_RATE;
   const usdFormatted =
@@ -79,24 +104,23 @@ const formatPriceWithUSD = (rielValue) => {
     usd: `≈ ${usdFormatted}`,
   };
 };
+const riel = (n) => formatPriceWithUSD(n).riel;
 
 /* ---------- products from the database ----------
    A product can be sold in up to 3 ways: its standard price, a Big size and a Small size.
-   An empty (NULL) price means "not offered". The product's discount_percent applies to every size. */
+   An empty (NULL) price means "not offered". discount_percent applies to every size. */
 const SIZE_DEFS = [
-  { key: "price", label: "Regular", field: "price" },
-  { key: "big", label: "Big", field: "big_size_price" },
-  { key: "small", label: "Small", field: "small_size_price" },
+  { key: "price", labelKey: "regular", field: "price" },
+  { key: "big", labelKey: "big", field: "big_size_price" },
+  { key: "small", labelKey: "small", field: "small_size_price" },
 ];
 const hasValue = (v) => v !== null && v !== undefined && v !== "";
-// price after the product's percentage discount (rounded to cents)
 const unitPrice = (base, discountPct) =>
   round2((Number(base) * (100 - Number(discountPct || 0))) / 100);
-// the ways this product can be sold: [{ key, label, base, unit }]
 const sizeOptions = (p) =>
   SIZE_DEFS.filter((s) => hasValue(p[s.field])).map((s) => ({
     key: s.key,
-    label: s.label,
+    labelKey: s.labelKey,
     base: Number(p[s.field]),
     unit: unitPrice(p[s.field], p.discount_percent),
   }));
@@ -104,13 +128,13 @@ const sizeOptions = (p) =>
 const STATIC_RATING = 4.5;
 const STATIC_REVIEWS = 120;
 
-function Stars({ value = 0 }) {
+function Stars({ value = 0, t }) {
   const rating = Math.max(0, Math.min(5, Number(value) || 0));
   return (
     <div
       className="flex items-center gap-0.5"
       role="img"
-      aria-label={`${rating.toFixed(1)} out of 5 stars`}
+      aria-label={`${rating.toFixed(1)} ${t("out_of_5_stars")}`}
     >
       {[0, 1, 2, 3, 4].map((star) => (
         <span
@@ -130,21 +154,21 @@ function Stars({ value = 0 }) {
   );
 }
 
-function SizeChips({ options, active, onPick }) {
+function SizeChips({ options, active, onPick, t }) {
   return (
-    <div className="flex flex-wrap gap-1.5 pt-1">
+    <div className="flex flex-wrap items-center gap-1 pt-0.5">
       {options.map((option) => (
         <button
           key={option.key}
           type="button"
           onClick={() => onPick(option.key)}
-          className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-colors ${
+          className={`px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold rounded-md border transition-colors cursor-pointer ${
             active === option.key
               ? "bg-accent-600 border-accent-600 text-white"
               : "bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:border-accent-500"
           }`}
         >
-          {option.label}
+          {t(option.labelKey)}
         </button>
       ))}
     </div>
@@ -156,7 +180,7 @@ function FilterChip({ active, onClick, children }) {
     <button
       type="button"
       onClick={onClick}
-      className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+      className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
         active
           ? "bg-accent-600 border-accent-600 text-white"
           : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-accent-500"
@@ -169,6 +193,14 @@ function FilterChip({ active, onClick, children }) {
 
 export default function POS() {
   const navigate = useNavigate();
+  const { language, t } = useLanguage();
+  const activeLanguage = language || "en";
+
+  // Translates database JSON ({"en": "", "km": ""}) into the active language
+  const tr = useCallback(
+    (value) => trLang(value, activeLanguage),
+    [activeLanguage],
+  );
 
   // menu from the database
   const [products, setProducts] = useState([]);
@@ -183,7 +215,7 @@ export default function POS() {
   const [customizations, setCustomizations] = useState({});
   const [addedId, setAddedId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const [loadError, setLoadError] = useState(""); // message, or "" / "__default__"
 
   // menu browsing
   const [catFilter, setCatFilter] = useState("all"); // "all" | category id
@@ -215,7 +247,8 @@ export default function POS() {
   const [promoApplied, setPromoApplied] = useState(() =>
     Boolean(initialOrder.promoApplied),
   );
-  const [promoMsg, setPromoMsg] = useState("");
+  // null | { percent } (applied) | { error } (error text, "" = use the default)
+  const [promoMsg, setPromoMsg] = useState(null);
   const [manualPct, setManualPct] = useState(
     () => Number(initialOrder.manualPct) || 0,
   );
@@ -229,13 +262,13 @@ export default function POS() {
   const [method, setMethod] = useState("cash");
   const [cashReceived, setCashReceived] = useState("");
   const [paying, setPaying] = useState(false);
-  const [payError, setPayError] = useState("");
+  const [payError, setPayError] = useState(""); // message, or "__default__"
   const [shopOptions, setShopOptions] = useState({
     delivery: [],
     maxStaffDiscountPercent: 20,
   });
   const [quote, setQuote] = useState(null); // the server's price for the current order
-  const [quoteError, setQuoteError] = useState("");
+  const [quoteError, setQuoteError] = useState(""); // message, or "__default__"
   const [receipt, setReceipt] = useState(null);
 
   useEffect(() => {
@@ -273,17 +306,6 @@ export default function POS() {
     setLoading(true);
     setLoadError("");
     try {
-      // const [prods, cs, ts, sugars, ices, coffees, levelOptions] =
-      //   await Promise.all([
-      //     productService.list(),
-      //     categoryService.list(),
-      //     drinksTypesService.list(),
-      //     sugarLevelService.list(),
-      //     iceLevelService.list(),
-      //     coffeeLevelService.list(),
-      //     levelsOptionsService.list(),
-      //     orderService.options().catch(() => null),
-      //   ]);
       const [prods, cs, ts, sugars, ices, coffees, levelOptions, shop] =
         await Promise.all([
           productService.list(),
@@ -321,7 +343,7 @@ export default function POS() {
       if (shop) setShopOptions(shop);
     } catch (err) {
       console.error("Failed to load the menu:", err);
-      setLoadError(err.message || "Could not load the menu.");
+      setLoadError(err.message || "__default__");
     } finally {
       setLoading(false);
     }
@@ -330,15 +352,6 @@ export default function POS() {
   useEffect(() => {
     loadMenu();
   }, [loadMenu]);
-
-  // useEffect(() => {
-  //   const load = () =>
-  //     orderService.list().then((o) => setPendingOnline(o.filter((x) => x.source === "online" && x.status === "pending").length));
-  //   load();
-  //   const onStorage = (e) => e.key === "bb_orders_v1" && load();
-  //   window.addEventListener("storage", onStorage);
-  //   return () => window.removeEventListener("storage", onStorage);
-  // }, []);
 
   useEffect(() => {
     const load = () =>
@@ -356,7 +369,7 @@ export default function POS() {
     localStorage.setItem(HELD_KEY, JSON.stringify(list));
   };
 
-  // only products that are on the menu (managers also receive the hidden ones) and have a price
+  // only products that are on the menu and have a price
   const availableItems = useMemo(
     () =>
       products
@@ -365,8 +378,6 @@ export default function POS() {
     [products],
   );
 
-  // Filter panel uses Menu Manager's Categories and Drinks Types filters.
-  // POS intentionally shows only available products; there is no Status filter.
   const filterCategories = useMemo(() => {
     const used = new Set(availableItems.map((p) => Number(p.category_id)));
     return cats
@@ -379,7 +390,7 @@ export default function POS() {
       availableItems.map((p) => Number(p.type_id)).filter(Number.isFinite),
     );
     return types
-      .filter((t) => Number(t.status) === 1 && used.has(Number(t.id)))
+      .filter((dt) => Number(dt.status) === 1 && used.has(Number(dt.id)))
       .sort(bySort);
   }, [types, availableItems]);
 
@@ -395,26 +406,25 @@ export default function POS() {
   useEffect(() => {
     if (
       typeFilter !== "all" &&
-      !filterTypes.some((t) => Number(t.id) === Number(typeFilter))
+      !filterTypes.some((dt) => Number(dt.id) === Number(typeFilter))
     ) {
       setTypeFilter("all");
     }
   }, [filterTypes, typeFilter]);
 
-  const visible = useMemo(
-    () =>
-      availableItems.filter(
-        (p) =>
-          (catFilter === "all" ||
-            Number(p.category_id) === Number(catFilter)) &&
-          (typeFilter === "all" || Number(p.type_id) === Number(typeFilter)) &&
-          Object.values(p.name || {})
-            .join(" ")
-            .toLowerCase()
-            .includes(search.toLowerCase()),
-      ),
-    [availableItems, catFilter, typeFilter, search],
-  );
+  const visible = useMemo(() => {
+    const term = search.toLowerCase();
+    return availableItems.filter((p) => {
+      const names =
+        p.name && typeof p.name === "object" ? Object.values(p.name) : [];
+      const searchable = [...names, tr(p.name)].join(" ").toLowerCase();
+      return (
+        (catFilter === "all" || Number(p.category_id) === Number(catFilter)) &&
+        (typeFilter === "all" || Number(p.type_id) === Number(typeFilter)) &&
+        searchable.includes(term)
+      );
+    });
+  }, [availableItems, catFilter, typeFilter, search, tr]);
 
   const activeFilters =
     Number(catFilter !== "all") + Number(typeFilter !== "all");
@@ -494,7 +504,8 @@ export default function POS() {
   };
 
   // ---- cart actions ----
-  // one cart line per product + size, so "Iced Latte (Big)" and "Iced Latte (Small)" stay separate
+  // One cart line per product + size + options. Names are stored as the raw
+  // {"en","km"} objects, so they re-translate when the language changes.
   const addToCart = (product, option, customization = {}) => {
     const sugar = customization.sugar;
     const ice = customization.ice;
@@ -503,19 +514,17 @@ export default function POS() {
     const finalPrice = round2(option.unit + extraCoffeePrice);
     const basePrice = round2(option.base + extraCoffeePrice);
     const lineId = `${product.id}:${option.key}:${sugar?.id || 0}:${ice?.id || 0}:${coffee?.id || 0}`;
-    const options = sizeOptions(product);
-    const showSize = options.length > 1 || option.key !== "price";
+    const showSize = sizeOptions(product).length > 1 || option.key !== "price";
+
+    // plain-text fallback title (used only by lines saved before this change)
     const labels = [
-      showSize ? option.label : null,
+      showSize ? t(option.labelKey) : null,
       sugar ? tr(sugar.name) : null,
       ice ? tr(ice.name) : null,
       coffee ? tr(coffee.name) : null,
     ].filter(Boolean);
     const productTitle = tr(product.name);
     const detailTitle = labels.length ? `(${labels.join(", ")})` : "";
-    // Keep the combined title for the order payload, while the Current Order UI
-    // displays the product and its customizations on separate lines.
-    const title = `${productTitle}${detailTitle ? ` ${detailTitle}` : ""}`;
 
     setCart((prev) => {
       const found = prev.find((line) => line.id === lineId);
@@ -529,7 +538,13 @@ export default function POS() {
               id: lineId,
               productId: product.id,
               size: option.key,
-              title,
+              sizeLabelKey: option.labelKey,
+              showSize,
+              nameObj: product.name,
+              sugarName: sugar?.name ?? null,
+              iceName: ice?.name ?? null,
+              coffeeName: coffee?.name ?? null,
+              title: `${productTitle}${detailTitle ? ` ${detailTitle}` : ""}`,
               productTitle,
               detailTitle,
               price: finalPrice,
@@ -549,18 +564,35 @@ export default function POS() {
     setAddedId(product.id);
     window.setTimeout(() => setAddedId(null), 1000);
   };
-  // Product cards select size directly; this handler preserves the existing modal flow if invoked.
-  const pickProduct = (product) => {
-    const options = sizeOptions(product);
-    if (options.length === 1) {
-      const customization = customizations[product.id] || {};
-      if (isCompleteCustomization(product))
-        addToCart(product, options[0], customization);
-      else setShowOptionsId(product.id);
-    } else {
-      setSizePick(product);
+
+  // Name and option parts of a cart line, in the active language
+  const lineName = (line) =>
+    line.nameObj
+      ? tr(line.nameObj)
+      : line.productTitle || line.title.split(" (")[0];
+
+  const lineDetailParts = (line) => {
+    if (line.nameObj) {
+      return [
+        line.showSize && line.sizeLabelKey ? t(line.sizeLabelKey) : null,
+        line.sugarName ? tr(line.sugarName) : null,
+        line.iceName ? tr(line.iceName) : null,
+        line.coffeeName ? tr(line.coffeeName) : null,
+      ].filter(Boolean);
     }
+    // lines saved before names were stored as objects
+    const legacy =
+      line.detailTitle ||
+      (line.title.includes(" (")
+        ? `(${line.title.split(" (").slice(1).join(" (")}`
+        : "");
+    return legacy
+      .replace(/^\(|\)$/g, "")
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
   };
+
   const changeQty = (id, d) =>
     setCart((prev) =>
       prev
@@ -572,7 +604,9 @@ export default function POS() {
   const resetOrder = () => {
     try {
       localStorage.removeItem(CURRENT_ORDER_KEY);
-    } catch {}
+    } catch {
+      // storage unavailable
+    }
     setCart([]);
     setOrderType("dine-in");
     setTable("");
@@ -581,22 +615,12 @@ export default function POS() {
     setNote("");
     setPromoCode("");
     setPromoApplied(false);
-    setPromoMsg("");
+    setPromoMsg(null);
     setManualPct(0);
     setCashReceived("");
     setMethod("cash");
   };
 
-  // const applyPromo = (e) => {
-  //   e.preventDefault();
-  //   if (promoPercent(promoCode) > 0) {
-  //     setPromoApplied(true);
-  //     setPromoMsg(`${promoPercent(promoCode)}% promo applied`);
-  //   } else {
-  //     setPromoApplied(false);
-  //     setPromoMsg("Invalid code");
-  //   }
-  // };
   const applyPromo = async (e) => {
     e.preventDefault();
     const code = promoCode.trim();
@@ -605,10 +629,10 @@ export default function POS() {
       const res = await orderService.checkPromo(code);
       setPromoCode(res.code);
       setPromoApplied(true);
-      setPromoMsg(`${res.percent}% promo applied`);
+      setPromoMsg({ percent: res.percent });
     } catch (err) {
       setPromoApplied(false);
-      setPromoMsg(err.message || "Invalid code");
+      setPromoMsg({ error: err.message || "" });
     }
   };
 
@@ -631,13 +655,10 @@ export default function POS() {
       },
       ...held,
     ]);
-    // Keep the current order visible; it is only cleared by Clear all or successful payment.
+    // The current order stays visible; it is cleared by "Clear all" or a successful payment.
   };
   const recallOrder = (h) => {
-    if (
-      cart.length &&
-      !window.confirm("Replace the current order with the held one?")
-    )
+    if (cart.length && !window.confirm(t("replace_current_order_confirm")))
       return;
     setCart(h.cart);
     setOrderType(h.orderType);
@@ -651,25 +672,7 @@ export default function POS() {
     saveHeld(held.filter((x) => x.id !== h.id));
   };
 
-  // // ---- totals (same rules as Cart / Checkout) ----
-  // const isDelivery = orderType === "delivery";
-  // const discountPct = Math.max(
-  //   promoApplied ? promoPercent(promoCode) : 0,
-  //   manualPct,
-  // );
-  // const { subtotal, discount, shipping, tax, total } = calcTotals(cart, {
-  //   discountPct,
-  //   deliveryId: isDelivery ? deliveryId : "standard",
-  // });
-
-  // const received = Number(cashReceived) || 0;
-  // const change = method === "cash" ? round2(Math.max(0, received - total)) : 0;
-  // const deliveryOk =
-  //   !isDelivery || (customer.phone.trim() && customer.address.trim());
-  // const canCharge = cart.length > 0 && deliveryOk;
-  // const canPay = canCharge && (method !== "cash" || received >= total);
-
-  // ---- totals: the SERVER prices the order. calcTotals is only a stand-in for the split second the answer takes ----
+  // ---- totals: the SERVER prices the order; calcTotals is a stand-in while it answers ----
   const isDelivery = orderType === "delivery";
   const apiItems = cart.map((l) => ({
     productId: l.productId,
@@ -711,7 +714,7 @@ export default function POS() {
         .catch((err) => {
           if (!alive) return;
           setQuote(null);
-          setQuoteError(err.message || "Could not price this order.");
+          setQuoteError(err.message || "__default__");
         });
     }, 250);
     return () => {
@@ -735,7 +738,7 @@ export default function POS() {
   const canCharge = cart.length > 0 && deliveryOk && Boolean(quote); // only charge what the server has priced
   const canPay = canCharge && (method !== "cash" || received >= total);
 
-  // delivery choices come from the database (the "standard" one is the free "no delivery")
+  // delivery choices come from the database ("standard" is the free "no delivery")
   const deliveryChoices = shopOptions.delivery.filter(
     (d) => d.code !== "standard",
   );
@@ -748,45 +751,11 @@ export default function POS() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopOptions]);
 
-  // const confirmPayment = async () => {
-  //   setPaying(true);
-  //   try {
-  //     const order = await orderService.create({
-  //       items: cart,
-  //       orderType,
-  //       table: orderType === "dine-in" ? table : "",
-  //       customer: { ...customer, notes: note },
-  //       paymentMethod: method,
-  //       subtotal,
-  //       discount,
-  //       shipping,
-  //       tax,
-  //       total,
-  //       cashReceived: method === "cash" ? received : null,
-  //       change,
-  //       source: "pos",
-  //     });
-  //     setReceipt(order);
-  //     setPayOpen(false);
-  //     resetOrder();
-  //   } finally {
-  //     setPaying(false);
-  //   }
-  // };
-
   const confirmPayment = async () => {
     setPaying(true);
     setPayError("");
     try {
       const order = await orderService.create({
-        // items: cart.map((l) => ({
-        //   productId: l.productId,
-        //   size: l.size,
-        //   qty: l.qty,
-        //   sugarLevelId: l.sugarLevelId,
-        //   iceLevelId: l.iceLevelId,
-        //   coffeeLevelId: l.coffeeLevelId,
-        // })),
         items: apiItems,
         orderType,
         table: orderType === "dine-in" ? table : "",
@@ -802,9 +771,7 @@ export default function POS() {
       setPayOpen(false);
       resetOrder();
     } catch (err) {
-      setPayError(
-        err.message || "The order could not be saved. Please try again.",
-      );
+      setPayError(err.message || "__default__");
     } finally {
       setPaying(false);
     }
@@ -819,14 +786,14 @@ export default function POS() {
       <div className="xl:col-span-2 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-extrabold">Point of Sale</h1>
+            <h1 className="text-2xl font-extrabold">{t("point_of_sale")}</h1>
             {pendingOnline > 0 && (
               <button
                 onClick={() => navigate("/dashboard/orders")}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-100 text-accent-700 text-xs font-bold"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-100 text-accent-700 text-xs font-bold cursor-pointer"
               >
-                <Bell className="w-3.5 h-3.5" /> {pendingOnline} online order
-                {pendingOnline > 1 ? "s" : ""} waiting
+                <Bell className="w-3.5 h-3.5" /> {pendingOnline}{" "}
+                {t("online_orders_waiting")}
               </button>
             )}
           </div>
@@ -836,16 +803,16 @@ export default function POS() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search menu..."
+                placeholder={t("search_drinks_pastries")}
                 className={`${inputCls} pl-9`}
               />
             </div>
             <button
               onClick={loadMenu}
               disabled={loading}
-              title="Reload the menu"
-              aria-label="Reload the menu"
-              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-accent-500 disabled:opacity-60 transition-colors"
+              title={t("reload_menu")}
+              aria-label={t("reload_menu")}
+              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-accent-500 disabled:opacity-60 transition-colors cursor-pointer"
             >
               <RotateCcw
                 className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
@@ -859,10 +826,10 @@ export default function POS() {
             type="button"
             onClick={() => setShowFilters((value) => !value)}
             aria-expanded={showFilters}
-            className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center gap-2 hover:border-accent-500 transition-colors"
+            className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center gap-2 hover:border-accent-500 transition-colors cursor-pointer"
           >
             <SlidersHorizontal className="w-4 h-4" />
-            {showFilters ? "Hide Filters" : "Show Filters"}
+            {showFilters ? t("hide_filters") : t("show_filters")}
             {activeFilters > 0 && (
               <span className="px-1.5 rounded-full bg-accent-600 text-white text-xs leading-5">
                 {activeFilters}
@@ -871,17 +838,17 @@ export default function POS() {
           </button>
           {catFilter !== "all" && (
             <span className="px-3 py-1.5 rounded-full bg-accent-100 text-accent-800 dark:bg-accent-950/40 dark:text-accent-300 text-xs font-medium">
-              Category:{" "}
+              {t("category")}:{" "}
               {tr(cats.find((c) => Number(c.id) === Number(catFilter))?.name) ||
-                "Selected"}
+                t("selected")}
             </span>
           )}
           {typeFilter !== "all" && (
             <span className="px-3 py-1.5 rounded-full bg-accent-100 text-accent-800 dark:bg-accent-950/40 dark:text-accent-300 text-xs font-medium">
-              Type:{" "}
+              {t("type")}:{" "}
               {tr(
-                types.find((t) => Number(t.id) === Number(typeFilter))?.name,
-              ) || "Selected"}
+                types.find((dt) => Number(dt.id) === Number(typeFilter))?.name,
+              ) || t("selected")}
             </span>
           )}
         </div>
@@ -890,14 +857,14 @@ export default function POS() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 space-y-4 shadow-sm">
             <div className="space-y-2">
               <div className="text-xs font-semibold text-slate-500">
-                Categories
+                {t("categories")}
               </div>
               <div className="flex flex-wrap gap-2">
                 <FilterChip
                   active={catFilter === "all"}
                   onClick={() => setCatFilter("all")}
                 >
-                  All ({availableItems.length})
+                  {t("all")} ({availableItems.length})
                 </FilterChip>
                 {filterCategories.map((c) => (
                   <FilterChip
@@ -914,23 +881,23 @@ export default function POS() {
 
             <div className="space-y-2">
               <div className="text-xs font-semibold text-slate-500">
-                Drinks Types
+                {t("drinks_types")}
               </div>
               <div className="flex flex-wrap gap-2">
                 <FilterChip
                   active={typeFilter === "all"}
                   onClick={() => setTypeFilter("all")}
                 >
-                  All ({availableItems.length})
+                  {t("all")} ({availableItems.length})
                 </FilterChip>
-                {filterTypes.map((t) => (
+                {filterTypes.map((dt) => (
                   <FilterChip
-                    key={t.id}
-                    active={Number(typeFilter) === Number(t.id)}
-                    onClick={() => setTypeFilter(String(t.id))}
+                    key={dt.id}
+                    active={Number(typeFilter) === Number(dt.id)}
+                    onClick={() => setTypeFilter(String(dt.id))}
                   >
-                    {tr(t.name)} (
-                    {countBy((p) => Number(p.type_id) === Number(t.id))})
+                    {tr(dt.name)} (
+                    {countBy((p) => Number(p.type_id) === Number(dt.id))})
                   </FilterChip>
                 ))}
               </div>
@@ -940,27 +907,32 @@ export default function POS() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="text-sm text-accent-600 font-medium underline"
+                className="text-sm text-accent-600 font-medium underline cursor-pointer"
               >
-                Clear filters
+                {t("clear_filters")}
               </button>
             )}
           </div>
         )}
 
         {loadError && (
-          <div className="p-3 rounded-xl bg-rose-50 text-rose-700 text-sm flex items-center justify-between">
-            {loadError}
-            <button onClick={loadMenu} className="font-semibold underline">
-              Retry
+          <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 text-sm flex items-center justify-between">
+            {loadError === "__default__"
+              ? t("could_not_load_menu_options")
+              : loadError}
+            <button
+              onClick={loadMenu}
+              className="font-semibold underline cursor-pointer"
+            >
+              {t("retry")}
             </button>
           </div>
         )}
 
         {loading && products.length === 0 ? (
-          <p className="text-slate-500">Loading menu...</p>
+          <p className="text-slate-500">{t("loading_menu")}</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {visible.map((item) => {
               const options = sizeOptions(item);
               const option = chosenOption(item);
@@ -984,62 +956,80 @@ export default function POS() {
               const extraCoffeePrice = Number(customization.coffee?.price || 0);
               const currentPrice = round2(option.unit + extraCoffeePrice);
               const currentBasePrice = round2(option.base + extraCoffeePrice);
+              const categoryName = tr(
+                cats.find((cat) => cat.id === item.category_id)?.name,
+              );
+              const badge = tr(item.badge).trim();
+              const description = tr(item.description).trim();
 
               return (
-                <div
+                <article
                   key={item.id}
-                  className="group relative bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 hover:shadow-xl hover:border-accent-500/50 transition-all duration-300 flex flex-col justify-between overflow-hidden"
+                  className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-sm transition-shadow hover:shadow-md"
                 >
-                  <div>
-                    <div className="relative h-56 overflow-hidden bg-stone-100 dark:bg-stone-800">
+                  <div className="flex min-w-0 items-stretch">
+                    {/* Image */}
+                    <div className="relative w-[34%] min-w-[112px] sm:w-36 shrink-0 self-stretch overflow-hidden bg-stone-100 dark:bg-stone-800">
                       {img ? (
                         <img
                           src={img}
                           alt={tr(item.name)}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-5xl">
+                        <span className="absolute inset-0 flex items-center justify-center text-4xl">
                           ☕
-                        </div>
+                        </span>
                       )}
-                      <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                      <span className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/10 pointer-events-none" />
+                      <span className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-wrap gap-1">
                         {discount > 0 && (
-                          <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider bg-rose-600/90 text-white rounded-lg">
+                          <span className="rounded-md bg-rose-600/95 px-2 py-1 text-[10px] font-bold leading-tight text-white">
                             -{discount}%
                           </span>
                         )}
-                        {tr(item.badge).trim() && (
-                          <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider bg-black/60 text-white rounded-lg">
-                            {tr(item.badge)}
+                        {badge && (
+                          <span className="max-w-full break-words rounded-md bg-black/65 px-2 py-1 text-[10px] font-bold leading-tight text-white">
+                            {badge}
                           </span>
                         )}
-                      </div>
+                      </span>
                     </div>
 
-                    <div className="p-5 space-y-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-accent-600 dark:text-accent-400">
-                        {tr(
-                          cats.find((cat) => cat.id === item.category_id)?.name,
+                    {/* Details */}
+                    <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5 p-2.5 sm:p-3">
+                      {categoryName && (
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-accent-600 dark:text-accent-400">
+                          {categoryName}
+                        </span>
+                      )}
+
+                      <div className="w-full min-w-0">
+                        <h3 className="break-words text-xs sm:text-sm font-bold leading-snug text-stone-900 dark:text-white">
+                          {tr(item.name)}
+                        </h3>
+                        {description && (
+                          <p className="mt-0.5 break-words whitespace-pre-line line-clamp-2 text-[10px] sm:text-[11px] leading-snug text-stone-500 dark:text-stone-400">
+                            {description}
+                          </p>
                         )}
-                      </span>
-                      <h3 className="font-semibold text-stone-900 dark:text-white line-clamp-1">
-                        {tr(item.name)}
-                      </h3>
-                      <div className="flex items-center gap-2 text-xs text-stone-500">
-                        <Stars value={rating} />
-                        <span className="font-semibold text-stone-700 dark:text-stone-300">
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5 text-stone-500 dark:text-stone-400">
+                        <span className="text-[11px] leading-none">
+                          <Stars value={rating} t={t} />
+                        </span>
+                        <span className="text-[10px] font-semibold text-stone-700 dark:text-stone-300">
                           {rating.toFixed(1)}
                         </span>
-                        <span>
-                          ({reviews} {reviews === 1 ? "review" : "reviews"})
-                        </span>
+                        <span className="text-[10px]">({reviews})</span>
                       </div>
 
                       {options.length > 1 && (
                         <SizeChips
                           options={options}
                           active={option.key}
+                          t={t}
                           onPick={(key) =>
                             setPicked((previous) => ({
                               ...previous,
@@ -1050,154 +1040,138 @@ export default function POS() {
                       )}
 
                       {hasAnyOptions && (
-                        <div className="pt-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setShowOptionsId(isExpanded ? null : item.id)
-                            }
-                            className="w-full flex items-center justify-between text-xs font-semibold text-accent-600 dark:text-accent-400 py-1.5 px-3 rounded-lg bg-accent-50 dark:bg-accent-950/30 hover:bg-accent-100 transition-colors"
-                          >
-                            <span>Show more options</span>
-                            {isExpanded ? (
-                              <ChevronUp className="w-4 h-4" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4" />
-                            )}
-                          </button>
-
-                          {isExpanded && (
-                            <div className="mt-3 p-3 bg-stone-50 dark:bg-stone-800/50 rounded-xl space-y-3 text-xs border border-stone-200 dark:border-stone-700">
-                              {[
-                                {
-                                  key: "sugar",
-                                  label: "Sugar Level",
-                                  levels: availSugar,
-                                },
-                                {
-                                  key: "ice",
-                                  label: "Ice Level",
-                                  levels: availIce,
-                                },
-                                {
-                                  key: "coffee",
-                                  label: "Coffee Level",
-                                  levels: availCoffee,
-                                },
-                              ].map(
-                                (group) =>
-                                  group.levels.length > 0 && (
-                                    <div key={group.key}>
-                                      <span className="font-bold text-stone-700 dark:text-stone-300 block mb-1.5">
-                                        {group.label}{" "}
-                                        <span className="text-rose-500">*</span>
-                                      </span>
-                                      <div className="space-y-1.5">
-                                        {group.levels.map((level) => (
-                                          <label
-                                            key={level.id}
-                                            className="flex items-center gap-2 cursor-pointer text-stone-700 dark:text-stone-300 hover:text-accent-600"
-                                          >
-                                            <input
-                                              type="radio"
-                                              name={`${group.key}-${item.id}`}
-                                              checked={
-                                                customization[group.key]?.id ===
-                                                level.id
-                                              }
-                                              onChange={() =>
-                                                handleCustomizationChange(
-                                                  item.id,
-                                                  group.key,
-                                                  level,
-                                                )
-                                              }
-                                              className="accent-accent-600 cursor-pointer"
-                                            />
-                                            <span>
-                                              {tr(level.name)}
-                                              {/* {group.key === "coffee" &&
-                                              Number(level.price || 0) > 0
-                                                ? ` (+${money(Number(level.price))})`
-                                                : ""} */}
-                                              {/* // coffee level label */}
-                                              {group.key === "coffee" &&
-                                              Number(level.price || 0) > 0
-                                                ? ` (+${riel(level.price)})`
-                                                : ""}
-                                            </span>
-                                          </label>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  ),
-                              )}
-                            </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowOptionsId(isExpanded ? null : item.id)
+                          }
+                          aria-expanded={isExpanded}
+                          className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-accent-600 dark:text-accent-400 hover:text-accent-700 transition-colors cursor-pointer"
+                        >
+                          {t("show_more_options")}
+                          {isExpanded ? (
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          ) : (
+                            <ChevronDown className="w-3.5 h-3.5" />
                           )}
-                        </div>
+                        </button>
                       )}
+
+                      {/* Price + add */}
+                      <div className="mt-auto flex w-full min-w-0 flex-wrap items-end justify-between gap-2 pt-1">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                            <span className="text-xs sm:text-sm font-extrabold text-stone-900 dark:text-white">
+                              {formatPriceWithUSD(currentPrice).riel}
+                            </span>
+                            {discount > 0 && (
+                              <span className="text-[10px] line-through text-stone-400">
+                                {formatPriceWithUSD(currentBasePrice).riel}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] font-medium text-stone-400 dark:text-stone-500">
+                            {formatPriceWithUSD(currentPrice).usd}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!canAdd) {
+                              setShowOptionsId(item.id); // open the required options
+                              return;
+                            }
+                            addToCart(item, option, customization);
+                          }}
+                          aria-disabled={!canAdd}
+                          title={!canAdd ? t("complete_required_levels") : ""}
+                          className={`shrink-0 px-3 py-1.5 text-white font-semibold text-[11px] sm:text-xs rounded-lg shadow-sm transition-all cursor-pointer ${
+                            !canAdd
+                              ? "bg-stone-300 dark:bg-stone-700 text-stone-500 opacity-70"
+                              : addedId === item.id
+                                ? "bg-emerald-600"
+                                : "bg-accent-600 hover:bg-accent-700"
+                          }`}
+                        >
+                          {addedId === item.id ? t("added") : t("add_to_order")}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="p-5 pt-0 flex items-center justify-between mt-auto gap-3">
-                    <div className="flex flex-col gap-0.5 min-w-0">
-                      <div className="flex items-baseline gap-2 flex-wrap">
-                        <span className="text-xl font-extrabold text-stone-900 dark:text-white">
-                          {formatPriceWithUSD(currentPrice).riel}
-                        </span>
-                        {discount > 0 && (
-                          <span className="text-sm line-through text-stone-400">
-                            {formatPriceWithUSD(currentBasePrice).riel}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs font-medium text-stone-400 dark:text-stone-500">
-                        <span>{formatPriceWithUSD(currentPrice).usd}</span>
-                        {discount > 0 && (
-                          <span className="line-through">
-                            {formatPriceWithUSD(currentBasePrice).usd}
-                          </span>
-                        )}
-                      </div>
-                      {options.length > 1 && (
-                        <span className="text-xs text-stone-400">
-                          Selected: {option.label}
-                        </span>
+                  {/* Options: full card width, below the compact row */}
+                  {hasAnyOptions && isExpanded && (
+                    <div className="border-t border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-800/50 p-3 space-y-3 text-xs">
+                      {[
+                        {
+                          key: "sugar",
+                          label: t("sugar_level"),
+                          levels: availSugar,
+                        },
+                        {
+                          key: "ice",
+                          label: t("ice_level"),
+                          levels: availIce,
+                        },
+                        {
+                          key: "coffee",
+                          label: t("coffee_level"),
+                          levels: availCoffee,
+                        },
+                      ].map(
+                        (group) =>
+                          group.levels.length > 0 && (
+                            <div key={group.key}>
+                              <span className="font-bold text-stone-700 dark:text-stone-300 block mb-1.5">
+                                {group.label}{" "}
+                                <span className="text-rose-500">*</span>
+                              </span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                {group.levels.map((level) => (
+                                  <label
+                                    key={level.id}
+                                    className="flex items-center gap-2 cursor-pointer text-stone-700 dark:text-stone-300 hover:text-accent-600"
+                                  >
+                                    <input
+                                      type="radio"
+                                      name={`${group.key}-${item.id}`}
+                                      checked={
+                                        customization[group.key]?.id ===
+                                        level.id
+                                      }
+                                      onChange={() =>
+                                        handleCustomizationChange(
+                                          item.id,
+                                          group.key,
+                                          level,
+                                        )
+                                      }
+                                      className="accent-accent-600 cursor-pointer"
+                                    />
+                                    <span>
+                                      {tr(level.name)}
+                                      {group.key === "coffee" &&
+                                      Number(level.price || 0) > 0
+                                        ? ` (+${riel(level.price)})`
+                                        : ""}
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          ),
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!canAdd) {
-                          setShowOptionsId(item.id);
-                          return;
-                        }
-                        addToCart(item, option, customization);
-                      }}
-                      disabled={!canAdd}
-                      className={`shrink-0 px-4 py-2 text-white font-semibold text-xs rounded-xl shadow-sm transition-all ${
-                        !canAdd
-                          ? "bg-stone-300 dark:bg-stone-700 text-stone-500 cursor-not-allowed opacity-60"
-                          : addedId === item.id
-                            ? "bg-emerald-600"
-                            : "bg-accent-600 hover:bg-accent-700"
-                      }`}
-                      title={
-                        !canAdd
-                          ? "Please complete all required level selections first"
-                          : ""
-                      }
-                    >
-                      {addedId === item.id ? "Added ✓" : "Add to Order"}
-                    </button>
-                  </div>
-                </div>
+                  )}
+                </article>
               );
             })}
+
             {!loading && !loadError && visible.length === 0 && (
               <div className="col-span-full text-center py-16 text-stone-500 dark:text-stone-400">
                 <div className="text-5xl mb-3">☕</div>
-                <p className="font-semibold">No items match your search.</p>
+                <p className="font-semibold">{t("no_items_match_search")}</p>
               </div>
             )}
           </div>
@@ -1206,15 +1180,14 @@ export default function POS() {
 
       {/* RIGHT: current order */}
       <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-5 space-y-4 xl:sticky xl:top-0 xl:max-h-[calc(100vh-7rem)] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] dark:[scrollbar-color:#475569_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-track]:my-2 [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-accent-500">
-        {/* <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-5 space-y-4 xl:sticky xl:top-0 xl:max-h-[calc(100vh-7rem)] overflow-y-auto"> */}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">Current Order</h2>
+          <h2 className="text-lg font-bold">{t("current_order")}</h2>
           {cart.length > 0 && (
             <button
               onClick={resetOrder}
-              className="text-xs text-rose-500 font-semibold"
+              className="text-xs text-rose-500 font-semibold cursor-pointer"
             >
-              Clear all
+              {t("clear_all")}
             </button>
           )}
         </div>
@@ -1222,20 +1195,22 @@ export default function POS() {
         {/* held orders */}
         {held.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-xs font-semibold text-slate-500">Held orders</p>
+            <p className="text-xs font-semibold text-slate-500">
+              {t("held_orders")}
+            </p>
             {held.map((h) => (
               <button
                 key={h.id}
                 onClick={() => recallOrder(h)}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs hover:border-accent-500"
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs hover:border-accent-500 cursor-pointer"
               >
                 <span>
-                  {h.cart.reduce((n, l) => n + l.qty, 0)} items ·{" "}
+                  {h.cart.reduce((n, l) => n + l.qty, 0)} {t("items")} ·{" "}
                   {new Date(h.heldAt).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
-                  {h.table ? ` · Table ${h.table}` : ""}
+                  {h.table ? ` · ${t("table")} ${h.table}` : ""}
                 </span>
                 <Play className="w-3.5 h-3.5 text-accent-600" />
               </button>
@@ -1245,13 +1220,17 @@ export default function POS() {
 
         {/* order type */}
         <div className="grid grid-cols-3 gap-2">
-          {ORDER_TYPES.map((t) => (
+          {ORDER_TYPES.map((type) => (
             <button
-              key={t.id}
-              onClick={() => setOrderType(t.id)}
-              className={`py-2 rounded-xl text-xs font-semibold ${orderType === t.id ? "bg-accent-600 text-white" : "bg-slate-100 dark:bg-slate-900"}`}
+              key={type.id}
+              onClick={() => setOrderType(type.id)}
+              className={`py-2 rounded-xl text-xs font-semibold cursor-pointer ${
+                orderType === type.id
+                  ? "bg-accent-600 text-white"
+                  : "bg-slate-100 dark:bg-slate-900"
+              }`}
             >
-              {t.label}
+              {t(type.labelKey)}
             </button>
           ))}
         </div>
@@ -1260,24 +1239,13 @@ export default function POS() {
           <input
             value={table}
             onChange={(e) => setTable(e.target.value)}
-            placeholder="Table no. (optional)"
+            placeholder={t("table_no_optional")}
             className={inputCls}
           />
         )}
 
         {isDelivery && (
           <div className="space-y-2">
-            {/* <select
-              value={deliveryId}
-              onChange={(e) => setDeliveryId(e.target.value)}
-              className={inputCls}
-            >
-              {DELIVERY_OPTIONS.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.label}
-                </option>
-              ))}
-            </select> */}
             <select
               value={deliveryId}
               onChange={(e) => setDeliveryId(e.target.value)}
@@ -1285,7 +1253,7 @@ export default function POS() {
             >
               {deliveryChoices.map((d) => (
                 <option key={d.code} value={d.code}>
-                  {d.name} · {riel(d.fee)}
+                  {tr(d.name)} · {riel(d.fee)}
                 </option>
               ))}
             </select>
@@ -1294,7 +1262,7 @@ export default function POS() {
               onChange={(e) =>
                 setCustomer({ ...customer, address: e.target.value })
               }
-              placeholder="Delivery address *"
+              placeholder={`${t("delivery_address")} *`}
               className={inputCls}
             />
           </div>
@@ -1304,7 +1272,7 @@ export default function POS() {
           <input
             value={customer.name}
             onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
-            placeholder="Customer name"
+            placeholder={t("customer_name")}
             className={inputCls}
           />
           <input
@@ -1312,7 +1280,7 @@ export default function POS() {
             onChange={(e) =>
               setCustomer({ ...customer, phone: e.target.value })
             }
-            placeholder={isDelivery ? "Phone *" : "Phone"}
+            placeholder={isDelivery ? `${t("phone")} *` : t("phone")}
             className={inputCls}
           />
         </div>
@@ -1321,55 +1289,46 @@ export default function POS() {
         <div className="space-y-2 max-h-60 overflow-y-auto">
           {cart.length === 0 && (
             <p className="text-sm text-slate-500 py-6 text-center">
-              Choose the size and options, then tap Add to Order.
+              {t("pos_empty_hint")}
             </p>
           )}
           {cart.map((l) => {
-            const fullDetails =
-              l.detailTitle ||
-              (l.title.includes(" (")
-                ? `(${l.title.split(" (").slice(1).join(" (")}`
-                : "");
+            const parts = lineDetailParts(l);
             const isExpanded = Boolean(expandedDetails[l.id]);
-            // Keep size + first customization visible; expand the remaining details on demand.
-            const detailParts = fullDetails
-              .replace(/^\(|\)$/g, "")
-              .split(",")
-              .map((part) => part.trim())
-              .filter(Boolean);
-            const hasMoreDetails = detailParts.length > 2;
-            const shortDetails = hasMoreDetails
-              ? `(${detailParts.slice(0, 2).join(", ")}, `
-              : fullDetails;
-            const expandedDetailsText = hasMoreDetails
-              ? `(${detailParts.join(", ")})`
-              : fullDetails;
+            // Show size + first option; the rest expands on demand.
+            const hasMoreDetails = parts.length > 2;
+
             return (
               <div key={l.id} className="flex items-center gap-2 text-sm">
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold whitespace-normal break-words leading-snug">
-                    {l.productTitle || l.title.split(" (")[0]}
-                    {fullDetails && (
+                    {lineName(l)}
+                    {parts.length > 0 && (
                       <span className="font-normal text-slate-500 dark:text-slate-400">
                         {" "}
-                        {hasMoreDetails
-                          ? isExpanded
-                            ? expandedDetailsText
-                            : shortDetails
-                          : fullDetails}
-                        {hasMoreDetails && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedDetails((prev) => ({
-                                ...prev,
-                                [l.id]: !prev[l.id],
-                              }))
-                            }
-                            className="ml-1 text-accent-600 dark:text-accent-400 font-medium whitespace-nowrap"
-                          >
-                            {isExpanded ? "see less" : "see more...)"}
-                          </button>
+                        {hasMoreDetails ? (
+                          <>
+                            {isExpanded
+                              ? `(${parts.join(", ")})`
+                              : `(${parts.slice(0, 2).join(", ")}, `}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedDetails((prev) => ({
+                                  ...prev,
+                                  [l.id]: !prev[l.id],
+                                }))
+                              }
+                              className="ml-1 text-accent-600 dark:text-accent-400 font-medium whitespace-nowrap cursor-pointer"
+                            >
+                              {isExpanded
+                                ? t("see_less")
+                                : `${t("see_more")}...`}
+                            </button>
+                            {!isExpanded && ")"}
+                          </>
+                        ) : (
+                          `(${parts.join(", ")})`
                         )}
                       </span>
                     )}
@@ -1390,11 +1349,19 @@ export default function POS() {
                   </div>
                 </div>
                 <div className="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg">
-                  <button onClick={() => changeQty(l.id, -1)} className="p-1.5">
+                  <button
+                    onClick={() => changeQty(l.id, -1)}
+                    className="p-1.5 cursor-pointer"
+                    aria-label={t("decrease")}
+                  >
                     <Minus className="w-3.5 h-3.5" />
                   </button>
                   <span className="px-2 font-semibold">{l.qty}</span>
-                  <button onClick={() => changeQty(l.id, 1)} className="p-1.5">
+                  <button
+                    onClick={() => changeQty(l.id, 1)}
+                    className="p-1.5 cursor-pointer"
+                    aria-label={t("increase")}
+                  >
                     <Plus className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1408,8 +1375,9 @@ export default function POS() {
                 </span>
                 <button
                   onClick={() => removeLine(l.id)}
-                  className="p-1 text-rose-500"
-                  title="Remove"
+                  className="p-1 text-rose-500 cursor-pointer"
+                  title={t("remove")}
+                  aria-label={t("remove")}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -1422,51 +1390,46 @@ export default function POS() {
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={2}
-          placeholder="Order note (less sugar, no ice...)"
+          placeholder={t("order_note_placeholder")}
           className={inputCls}
         />
 
         {/* promo + manual discount */}
         <form onSubmit={applyPromo} className="flex gap-2">
-          {/* <input
-            value={promoCode}
-            onChange={(e) => setPromoCode(e.target.value)}
-            placeholder="Promo code"
-            className={inputCls}
-          /> */}
           <input
             value={promoCode}
             onChange={(e) => {
               setPromoCode(e.target.value);
               setPromoApplied(false);
-              setPromoMsg("");
+              setPromoMsg(null);
             }}
-            placeholder="Promo code"
+            placeholder={t("promo_code")}
             className={inputCls}
           />
-          <button className="px-4 py-2 bg-slate-900 dark:bg-slate-700 text-white font-semibold text-xs rounded-xl">
-            Apply
+          <button className="px-4 py-2 bg-slate-900 dark:bg-slate-700 text-white font-semibold text-xs rounded-xl cursor-pointer">
+            {t("apply")}
           </button>
         </form>
         {promoMsg && (
           <p
-            className={`text-xs ${promoApplied ? "text-emerald-600" : "text-rose-500"}`}
+            className={`text-xs ${
+              promoMsg.error !== undefined
+                ? "text-rose-500"
+                : "text-emerald-600"
+            }`}
           >
-            {promoMsg}
+            {promoMsg.error !== undefined
+              ? promoMsg.error || t("invalid_code")
+              : `${promoMsg.percent}% ${t("promo_applied")}`}
           </p>
         )}
         <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-500">Staff discount</span>
+          <span className="text-slate-500">{t("staff_discount")}</span>
           <select
             value={manualPct}
             onChange={(e) => setManualPct(Number(e.target.value))}
             className="px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700"
           >
-            {/* {[0, 5, 10, 15, 20].map((p) => (
-              <option key={p} value={p}>
-                {p}%
-              </option>
-            ))} */}
             {[0, 5, 10, 15, 20]
               .filter((p) => p <= shopOptions.maxStaffDiscountPercent)
               .map((p) => (
@@ -1480,7 +1443,7 @@ export default function POS() {
         {/* totals */}
         <div className="space-y-1.5 text-sm border-t border-slate-200 dark:border-slate-700 pt-3">
           <div className="flex justify-between gap-3 text-slate-500">
-            <span>Subtotal</span>
+            <span>{t("subtotal")}</span>
             <span className="text-right">
               <span className="block text-slate-700 dark:text-slate-200">
                 {formatPriceWithUSD(subtotal).riel}
@@ -1492,7 +1455,9 @@ export default function POS() {
           </div>
           {discount > 0 && (
             <div className="flex justify-between gap-3 text-emerald-600">
-              <span>Discount ({discountPct}%)</span>
+              <span>
+                {t("discount")} ({discountPct}%)
+              </span>
               <span className="text-right">
                 <span className="block">
                   -{formatPriceWithUSD(discount).riel}
@@ -1505,7 +1470,7 @@ export default function POS() {
           )}
           {shipping > 0 && (
             <div className="flex justify-between gap-3 text-slate-500">
-              <span>Delivery</span>
+              <span>{t("delivery")}</span>
               <span className="text-right">
                 <span className="block">
                   {formatPriceWithUSD(shipping).riel}
@@ -1517,7 +1482,7 @@ export default function POS() {
             </div>
           )}
           <div className="flex justify-between gap-3 text-slate-500">
-            <span>Tax (%)</span>
+            <span>{t("tax")}</span>
             <span className="text-right">
               <span className="block">{formatPriceWithUSD(tax).riel}</span>
               <span className="block text-[10px] text-slate-400">
@@ -1526,7 +1491,7 @@ export default function POS() {
             </span>
           </div>
           <div className="flex justify-between gap-3 text-lg font-extrabold pt-1">
-            <span>Total</span>
+            <span>{t("total")}</span>
             <span className="text-right text-accent-600 dark:text-accent-400">
               <span className="block">{formatPriceWithUSD(total).riel}</span>
               <span className="block text-xs font-medium text-accent-500/70">
@@ -1536,36 +1501,39 @@ export default function POS() {
           </div>
         </div>
 
+        {quoteError && (
+          <p role="alert" className="text-xs text-rose-500">
+            {quoteError === "__default__"
+              ? t("could_not_price_order")
+              : quoteError}
+          </p>
+        )}
+
         <div className="flex gap-2">
-          {quoteError && (
-            <p role="alert" className="text-xs text-rose-500">
-              {quoteError}
-            </p>
-          )}
           <button
             disabled={cart.length === 0}
             onClick={holdOrder}
-            className="px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 disabled:opacity-40 flex items-center gap-1.5 text-sm font-semibold"
+            className="px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 disabled:opacity-40 flex items-center gap-1.5 text-sm font-semibold cursor-pointer"
           >
-            <Pause className="w-4 h-4" /> Hold
+            <Pause className="w-4 h-4" /> {t("hold")}
           </button>
           <button
             disabled={!canCharge}
             onClick={() => setPayOpen(true)}
-            className="flex-1 py-3 rounded-xl bg-accent-600 hover:bg-accent-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-lg transition-all"
+            className="flex-1 py-3 rounded-xl bg-accent-600 hover:bg-accent-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold shadow-lg transition-all cursor-pointer"
           >
-            Charge {formatPriceWithUSD(total).riel} (
+            {t("charge")} {formatPriceWithUSD(total).riel} (
             {formatPriceWithUSD(total).usd})
           </button>
         </div>
         {isDelivery && !deliveryOk && (
           <p className="text-xs text-rose-500">
-            Delivery needs a phone number and address.
+            {t("delivery_needs_phone_address")}
           </p>
         )}
       </div>
 
-      {/* SIZE PICKER: shown when a product is sold in more than one way (Regular / Big / Small) */}
+      {/* SIZE PICKER: shown when a product is sold in more than one way */}
       {sizePick && (
         <div
           className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
@@ -1574,7 +1542,7 @@ export default function POS() {
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="Choose a size"
+            aria-label={t("choose_a_size")}
             onClick={(e) => e.stopPropagation()}
             className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4"
           >
@@ -1582,7 +1550,11 @@ export default function POS() {
               <h3 className="text-lg font-bold truncate">
                 {tr(sizePick.name)}
               </h3>
-              <button onClick={() => setSizePick(null)} aria-label="Close">
+              <button
+                onClick={() => setSizePick(null)}
+                aria-label={t("close")}
+                className="cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1594,17 +1566,10 @@ export default function POS() {
                     addToCart(sizePick, o, customizations[sizePick.id] || {});
                     setSizePick(null);
                   }}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-accent-500 hover:bg-accent-50 dark:hover:bg-accent-950/20 font-semibold transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-accent-500 hover:bg-accent-50 dark:hover:bg-accent-950/20 font-semibold transition-colors cursor-pointer"
                 >
-                  <span>{o.label}</span>
+                  <span>{t(o.labelKey)}</span>
                   <span className="text-accent-600 dark:text-accent-400">
-                    {/* {money(o.unit)}
-                    {Number(sizePick.discount_percent) > 0 && (
-                      <span className="ml-2 text-xs font-normal line-through text-slate-400">
-                        {money(o.base)}
-                      </span>
-                    )} */}
-                    {/* // size picker */}
                     {riel(o.unit)}
                     {Number(sizePick.discount_percent) > 0 && (
                       <span className="ml-2 text-xs font-normal line-through text-slate-400">
@@ -1624,15 +1589,16 @@ export default function POS() {
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold">Payment</h3>
-              <button onClick={() => setPayOpen(false)}>
+              <h3 className="text-lg font-bold">{t("payment")}</h3>
+              <button
+                onClick={() => setPayOpen(false)}
+                aria-label={t("close")}
+                className="cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            {/* <p className="text-3xl font-extrabold text-center text-accent-600 dark:text-accent-400">
-              {money(total)}
-            </p> */}
-            {/* // payment window: the big total */}
+
             <p className="text-3xl font-extrabold text-center text-accent-600 dark:text-accent-400">
               {formatPriceWithUSD(total).riel}
               <span className="block text-sm font-medium text-accent-500/70">
@@ -1641,21 +1607,17 @@ export default function POS() {
             </p>
 
             <div className="grid grid-cols-3 gap-2">
-              {[
-                { id: "cash", label: "Cash", icon: Banknote },
-                { id: "card", label: "Card", icon: CreditCard },
-                { id: "qr", label: "QR", icon: QrCode },
-              ].map(({ id, label, icon: Icon }) => (
+              {PAYMENT_METHODS.map(({ id, labelKey, icon: Icon }) => (
                 <button
                   key={id}
                   onClick={() => setMethod(id)}
-                  className={`py-3 rounded-xl border text-sm font-semibold flex flex-col items-center gap-1 ${
+                  className={`py-3 rounded-xl border text-sm font-semibold flex flex-col items-center gap-1 cursor-pointer ${
                     method === id
                       ? "border-accent-600 bg-accent-50 dark:bg-accent-950/30 text-accent-700 dark:text-accent-300"
                       : "border-slate-200 dark:border-slate-700"
                   }`}
                 >
-                  <Icon className="w-5 h-5" /> {label}
+                  <Icon className="w-5 h-5" /> {t(labelKey)}
                 </button>
               ))}
             </div>
@@ -1667,65 +1629,56 @@ export default function POS() {
                   min="0"
                   value={cashReceived}
                   onChange={(e) => setCashReceived(e.target.value)}
-                  placeholder="Cash received"
+                  placeholder={`${t("cash_received")} (៛)`}
                   className={inputCls}
                 />
                 <div className="flex gap-2">
                   <button
                     onClick={() => setCashReceived(String(total))}
-                    className="flex-1 py-1.5 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 font-semibold"
+                    className="flex-1 py-1.5 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 font-semibold cursor-pointer"
                   >
-                    Exact
+                    {t("exact")}
                   </button>
-                  {/* {[5, 10, 20, 50].map((v) => (
-                    <button
-                      key={v}
-                      onClick={() => setCashReceived(String(v))}
-                      className="flex-1 py-1.5 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 font-semibold"
-                    >
-                      ${v}
-                    </button>
-                  ))} */}
-                  {/* // cash input placeholder: "Cash received (៛)"; the quick buttons become Riel notes */}
                   {[10000, 20000, 50000, 100000].map((v) => (
                     <button
                       key={v}
                       onClick={() => setCashReceived(String(v))}
-                      className="flex-1 px-1 py-1.5 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 font-semibold"
+                      className="flex-1 px-1 py-1.5 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 font-semibold cursor-pointer"
                     >
                       {v.toLocaleString()}៛
                     </button>
                   ))}
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Change</span>
-                  {/* <span className="font-bold">{money(change)}</span> */}
+                  <span className="text-slate-500">{t("change")}</span>
                   <span className="font-bold">{riel(change)}</span>
                 </div>
               </div>
             )}
             {method === "card" && (
               <p className="text-sm text-slate-500 text-center">
-                Tap or insert card on the terminal, then confirm.
+                {t("pay_card_hint")}
               </p>
             )}
             {method === "qr" && (
               <p className="text-sm text-slate-500 text-center">
-                Show the QR code to the customer, then confirm once paid.
+                {t("pay_qr_hint")}
               </p>
             )}
 
             {payError && (
               <p role="alert" className="text-sm text-rose-500 text-center">
-                {payError}
+                {payError === "__default__"
+                  ? t("order_could_not_be_saved")
+                  : payError}
               </p>
             )}
             <button
               disabled={!canPay || paying}
               onClick={confirmPayment}
-              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold"
+              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold cursor-pointer"
             >
-              {paying ? "Processing..." : "Confirm Payment"}
+              {paying ? t("processing") : t("confirm_payment")}
             </button>
           </div>
         </div>
