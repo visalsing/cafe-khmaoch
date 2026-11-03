@@ -39,60 +39,113 @@ export default function ReceiptModal({ order, onClose }) {
     order?.ticketNumber || order?.dailyNumber || order?.number || "1";
   const displayTicketNo = parseInt(String(rawNum).replace(/\D/g, ""), 10) || 1;
 
+  // const print = () => {
+  //   const printWindow = window.open("", "_blank", "width=380,height=750");
+  //   if (!printWindow)
+  //     return alert("Please allow pop-ups to print the receipt.");
+
+  //   const printHtml = `
+  //     <!DOCTYPE html>
+  //     <html>
+  //       <head>
+  //         <title>Receipt ${order?.number || ""}</title>
+  //         <style>
+  //           @page {
+  //             size: 80mm auto;
+  //             margin: 0mm;
+  //           }
+  //           body {
+  //             margin: 0;
+  //             padding: 4mm;
+  //             background: #fff;
+  //             color: #000;
+  //             font-family: 'Courier New', Courier, monospace;
+  //             font-size: 11px;
+  //             line-height: 1.3;
+  //             width: 72mm;
+  //             -webkit-print-color-adjust: exact;
+  //           }
+  //           img {
+  //             display: block;
+  //             margin: 0 auto 4px auto;
+  //             width: 48px;
+  //             height: 48px;
+  //             object-fit: contain;
+  //           }
+  //           hr {
+  //             border: none;
+  //             border-top: 1px dashed #000;
+  //             margin: 6px 0;
+  //           }
+  //         </style>
+  //       </head>
+  //       <body>
+  //         ${ref.current.innerHTML}
+  //       </body>
+  //     </html>
+  //   `;
+
+  //   printWindow.document.write(printHtml);
+  //   printWindow.document.close();
+  //   printWindow.focus();
+
+  //   setTimeout(() => {
+  //     printWindow.print();
+  //     printWindow.close();
+  //   }, 300);
+  // };
+
   const print = () => {
-    const printWindow = window.open("", "_blank", "width=380,height=750");
-    if (!printWindow)
-      return alert("Please allow pop-ups to print the receipt.");
+    const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Receipt ${order?.number || ""}</title>
+        <style>
+          @page { size: 80mm auto; margin: 0; }
+          body {
+            margin: 0; padding: 4mm; background: #fff; color: #000;
+            font-family: 'Courier New', Courier, monospace, 'Noto Sans Khmer', 'Khmer OS';
+            font-size: 11px; line-height: 1.3; width: 72mm;
+          }
+          img { display: block; margin: 0 auto 4px auto; width: 48px; height: 48px; object-fit: contain; }
+        </style>
+      </head>
+      <body>${ref.current.innerHTML}</body>
+    </html>`;
 
-    const printHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Receipt ${order?.number || ""}</title>
-          <style>
-            @page {
-              size: 80mm auto;
-              margin: 0mm;
-            }
-            body {
-              margin: 0;
-              padding: 4mm;
-              background: #fff;
-              color: #000;
-              font-family: 'Courier New', Courier, monospace;
-              font-size: 11px;
-              line-height: 1.3;
-              width: 72mm;
-              -webkit-print-color-adjust: exact;
-            }
-            img {
-              display: block;
-              margin: 0 auto 4px auto;
-              width: 48px;
-              height: 48px;
-              object-fit: contain;
-            }
-            hr {
-              border: none;
-              border-top: 1px dashed #000;
-              margin: 6px 0;
-            }
-          </style>
-        </head>
-        <body>
-          ${ref.current.innerHTML}
-        </body>
-      </html>
-    `;
+    const iframe = document.createElement("iframe");
+    Object.assign(iframe.style, {
+      position: "fixed",
+      right: "0",
+      bottom: "0",
+      width: "0",
+      height: "0",
+      border: "0",
+    });
+    document.body.appendChild(iframe);
 
-    printWindow.document.write(printHtml);
-    printWindow.document.close();
-    printWindow.focus();
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
 
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 300);
+    // wait for the logo to load, then print
+    const waitImages = Array.from(doc.images).map((img) =>
+      img.complete
+        ? Promise.resolve()
+        : new Promise((r) => {
+            img.onload = img.onerror = r;
+          }),
+    );
+
+    Promise.all(waitImages).then(() => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      // remove later, never immediately
+      setTimeout(() => document.body.removeChild(iframe), 60000);
+    });
   };
 
   const MetaRow = ({ labelKm, labelEn, value }) => (
