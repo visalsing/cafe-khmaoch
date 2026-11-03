@@ -1,42 +1,58 @@
 // src/context/ThemeContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { themeService } from "../services/api.js";
+import { useAuth } from "./AuthContext.jsx";
 
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
-  // Initialize instantly from localStorage if available to prevent flashing/slow load
-  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "system");
+  const { currentUser } = useAuth();
+  const [theme, setTheme] = useState(() => {
+    // If user has a saved choice in auth profile, use it; otherwise fallback to local/system
+    return currentUser?.theme_code || localStorage.getItem("theme") || "system";
+  });
 
-  // Fetch the latest theme configuration from the database on mount
-  const syncThemeFromDB = () => {
-    themeService
-      .list()
-      .then((data) => {
-        if (!Array.isArray(data)) return;
-
-        // 1. Check if Admin set a new default (is_selected === 1) and user has no local override
-        const adminDefault = data.find(
-          (r) => r.is_selected === 1 || r.is_selected === true
-        );
-
-        // If no local storage exists, strictly follow Admin's default
-        if (adminDefault && !localStorage.getItem("theme_user_override")) {
-          setTheme(adminDefault.code);
-          localStorage.setItem("theme", adminDefault.code);
-        }
-      })
-      .catch(() => {});
-  };
-
+  // Sync and resolve theme based on User Preference > Admin Default
   useEffect(() => {
-    syncThemeFromDB();
+    let cancelled = false;
 
-    // Listen to custom cross-tab or cross-component sync events for real-time feel
-    const handleThemeUpdate = () => syncThemeFromDB();
-    window.addEventListener("themeChanged", handleThemeUpdate);
-    return () => window.removeEventListener("themeChanged", handleThemeUpdate);
-  }, []);
+    // 1. If the logged-in user has a theme_id assigned in the database, resolve its code
+    if (currentUser?.theme_id) {
+      themeService
+        .list()
+        .then((data) => {
+          if (cancelled || !Array.isArray(data)) return;
+          const userThemeRow = data.find((r) => r.id === currentUser.theme_id);
+          if (userThemeRow) {
+            setTheme(userThemeRow.code);
+            localStorage.setItem("theme", userThemeRow.code);
+          }
+        })
+        .catch(() => {});
+      return;
+    }
+
+    // 2. If user has NO theme_id (blank), check for Admin's global default (is_selected = 1)
+    if (!currentUser?.theme_id && !localStorage.getItem("theme_user_override")) {
+      themeService
+        .list()
+        .then((data) => {
+          if (cancelled || !Array.isArray(data)) return;
+          const adminDefault = data.find(
+            (r) => r.is_selected === 1 || r.is_selected === true
+          );
+          if (adminDefault) {
+            setTheme(adminDefault.code);
+            localStorage.setItem("theme", adminDefault.code);
+          }
+        })
+        .catch(() => {});
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser]);
 
   const resolveTheme = (mode) => {
     if (mode === "system") {
@@ -60,15 +76,8 @@ export function ThemeProvider({ children }) {
     );
   };
 
-  const updateTheme = (newTheme) => {
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    localStorage.setItem("theme_user_override", "true"); // Mark that user chose explicitly
-    window.dispatchEvent(new Event("themeChanged"));
-  };
-
   return (
-    <ThemeContext.Provider value={{ theme, setTheme: updateTheme, cycleTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, cycleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -77,7 +86,11 @@ export function ThemeProvider({ children }) {
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (!context) {
-    return { theme: "system", setTheme: () => {}, cycleTheme: () => {} };
+    return {
+      theme: "system",
+      setTheme: () => {},
+      cycleTheme: () => {},
+    };
   }
   return context;
 };
