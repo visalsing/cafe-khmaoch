@@ -340,6 +340,8 @@ const normalizeUser = (u) => ({
   lastName: pick(u, "lastName", "last_name") ?? "",
   firstNameNative: pick(u, "firstNameNative", "first_name_native") ?? "",
   lastNameNative: pick(u, "lastNameNative", "last_name_native") ?? "",
+  isFullname: toBit(pick(u, "isFullname", "is_fullname"), 1),
+  isNfullname: toBit(pick(u, "isNfullname", "is_nfullname"), 1),
   email: pick(u, "email") ?? "",
   phone: pick(u, "phone") ?? "",
   role: pick(u, "role", "roleCode", "role_code") ?? "",
@@ -365,8 +367,17 @@ const normalizeUser = (u) => ({
   removedAt: pick(u, "removedAt", "removed_at"),
 });
 
-const fullName = (u) => `${u.lastName} ${u.firstName}`.trim();
-const nativeName = (u) => `${u.lastNameNative} ${u.firstNameNative}`.trim();
+// firstThenLast: 1 = "First Last", 0 = "Last First" (anything else counts as 1)
+const joinName = (first, last, firstThenLast) =>
+  (firstThenLast === 0 ? [last, first] : [first, last])
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+// is_fullname = Latin name order, is_nfullname = native name order
+const fullName = (u) => joinName(u.firstName, u.lastName, u.isFullname);
+const nativeName = (u) =>
+  joinName(u.firstNameNative, u.lastNameNative, u.isNfullname);
 
 // text of a translated field; position titles are lists ({"en": ["Owner", "Manager"]})
 const labelOf = (value) => {
@@ -391,6 +402,8 @@ const emptyForm = {
   lastName: "",
   firstNameNative: "",
   lastNameNative: "",
+  isFullname: 1,
+  isNfullname: 1,
   email: "",
   phone: "",
   password: "",
@@ -414,6 +427,8 @@ const formFromUser = (u) => ({
   lastName: u.lastName,
   firstNameNative: u.firstNameNative,
   lastNameNative: u.lastNameNative,
+  isFullname: u.isFullname,
+  isNfullname: u.isNfullname,
   email: u.email,
   phone: u.phone,
   password: "", // left empty unless the password is changed
@@ -438,6 +453,8 @@ const fingerprint = (f) =>
     lastName: f.lastName.trim(),
     firstNameNative: f.firstNameNative.trim(),
     lastNameNative: f.lastNameNative.trim(),
+    isFullname: Number(f.isFullname),
+    isNfullname: Number(f.isNfullname),
     email: f.email.trim().toLowerCase(),
     phone: f.phone.trim(),
     password: f.password,
@@ -687,6 +704,7 @@ export default function UsersManager() {
     const itemName = fullName({
       firstName: form.firstName.trim(),
       lastName: form.lastName.trim(),
+      isFullname: Number(form.isFullname),
     });
 
     // editing but nothing was touched (no field changed, no avatar chosen/removed)
@@ -712,6 +730,8 @@ export default function UsersManager() {
       fd.append("lastName", form.lastName.trim());
       fd.append("firstNameNative", form.firstNameNative.trim());
       fd.append("lastNameNative", form.lastNameNative.trim());
+      fd.append("isFullname", String(Number(form.isFullname)));
+      fd.append("isNfullname", String(Number(form.isNfullname)));
       fd.append("email", form.email.trim());
       fd.append("phone", form.phone.trim());
       if (form.password) fd.append("password", form.password);
@@ -1067,6 +1087,10 @@ export default function UsersManager() {
   const statusOptions = [
     { value: 1, label: "Active" },
     { value: 0, label: "Inactive" },
+  ];
+  const nameOrderOptions = [
+    { value: 1, label: "First name + Last name" },
+    { value: 0, label: "Last name + First name" },
   ];
   const accessOptions = [
     { value: 0, label: "Allowed" },
@@ -1721,6 +1745,16 @@ export default function UsersManager() {
                     <Field label="Native name">
                       {nativeName(viewing) || "—"}
                     </Field>
+                    <Field label="Name order (Latin)">
+                      {viewing.isFullname === 0
+                        ? "Last + First"
+                        : "First + Last"}
+                    </Field>
+                    <Field label="Name order (native)">
+                      {viewing.isNfullname === 0
+                        ? "Last + First"
+                        : "First + Last"}
+                    </Field>
                     <Field label="Phone">{viewing.phone || "—"}</Field>
                     <Field label="Gender">
                       {nameIn(genders, viewing.genderId, "gender")}
@@ -1908,6 +1942,29 @@ export default function UsersManager() {
                       onChange={(e) => setField("lastName", e.target.value)}
                     />
                   </label>
+                  <label className={`${labelCls} sm:col-span-2`}>
+                    Name order (Latin name)
+                    <div className="relative mt-1 w-full">
+                      <CustomSelect
+                        value={form.isFullname}
+                        onChange={(value) =>
+                          setField("isFullname", Number(value))
+                        }
+                        options={nameOrderOptions}
+                      />
+                    </div>
+                    <span className="block mt-1 text-xs text-slate-500">
+                      Shown as:{" "}
+                      <strong className="text-slate-700 dark:text-slate-200">
+                        {fullName({
+                          firstName: form.firstName.trim(),
+                          lastName: form.lastName.trim(),
+                          isFullname: Number(form.isFullname),
+                        }) || "—"}
+                      </strong>
+                    </span>
+                  </label>
+
                   <label className={labelCls}>
                     First name (native)
                     <input
@@ -1928,6 +1985,28 @@ export default function UsersManager() {
                         setField("lastNameNative", e.target.value)
                       }
                     />
+                  </label>
+                  <label className={`${labelCls} sm:col-span-2`}>
+                    Name order (native name)
+                    <div className="relative mt-1 w-full">
+                      <CustomSelect
+                        value={form.isNfullname}
+                        onChange={(value) =>
+                          setField("isNfullname", Number(value))
+                        }
+                        options={nameOrderOptions}
+                      />
+                    </div>
+                    <span className="block mt-1 text-xs text-slate-500">
+                      Shown as:{" "}
+                      <strong className="text-slate-700 dark:text-slate-200">
+                        {nativeName({
+                          firstNameNative: form.firstNameNative.trim(),
+                          lastNameNative: form.lastNameNative.trim(),
+                          isNfullname: Number(form.isNfullname),
+                        }) || "—"}
+                      </strong>
+                    </span>
                   </label>
                 </div>
               </section>
