@@ -47,6 +47,7 @@ import Checkout from "./components/Checkout/Checkout.jsx";
 import PagesOverview from "./components/Dashboard/Pages/PagesOverview.jsx";
 import HeroManager from "./components/Dashboard/Pages/HeroManager.jsx";
 import Map from "./components/Dashboard/Pages/Map.jsx";
+import AboutManager from "./components/Dashboard/Pages/About";
 import {
   RequireDashboard,
   Guard,
@@ -78,6 +79,7 @@ import RolePermissions from "./components/Dashboard/RolePermissions.jsx";
 import ForgetPassword from "./components/Auth/ForgetPassword.jsx";
 import ProfileUser from "./components/Dashboard/Profile.jsx";
 import QrManagement from "./components/Dashboard/QrManagement.jsx";
+import Theme from "./components/Dashboard/Theme";
 
 function DashboardLayout() {
   const [sideBarCollapsed, setSideBarCollapsed] = useState(false);
@@ -87,8 +89,10 @@ function DashboardLayout() {
     location.pathname.replace(/^\/dashboard\/?/, "") || "dashboard";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-all duration-500">
+    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-neutral-100 to-neutral-50 dark:from-neutral-900 dark:via-neutral-800 dark:to-neutral-900 transition-all duration-500">
+    {/* <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-all duration-500"> */}
       <div className="flex h-screen overflow-hidden">
+        {/* <Theme /> */}
         <Sidebar
           collapsed={sideBarCollapsed}
           onToggle={() => setSideBarCollapsed(!sideBarCollapsed)}
@@ -156,6 +160,7 @@ function DashboardLayout() {
                 <Route path="/positions" element={<PositionsManager />} />
                 <Route path="/permissions" element={<PermissionsManager />} />
                 <Route path="/genders" element={<GendersManager />} />
+                <Route path="themes" element={<Theme />} />
                 <Route
                   path="/nationalities"
                   element={<NationalitiesManager />}
@@ -200,6 +205,7 @@ function DashboardLayout() {
                   }
                 />
                 <Route path="/pages/maps" element={<Map />} />
+                <Route path="pages/about" element={<AboutManager />} />
                 <Route
                   path="/pages/hero"
                   element={

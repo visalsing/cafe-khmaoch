@@ -116,3 +116,80 @@ div {
   --accent-500: 140 76 56;   --accent-600: 108 54 38;   --accent-700: 80 38 28;
   --accent-800: 60 28 20;    --accent-900: 42 20 14;    --accent-950: 30 14 10;
 }
+
+
+/* ShopAll.jsx */
+/* =========================================
+   Menu Category Horizontal Scrollbar
+========================================= */
+
+.menu-category-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d6d3d1 transparent;
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
+/* Chrome, Edge, Safari */
+.menu-category-scrollbar::-webkit-scrollbar {
+  height: 5px;
+}
+
+.menu-category-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 999px;
+}
+
+.menu-category-scrollbar::-webkit-scrollbar-thumb {
+  background: #d6d3d1;
+  border-radius: 999px;
+  transition: background 0.25s ease;
+}
+
+.menu-category-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-600, #d97706);
+}
+
+/* Dark mode */
+.dark .menu-category-scrollbar {
+  scrollbar-color: #57534e transparent;
+}
+
+.dark .menu-category-scrollbar::-webkit-scrollbar-thumb {
+  background: #57534e;
+}
+
+.dark .menu-category-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-400, #fbbf24);
+}
+
+/* Modal scrollbar */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d6d3d1 transparent;
+}
+
+.dark .custom-scrollbar {
+  scrollbar-color: #57534e transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d6d3d1;
+  border-radius: 999px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #57534e;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-600, #d97706);
+}
