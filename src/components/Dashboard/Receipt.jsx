@@ -205,10 +205,19 @@ export default function ReceiptModal({ order, onClose }) {
 
   const print = async () => {
     try {
-      const canvas = await html2canvas(ref.current, {
-        scale: 2,
+      const el = ref.current;
+      const canvas = await html2canvas(el, {
+        scale: 576 / el.offsetWidth, // output is exactly 576px wide
         backgroundColor: "#ffffff",
         useCORS: true,
+        onclone: (doc) => {
+          // remove the shadow and rounded corners so no gray edges are printed
+          const n = doc.querySelector("[data-receipt]");
+          if (n) {
+            n.style.boxShadow = "none";
+            n.style.borderRadius = "0";
+          }
+        },
       });
       const bytes = canvasToEscPos(canvas, 576);
       window.location.href = "rawbt:base64," + toBase64(bytes);
