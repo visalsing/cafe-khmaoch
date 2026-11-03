@@ -14,6 +14,7 @@ import {
   ComputerIcon,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import ThemeActions from "./ThemeActions.jsx";
 import { useThemeOptions } from "../Dashboard/themeOptions.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
@@ -77,7 +78,9 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   // const { theme, setTheme } = useTheme();
   const { theme } = useTheme();
-  const { choices, choose } = useThemeOptions();
+  // const { choices, choose } = useThemeOptions();
+  const themeOpts = useThemeOptions();
+const { choices, select } = themeOpts;
   const { language, setLanguage, t, languages = [] } = useLanguage();
   const [backgroundStyle, setBackgroundStyle] = useBackgroundStyle();
 
@@ -255,7 +258,8 @@ export default function SettingsPage() {
                   <button
                     key={choice.value}
                     type="button"
-                    onClick={() => choose(choice)}
+                    // onClick={() => choose(choice)}
+                    onClick={() => select(choice)}
                     aria-pressed={active}
                     className={`relative p-5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between text-left ${focusStyle} ${active ? activeCard : inactiveCard}`}
                   >
@@ -279,6 +283,7 @@ export default function SettingsPage() {
                 );
               })}
             </div>
+            <ThemeActions {...themeOpts} />
 
             {/* <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {choices.map((choice) => {

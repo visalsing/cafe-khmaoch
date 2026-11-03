@@ -13,6 +13,7 @@ import {
   Sparkles,
   Computer,
 } from "lucide-react";
+import ThemeActions from "./ThemeActions.jsx";
 import { useThemeOptions } from "../Dashboard/themeOptions.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
@@ -77,7 +78,9 @@ const flagImages = {
 export default function Settings() {
   // const { theme, setTheme } = useTheme();
   const { theme } = useTheme();
-  const { choices, choose } = useThemeOptions();
+  // const { choices, choose } = useThemeOptions();
+  const themeOpts = useThemeOptions();
+  const { choices, select } = themeOpts;
   const { language, setLanguage, t, languages = [] } = useLanguage();
   const [loadingStyle, setLoadingStyle] = useLoadingStyle();
   const [accent, setAccent] = useAccent();
@@ -150,43 +153,6 @@ export default function Settings() {
           {t("appearanceDescription")}
         </p>
 
-        {/* <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {themeOptions.map(
-            ({ value, labelKey, descriptionKey, icon: Icon }) => {
-              const active = theme === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setTheme(value)}
-                  aria-pressed={active}
-                  className={`relative text-left p-4 rounded-xl border transition-all ${focusStyle} ${
-                    active ? activeCard : inactiveCard
-                  }`}
-                >
-                  {active && (
-                    <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center">
-                      <Check className="w-3.5 h-3.5 text-white" />
-                    </span>
-                  )}
-                  <Icon
-                    className={`w-5 h-5 mb-3 ${
-                      active
-                        ? "text-accent-700 dark:text-accent-400"
-                        : "text-neutral-500 dark:text-neutral-400"
-                    }`}
-                  />
-                  <p className="text-sm font-semibold text-neutral-800 dark:text-white">
-                    {t(labelKey)}
-                  </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                    {t(descriptionKey)}
-                  </p>
-                </button>
-              );
-            },
-          )}
-        </div> */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {choices.map((choice) => {
             const active = theme === choice.value;
@@ -195,7 +161,8 @@ export default function Settings() {
               <button
                 key={choice.value}
                 type="button"
-                onClick={() => choose(choice)}
+                // onClick={() => choose(choice)}
+                onClick={() => select(choice)}
                 aria-pressed={active}
                 className={`relative text-left p-4 rounded-xl border transition-all ${focusStyle} ${active ? activeCard : inactiveCard}`}
               >
@@ -217,37 +184,8 @@ export default function Settings() {
             );
           })}
         </div>
+        <ThemeActions {...themeOpts} />
 
-        {/* <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {choices.map((choice) => {
-            const active = theme === choice.value;
-            const Icon = choice.Icon;
-            return (
-              <button
-                key={choice.value}
-                type="button"
-                onClick={() => choose(choice)}
-                aria-pressed={active}
-                className={`relative text-left p-4 rounded-xl border transition-all ${focusStyle} ${active ? activeCard : inactiveCard}`}
-              >
-                {active && (
-                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center">
-                    <Check className="w-3.5 h-3.5 text-white" />
-                  </span>
-                )}
-                <Icon
-                  className={`w-5 h-5 mb-3 ${active ? "text-accent-700 dark:text-accent-400" : "text-neutral-500 dark:text-neutral-400"}`}
-                />
-                <p className="text-sm font-semibold text-neutral-800 dark:text-white">
-                  {choice.label}
-                </p>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                  {choice.description}
-                </p>
-              </button>
-            );
-          })}
-        </div> */}
       </div>
 
       {/* Accent color section */}

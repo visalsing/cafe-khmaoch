@@ -1,5 +1,4 @@
-// Dashboard/themeOptions.js
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
@@ -13,38 +12,28 @@ const BUILT_IN = {
 };
 
 export function useThemeOptions() {
-  const { setTheme } = useTheme();
+  const { theme, setTheme, savedTheme, commitTheme } = useTheme();
   const { currentUser } = useAuth();
   const { t, language } = useLanguage();
-  const [rows, setRows] = useState(null);
 
+  const [rows, setRows] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState(null); // { type: "success" | "error", text }
+
+  // Only load the list (for labels and ids). It never changes the theme.
   useEffect(() => {
     let cancelled = false;
     themeService
       .list()
       .then((data) => {
         if (cancelled || !Array.isArray(data)) return;
-        const usable = data.filter((r) => BUILT_IN[r.code]);
-        if (usable.length) {
-          setRows(usable);
-
-          // If no theme is saved locally or by user, fall back to Admin default (`is_selected = 1`)
-          if (!localStorage.getItem("theme") && !currentUser?.theme_id) {
-            const adminDefault = usable.find(
-              (r) => r.is_selected === 1 || r.is_selected === true
-            );
-            if (adminDefault) {
-              setTheme(adminDefault.code);
-            }
-          }
-        }
+        setRows(data.filter((r) => BUILT_IN[r.code]));
       })
-      .catch(() => {});
-
+      .catch((error) => console.error("[themes] Failed to load themes:", error));
     return () => {
       cancelled = true;
     };
-  }, [setTheme, currentUser]);
+  }, []);
 
   const choices = useMemo(() => {
     const list =
@@ -69,29 +58,71 @@ export function useThemeOptions() {
           r.description?.en ||
           "",
         Icon:
-          THEME_ICONS[r.icon] ||
-          THEME_ICONS[keys.icon] ||
-          THEME_ICONS.Monitor,
+          THEME_ICONS[r.icon] || THEME_ICONS[keys.icon] || THEME_ICONS.Monitor,
       };
     });
   }, [rows, language, t]);
 
-  const choose = useCallback(
-    async (choice) => {
-      setTheme(choice.value);
-      localStorage.setItem("theme", choice.value);
+  const dirty = theme !== savedTheme;
 
-      if (currentUser && choice.id) {
-        try {
-          await themeService.setMine(choice.id); // Updates users.theme_id on server
-        } catch {
-          /* fallback to local storage */
-        }
-      }
+  // Clicking a card previews it. Nothing is saved yet.
+  const select = useCallback(
+    (choice) => {
+      if (!choice) return;
+      setStatus(null);
+      setTheme(choice.value);
     },
-    [setTheme, currentUser],
+    [setTheme],
   );
 
-  // ALWAYS return choices so SettingsPage never throws "choices is undefined"
-  return { choices, choose };
+  const save = useCallback(async () => {
+    const choice = choices.find((c) => c.value === theme);
+    setSaving(true);
+    setStatus(null);
+    try {
+      if (currentUser && choice?.id != null) {
+        await themeService.setMine(Number(choice.id));
+      }
+      commitTheme(theme);
+      setStatus({
+        type: "success",
+        text: t("themeSaved") || "Theme saved successfully.",
+      });
+    } catch (error) {
+      console.error("[themes] Failed to save theme:", error);
+      setStatus({
+        type: "error",
+        text: t("themeSaveFailed") || "Could not save theme. Please try again.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [choices, theme, currentUser, commitTheme, t]);
+
+  const cancel = useCallback(() => {
+    setTheme(savedTheme);
+    setStatus(null);
+  }, [setTheme, savedTheme]);
+
+  const dismissStatus = useCallback(() => setStatus(null), []);
+
+  // Auto-hide the success message.
+  useEffect(() => {
+    if (status?.type !== "success") return undefined;
+    const timer = setTimeout(() => setStatus(null), 3000);
+    return () => clearTimeout(timer);
+  }, [status]);
+
+  // Leaving the page with an unsaved preview: revert to the saved theme.
+  const latest = useRef({ dirty, savedTheme, setTheme });
+  latest.current = { dirty, savedTheme, setTheme };
+  useEffect(
+    () => () => {
+      const { dirty, savedTheme, setTheme } = latest.current;
+      if (dirty) setTheme(savedTheme);
+    },
+    [],
+  );
+
+  return { choices, select, dirty, saving, status, save, cancel, dismissStatus };
 }
