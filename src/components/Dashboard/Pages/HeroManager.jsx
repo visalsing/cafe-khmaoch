@@ -19,6 +19,8 @@ import {
   Download,
   FileSpreadsheet,
   AlertTriangle,
+  GripVertical,
+  ArrowUpDown,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { heroService, assetUrl } from "../../../services/api";
@@ -457,6 +459,12 @@ export default function HeroManager() {
   const [showReset, setShowReset] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
+  // drag & drop "Order" modal (the chevrons keep saving right away, as before)
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [orderItems, setOrderItems] = useState([]);
+  const [draggedId, setDraggedId] = useState(null);
+  const [orderSaving, setOrderSaving] = useState(false);
+
   // ALL alerts are shown on the page, between the search/filters and the list
   const [notice, setNotice] = useState(null); // { id, type, title, message, returnToForm }
   const [modalHidden, setModalHidden] = useState(false); // form is hidden (not lost) while its alert is shown
@@ -688,6 +696,86 @@ export default function HeroManager() {
         err.message || "Something went wrong. Please try again.",
       );
       load({ silent: true }); // put the real order back
+    }
+  };
+
+  /* ---------- 5.8b Order modal: drag & drop ---------- */
+  const openOrderModal = () => {
+    // Start with the current saved order, not the filtered results.
+    setOrderItems([...slides]);
+    setDraggedId(null);
+    setShowOrderModal(true);
+  };
+
+  const handleOrderDragStart = (e, id) => {
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(id));
+  };
+
+  const handleOrderDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleOrderDrop = (e, targetId) => {
+    e.preventDefault();
+
+    const sourceId = draggedId ?? e.dataTransfer.getData("text/plain");
+
+    if (
+      sourceId === "" ||
+      sourceId === null ||
+      String(sourceId) === String(targetId)
+    ) {
+      setDraggedId(null);
+      return;
+    }
+
+    setOrderItems((current) => {
+      const updated = [...current];
+      const fromIndex = updated.findIndex(
+        (item) => String(item.id) === String(sourceId),
+      );
+      const toIndex = updated.findIndex(
+        (item) => String(item.id) === String(targetId),
+      );
+      if (fromIndex === -1 || toIndex === -1) return current;
+
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return updated;
+    });
+
+    setDraggedId(null);
+  };
+
+  // "Save Order" button of the Order modal: uses the same reorder API as the chevrons
+  const saveOrder = async () => {
+    if (orderSaving) return;
+    setOrderSaving(true);
+
+    try {
+      await heroService.reorder(orderItems.map((s) => s.id));
+      setSlides(orderItems); // instant UI, then reload the real sort_num values
+      setShowOrderModal(false);
+      await load({ silent: true });
+
+      notify(
+        "success",
+        "Order saved",
+        "The slides display order has been updated successfully.",
+      );
+    } catch (err) {
+      console.error("Failed to save slide order:", err);
+      notify(
+        "error",
+        "Failed to save order",
+        err.message || "Could not save the order. Please try again.",
+      );
+      await load({ silent: true }); // put the real order back
+    } finally {
+      setOrderSaving(false);
     }
   };
 
@@ -1074,6 +1162,22 @@ export default function HeroManager() {
             <Images className="w-4 h-4" />
           )}
           {slideMode ? "List view" : "Slide view"}
+        </button>
+
+        {/* Drag & drop order modal */}
+        <button
+          type="button"
+          onClick={openOrderModal}
+          disabled={loading || slides.length < 2}
+          title={
+            slides.length < 2
+              ? "You need at least 2 slides to change the order"
+              : "Drag the slides to change their order"
+          }
+          className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 flex items-center gap-2 hover:border-accent-500 hover:text-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <ArrowUpDown className="w-4 h-4" />
+          Order
         </button>
       </div>
 
@@ -1628,6 +1732,152 @@ export default function HeroManager() {
               </div>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ===== 6.7b SLIDE ORDER modal (drag & drop) ===== */}
+      {showOrderModal && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => {
+            if (!orderSaving) setShowOrderModal(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="slide-order-title"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between gap-4 border-b border-slate-200 p-5 dark:border-slate-800">
+              <div>
+                <h2
+                  id="slide-order-title"
+                  className="text-xl font-bold text-slate-900 dark:text-white"
+                >
+                  Arrange Slide Order
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Drag slides to change the order they appear on the homepage.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowOrderModal(false)}
+                disabled={orderSaving}
+                aria-label="Close order modal"
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Instructions */}
+            <div className="border-b border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950/40">
+              <span className="font-semibold">Top = first slide.</span> Drag a
+              row using its handle. Save your changes when finished.
+            </div>
+
+            {/* Draggable list */}
+            <div className="flex-1 space-y-2 overflow-y-auto p-4">
+              {orderItems.length === 0 ? (
+                <div className="py-10 text-center text-sm text-slate-500">
+                  No slides available to arrange.
+                </div>
+              ) : (
+                orderItems.map((item, index) => {
+                  const isDragging = String(draggedId) === String(item.id);
+
+                  return (
+                    <div
+                      key={item.id}
+                      draggable={!orderSaving}
+                      onDragStart={(e) => handleOrderDragStart(e, item.id)}
+                      onDragOver={handleOrderDragOver}
+                      onDrop={(e) => handleOrderDrop(e, item.id)}
+                      onDragEnd={() => setDraggedId(null)}
+                      className={`flex items-center gap-3 rounded-xl border p-3 transition-colors ${
+                        isDragging
+                          ? "border-accent-500 bg-accent-50 opacity-50 dark:bg-accent-950/20"
+                          : "border-slate-200 bg-white hover:border-accent-300 dark:border-slate-700 dark:bg-slate-900"
+                      } ${
+                        orderSaving
+                          ? "cursor-wait"
+                          : "cursor-grab active:cursor-grabbing"
+                      }`}
+                    >
+                      <GripVertical className="h-5 w-5 shrink-0 text-slate-400" />
+
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        {index + 1}
+                      </span>
+
+                      {item.img ? (
+                        <img
+                          src={assetUrl(item.img)}
+                          alt=""
+                          draggable={false}
+                          className="h-12 w-20 shrink-0 rounded-lg border border-slate-200 object-cover dark:border-slate-700"
+                        />
+                      ) : (
+                        <div className="flex h-12 w-20 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs text-slate-400 dark:bg-slate-800">
+                          No img
+                        </div>
+                      )}
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                          {getLocalizedValue(item.title) || "Untitled slide"}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {isShown(item) ? "Visible" : "Hidden"} · Current
+                          sort number: {item.sort_num ?? index + 1}
+                        </p>
+                      </div>
+
+                      <span className="shrink-0 text-xs font-medium text-slate-400">
+                        #{index + 1}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-200 p-5 sm:flex-row sm:justify-end dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowOrderModal(false)}
+                disabled={orderSaving}
+                className="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={saveOrder}
+                disabled={orderSaving || orderItems.length === 0}
+                className="flex items-center justify-center gap-2 rounded-xl bg-accent-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {orderSaving ? (
+                  <>
+                    <RotateCcw className="h-4 w-4 animate-spin" />
+                    Saving Order...
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpDown className="h-4 w-4" />
+                    Save Order
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

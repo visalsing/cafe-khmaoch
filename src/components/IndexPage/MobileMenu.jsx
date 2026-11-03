@@ -1,3 +1,4 @@
+// IndexPage/MobileMenu.jsx
 import React, { useState, useEffect } from "react";
 import { LogOut } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -93,9 +94,9 @@ export default function MobileMenu({ isOpen, onClose }) {
   return (
     <>
       {/* Full-Screen Mobile Menu */}
-      <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors duration-200">
+      <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white transition-colors duration-200">
         {/* Top Header Row */}
-        <div className="max-w-7xl w-full mx-auto px-6 h-20 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
+        <div className="max-w-7xl w-full mx-auto px-6 h-20 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
           {/* Brand Logo & Name */}
           <div
             className="flex items-center space-x-3 cursor-pointer"
@@ -114,7 +115,7 @@ export default function MobileMenu({ isOpen, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-accent-600 dark:hover:text-accent-400 hover:bg-accent-50 dark:hover:bg-slate-700 flex items-center justify-center transition-all shadow-sm cursor-pointer"
+            className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:text-accent-600 dark:hover:text-accent-400 hover:bg-accent-50 dark:hover:bg-neutral-700 flex items-center justify-center transition-all shadow-sm cursor-pointer"
             title="Close Menu"
             aria-label="Close navigation menu"
           >
@@ -137,7 +138,7 @@ export default function MobileMenu({ isOpen, onClose }) {
                 className={`!text-lg transition-all cursor-pointer ${
                   isActive
                     ? "text-accent-600 dark:text-accent-400 font-bold scale-105"
-                    : "text-slate-600 dark:text-slate-300 hover:text-accent-600 dark:hover:text-accent-400"
+                    : "text-neutral-600 dark:text-neutral-300 hover:text-accent-600 dark:hover:text-accent-400"
                 }`}
               >
                 {link.label}
@@ -152,7 +153,7 @@ export default function MobileMenu({ isOpen, onClose }) {
             className={`!text-lg transition-all cursor-pointer ${
               location.pathname === "/settings-page"
                 ? "text-accent-600 dark:text-accent-400 font-bold"
-                : "text-slate-600 dark:text-slate-300 hover:text-accent-600 dark:hover:text-accent-400"
+                : "text-neutral-600 dark:text-neutral-300 hover:text-accent-600 dark:hover:text-accent-400"
             }`}
           >
             {t("settings")}
@@ -166,7 +167,7 @@ export default function MobileMenu({ isOpen, onClose }) {
               className={`!text-lg transition-all cursor-pointer ${
                 location.pathname.startsWith("/profile")
                   ? "text-accent-600 dark:text-accent-400 font-bold"
-                  : "text-slate-600 dark:text-slate-300 hover:text-accent-600 dark:hover:text-accent-400"
+                  : "text-neutral-600 dark:text-neutral-300 hover:text-accent-600 dark:hover:text-accent-400"
               }`}
             >
               {t("profile")}
@@ -181,7 +182,7 @@ export default function MobileMenu({ isOpen, onClose }) {
               className={`!text-lg transition-all cursor-pointer ${
                 location.pathname.startsWith("/dashboard")
                   ? "text-accent-600 dark:text-accent-400 font-bold"
-                  : "text-slate-600 dark:text-slate-300 hover:text-accent-600 dark:hover:text-accent-400"
+                  : "text-neutral-600 dark:text-neutral-300 hover:text-accent-600 dark:hover:text-accent-400"
               }`}
             >
               {t("dashboard")}
@@ -231,17 +232,17 @@ export default function MobileMenu({ isOpen, onClose }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="mobile-logout-modal-title"
-            className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+            className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white"
             onClick={(event) => event.stopPropagation()}
           >
             <h3
               id="mobile-logout-modal-title"
-              className="text-lg font-bold text-slate-900 dark:text-white"
+              className="text-lg font-bold text-neutral-900 dark:text-white"
             >
               {isImpersonating ? t("exit_impersonation") : t("confirm_logout")}
             </h3>
 
-            <p className="text-sm text-slate-600 dark:text-slate-300">
+            <p className="text-sm text-neutral-600 dark:text-neutral-300">
               {isImpersonating
                 ? t("return_to_admin_acc")
                 : t("are_you_sure_logout")}
@@ -252,7 +253,7 @@ export default function MobileMenu({ isOpen, onClose }) {
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => setShowLogoutModal(false)}
-                className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-60"
+                className="px-4 py-2 text-sm font-medium rounded-xl border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer disabled:opacity-60"
               >
                 {t("cancel")}
               </button>

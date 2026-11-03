@@ -1,3 +1,4 @@
+// IndexPage/Contact.jsx
 import React, { useState, useEffect } from "react";
 import { Send, CheckCircle2, AlertCircle } from "lucide-react";
 import emailjs from "emailjs-com";
@@ -43,10 +44,11 @@ export default function Contact() {
       .then((data) => {
         if (active) {
           if (data && data.city && data.country_name) {
-            const locString = `${data.city}, ${data.region || ""}, ${data.country_name}`.replace(
-              ", ,",
-              ","
-            );
+            const locString =
+              `${data.city}, ${data.region || ""}, ${data.country_name}`.replace(
+                ", ,",
+                ",",
+              );
             setUserLocation(locString);
           } else {
             setUserLocation("Phnom Penh, Cambodia");
@@ -94,14 +96,14 @@ export default function Contact() {
 
     // EXACT KEYS MATCHING YOUR EMAILJS TEMPLATE
     const templateParams = {
-      from_name: formData.name,       // Maps to {{from_name}}
-      from_email: formData.email,      // Maps to {{from_email}} in Reply-To
-      name: formData.name,            // Maps to {{name}} in Email Body
+      from_name: formData.name, // Maps to {{from_name}}
+      from_email: formData.email, // Maps to {{from_email}} in Reply-To
+      name: formData.name, // Maps to {{name}} in Email Body
       title: formData.title || "Inquiry", // Maps to {{title}} in Subject
-      message: formData.message,      // Maps to {{message}}
-      time: cambodiaTime,             // Maps to {{time}}
-      location: userLocation,         // Maps to {{location}}
-      avatar_url: senderAvatar,       // Maps to {{avatar_url}}
+      message: formData.message, // Maps to {{message}}
+      time: cambodiaTime, // Maps to {{time}}
+      location: userLocation, // Maps to {{location}}
+      avatar_url: senderAvatar, // Maps to {{avatar_url}}
     };
 
     emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY).then(
@@ -125,20 +127,20 @@ export default function Contact() {
           text: "Failed to send message. Please try again later.",
         });
         console.error("EmailJS Error:", error);
-      }
+      },
     );
   };
 
   return (
     <form
       onSubmit={handleSendEmail}
-      className="bg-stone-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-stone-200 dark:border-slate-700 space-y-4"
+      className="bg-neutral-50 dark:bg-neutral-800/50 p-6 rounded-2xl border border-neutral-200 dark:border-neutral-700 space-y-4"
     >
       <div className="space-y-1">
-        <h3 className="text-lg font-bold text-stone-900 dark:text-white">
+        <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
           {t("send_us_a_message") || "Send us a Message"}
         </h3>
-        <p className="text-xs text-stone-500">
+        <p className="text-xs text-neutral-500">
           Have any questions or feedback? Drop us a line below.
         </p>
       </div>
@@ -163,7 +165,7 @@ export default function Contact() {
       {/* Name and Email Input Fields */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-300 mb-1">
+          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-1">
             Your Name
           </label>
           <input
@@ -173,11 +175,11 @@ export default function Contact() {
             value={formData.name}
             onChange={handleInputChange}
             placeholder="Visalsing"
-            className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-accent-500 text-stone-900 dark:text-white"
+            className="w-full px-3.5 py-2 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:outline-none focus:border-accent-500 text-neutral-900 dark:text-white"
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-300 mb-1">
+          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-1">
             Your Email
           </label>
           <input
@@ -187,14 +189,14 @@ export default function Contact() {
             value={formData.email}
             onChange={handleInputChange}
             placeholder="example@gmail.com"
-            className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-accent-500 text-stone-900 dark:text-white"
+            className="w-full px-3.5 py-2 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:outline-none focus:border-accent-500 text-neutral-900 dark:text-white"
           />
         </div>
       </div>
 
       {/* Subject / Title Input Field */}
       <div>
-        <label className="block text-xs font-semibold text-stone-600 dark:text-stone-300 mb-1">
+        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-1">
           Subject / Title
         </label>
         <input
@@ -204,13 +206,13 @@ export default function Contact() {
           value={formData.title}
           onChange={handleInputChange}
           placeholder="e.g., Table Reservation or General Question"
-          className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-accent-500 text-stone-900 dark:text-white"
+          className="w-full px-3.5 py-2 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:outline-none focus:border-accent-500 text-neutral-900 dark:text-white"
         />
       </div>
 
       {/* Message Textarea */}
       <div>
-        <label className="block text-xs font-semibold text-stone-600 dark:text-stone-300 mb-1">
+        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-300 mb-1">
           Message
         </label>
         <textarea
@@ -220,7 +222,7 @@ export default function Contact() {
           value={formData.message}
           onChange={handleInputChange}
           placeholder="How can we help you?"
-          className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-accent-500 text-stone-900 dark:text-white resize-none"
+          className="w-full px-3.5 py-2 text-xs bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:outline-none focus:border-accent-500 text-neutral-900 dark:text-white resize-none"
         />
       </div>
 

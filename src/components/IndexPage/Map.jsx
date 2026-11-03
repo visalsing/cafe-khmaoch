@@ -1,3 +1,4 @@
+// IndexPage/Map.jsx
 import React, { useCallback, useEffect, useState } from "react";
 import {
   MapPin,
@@ -84,7 +85,7 @@ const SOCIAL_LINKS = [
     name: "TikTok",
     icon: TikTokIcon,
     href: "https://tiktok.com",
-    color: "hover:text-slate-900 dark:hover:text-white",
+    color: "hover:text-neutral-900 dark:hover:text-white",
   },
   {
     name: "Gmail",
@@ -149,18 +150,6 @@ export default function LocationSection({ lang = "en" }) {
     [activeLanguage],
   );
 
-  // useEffect(() => {
-  //   let cancelled = false;
-  //   mapService
-  //     .listPublic(activeLanguage)
-  //     .then((list) => {
-  //       if (!cancelled) setShop(Array.isArray(list) ? list[0] || null : null);
-  //     })
-  //     .catch(() => {});
-  //   return () => {
-  //     cancelled = true;
-  //   };
-  // }, [activeLanguage]);
   useEffect(() => {
     let cancelled = false;
 
@@ -250,12 +239,12 @@ export default function LocationSection({ lang = "en" }) {
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-accent-600 to-accent-300 bg-clip-text text-transparent">
           {t("contact_us")}
         </h1>
-        <p className="text-base text-stone-600 dark:text-stone-300 font-medium">
+        <p className="text-base text-neutral-600 dark:text-neutral-300 font-medium">
           {t("contact_subtitle")}
         </p>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 sm:p-12 border border-slate-200 dark:border-slate-800 shadow-sm space-y-8">
+      <div className="bg-white dark:bg-neutral-900 rounded-3xl p-8 sm:p-12 border border-neutral-200 dark:border-neutral-800 shadow-sm space-y-8">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold uppercase tracking-wider text-accent-600 dark:text-accent-400">
             {t("find_us")}
@@ -266,7 +255,7 @@ export default function LocationSection({ lang = "en" }) {
             </h2>
           )}
           {intro && (
-            <p className="text-stone-600 dark:text-stone-400 text-sm">
+            <p className="text-neutral-600 dark:text-neutral-400 text-sm">
               {intro}
             </p>
           )}
@@ -274,26 +263,19 @@ export default function LocationSection({ lang = "en" }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Left Column: Café Info Card */}
-          <div className="space-y-6 bg-stone-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-stone-200 dark:border-slate-700">
+          <div className="space-y-6 bg-neutral-50 dark:bg-neutral-800/50 p-6 rounded-2xl border border-neutral-200 dark:border-neutral-700">
             <div className="flex items-center gap-3">
-              {/* {logo && (
-                <img
-                  src={logo}
-                  alt=""
-                  className="w-12 h-12 rounded-xl object-contain bg-white dark:bg-slate-800 border-2 border-accent-500/30 dark:border-accent-400/30 shadow-sm"
-                />
-              )} */}
               {logo && (
                 <img
                   src={logo}
                   alt=""
                   onLoad={() => finishLoading(logoLoadingKey)}
                   onError={() => finishLoading(logoLoadingKey)}
-                  className="w-12 h-12 rounded-xl object-contain bg-white dark:bg-slate-800 border-2 border-accent-500/30 dark:border-accent-400/30 shadow-sm"
+                  className="w-12 h-12 rounded-xl object-contain bg-white dark:bg-neutral-800 border-2 border-accent-500/30 dark:border-accent-400/30 shadow-sm"
                 />
               )}
               <div className="min-w-0">
-                <h3 className="text-xl font-bold text-stone-900 dark:text-white break-words">
+                <h3 className="text-xl font-bold text-neutral-900 dark:text-white break-words">
                   {shopName}
                 </h3>
                 {slogan && (
@@ -304,15 +286,15 @@ export default function LocationSection({ lang = "en" }) {
               </div>
             </div>
 
-            <div className="space-y-4 text-sm text-stone-600 dark:text-stone-300">
+            <div className="space-y-4 text-sm text-neutral-600 dark:text-neutral-300">
               {location && (
                 <div className="flex items-start gap-3">
                   <MapPin className="w-5 h-5 text-accent-600 shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-stone-900 dark:text-white">
+                    <p className="font-semibold text-neutral-900 dark:text-white">
                       {t("location")}
                     </p>
-                    <p className="text-xs text-stone-500">{location}</p>
+                    <p className="text-xs text-neutral-500">{location}</p>
                   </div>
                 </div>
               )}
@@ -320,10 +302,10 @@ export default function LocationSection({ lang = "en" }) {
               <div className="flex items-start gap-3">
                 <Clock className="w-5 h-5 text-accent-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-stone-900 dark:text-white">
+                  <p className="font-semibold text-neutral-900 dark:text-white">
                     {t("opening_hours")}
                   </p>
-                  <p className="text-xs text-stone-500">
+                  <p className="text-xs text-neutral-500">
                     {translateJson(OPENING_HOURS)}
                   </p>
                 </div>
@@ -332,29 +314,29 @@ export default function LocationSection({ lang = "en" }) {
               <div className="flex items-start gap-3">
                 <Phone className="w-5 h-5 text-accent-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-stone-900 dark:text-white">
+                  <p className="font-semibold text-neutral-900 dark:text-white">
                     {t("phone")}
                   </p>
-                  <p className="text-xs text-stone-500">{PHONE}</p>
+                  <p className="text-xs text-neutral-500">{PHONE}</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
                 <Mail className="w-5 h-5 text-accent-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-stone-900 dark:text-white">
+                  <p className="font-semibold text-neutral-900 dark:text-white">
                     {t("email")}
                   </p>
-                  <p className="text-xs text-stone-500">{EMAIL}</p>
+                  <p className="text-xs text-neutral-500">{EMAIL}</p>
                 </div>
               </div>
 
               {/* Amenities & Perks */}
-              <div className="pt-4 border-t border-stone-200 dark:border-slate-700 space-y-2.5">
-                <p className="font-semibold text-xs text-stone-900 dark:text-white uppercase tracking-wider">
+              <div className="pt-4 border-t border-neutral-200 dark:border-neutral-700 space-y-2.5">
+                <p className="font-semibold text-xs text-neutral-900 dark:text-white uppercase tracking-wider">
                   Amenities & Perks
                 </p>
-                <ul className="text-xs text-stone-600 dark:text-stone-300 space-y-2">
+                <ul className="text-xs text-neutral-600 dark:text-neutral-300 space-y-2">
                   <li className="flex items-center gap-2">
                     <Wifi className="w-4 h-4 text-accent-600 shrink-0" />
                     <span>Free High-Speed Wi-Fi & Power Outlets</span>
@@ -375,8 +357,8 @@ export default function LocationSection({ lang = "en" }) {
               </div>
 
               {/* Social Links */}
-              <div className="pt-4 border-t border-stone-200 dark:border-slate-700">
-                <p className="font-semibold text-stone-900 dark:text-white mb-2 text-xs uppercase tracking-wider">
+              <div className="pt-4 border-t border-neutral-200 dark:border-neutral-700">
+                <p className="font-semibold text-neutral-900 dark:text-white mb-2 text-xs uppercase tracking-wider">
                   {t("follow_connect")}
                 </p>
                 <div className="flex items-center gap-2.5 flex-wrap">
@@ -388,7 +370,7 @@ export default function LocationSection({ lang = "en" }) {
                         href={social.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`p-2 rounded-xl bg-white dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-stone-600 dark:text-stone-300 transition-colors shadow-sm ${social.color}`}
+                        className={`p-2 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 transition-colors shadow-sm ${social.color}`}
                         title={social.name}
                         aria-label={social.name}
                       >
@@ -416,14 +398,14 @@ export default function LocationSection({ lang = "en" }) {
             <div className="pt-2">
               <div className="bg-accent-500/10 dark:bg-accent-400/10 border border-accent-500/20 p-4 rounded-xl flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm">
+                  <div className="p-2 bg-white dark:bg-neutral-800 rounded-lg shadow-sm">
                     <QrCode className="w-6 h-6 text-accent-600" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-stone-900 dark:text-white">
+                    <p className="text-xs font-bold text-neutral-900 dark:text-white">
                       Share Website & Menu
                     </p>
-                    <p className="text-[11px] text-stone-500">
+                    <p className="text-[11px] text-neutral-500">
                       Scan or share website link
                     </p>
                   </div>
@@ -442,7 +424,7 @@ export default function LocationSection({ lang = "en" }) {
 
           {/* Right Column: Google Map on top, Contact Form below it */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="relative h-80 sm:h-96 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-inner">
+            <div className="relative h-80 sm:h-96 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-inner">
               {shop.map ? (
                 <iframe
                   src={shop.map}
@@ -455,7 +437,7 @@ export default function LocationSection({ lang = "en" }) {
                   title={`${shopName} map`}
                 />
               ) : (
-                <div className="w-full h-full bg-stone-100 dark:bg-slate-800 flex items-center justify-center text-sm text-stone-400">
+                <div className="w-full h-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-sm text-neutral-400">
                   {t("map_coming_soon")}
                 </div>
               )}
@@ -469,32 +451,32 @@ export default function LocationSection({ lang = "en" }) {
       {/* Share Website Modal Popup */}
       {showShareModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-5 shadow-2xl relative">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 max-w-sm w-full space-y-5 shadow-2xl relative">
             {/* Close Button */}
             <button
               onClick={() => setShowShareModal(false)}
               aria-label="Close"
-              className="absolute top-4 right-4 p-1.5 rounded-full text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-slate-800 transition-colors"
+              className="absolute top-4 right-4 p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
             {/* Modal Header */}
             <div className="text-center space-y-1">
-              <h3 className="text-lg font-bold text-stone-900 dark:text-white">
+              <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
                 {shopName} Website & Menu
               </h3>
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-neutral-500">
                 {qrCaption || "Scan QR code to view our menu and order online"}
               </p>
             </div>
 
             {/* QR Image Box: always white, so the QR scans even in dark mode */}
             <div className="flex justify-center">
-              <div className="p-3 bg-white rounded-2xl border border-stone-200 shadow-inner">
+              <div className="p-3 bg-white rounded-2xl border border-neutral-200 shadow-inner">
                 {qrLoading ? (
                   <div
-                    className="w-48 h-48 rounded-lg bg-stone-100 animate-pulse"
+                    className="w-48 h-48 rounded-lg bg-neutral-100 animate-pulse"
                     aria-label="Loading QR code"
                   />
                 ) : (
@@ -515,7 +497,7 @@ export default function LocationSection({ lang = "en" }) {
             <div className="space-y-1.5">
               <label
                 htmlFor="share-url-input"
-                className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider"
+                className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider"
               >
                 Website URL
               </label>
@@ -525,7 +507,7 @@ export default function LocationSection({ lang = "en" }) {
                   type="text"
                   readOnly
                   value={shareUrl}
-                  className="w-full px-3 py-2 text-xs bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 rounded-xl text-stone-600 dark:text-stone-300 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-neutral-600 dark:text-neutral-300 focus:outline-none"
                 />
                 <button
                   onClick={handleCopyLink}

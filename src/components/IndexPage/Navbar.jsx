@@ -1,3 +1,4 @@
+// IndexPage/Navbar.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { LogOut } from "lucide-react";
@@ -109,26 +110,6 @@ export default function Navbar({ setMobileMenuOpen }) {
     }
   }, [location.pathname, location.hash]);
 
-  // const handleNavClick = (event, link) => {
-  //   if (link.id !== "hero") return;
-
-  //   // Home = top of the page, not the #hero anchor
-  //   event.preventDefault();
-
-  //   if (location.pathname !== "/") {
-  //     navigate("/");
-  //     window.scrollTo({ top: 0, behavior: "auto" });
-  //     return;
-  //   }
-
-  //   // Remove any leftover #hash from the URL
-  //   if (location.hash) {
-  //     window.history.replaceState(null, "", "/");
-  //   }
-
-  //   window.scrollTo({ top: 0, behavior: "smooth" });
-  // };
-
   const avatarSrc = currentUser?.avatarThumbnail || currentUser?.avatar;
   const onProfilePage = location.pathname.startsWith("/profile");
   const actionLabel = isImpersonating ? t("exit_impersonation") : t("logout");
@@ -137,7 +118,7 @@ export default function Navbar({ setMobileMenuOpen }) {
     <img
       src={assetUrl(avatarSrc)}
       alt={`${currentUser?.firstName || "User"} avatar`}
-      className="w-7 h-7 rounded-full object-cover bg-slate-200 dark:bg-slate-700 shrink-0"
+      className="w-7 h-7 rounded-full object-cover bg-neutral-200 dark:bg-neutral-700 shrink-0"
     />
   ) : (
     <div className="w-7 h-7 rounded-full bg-accent-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
@@ -146,8 +127,11 @@ export default function Navbar({ setMobileMenuOpen }) {
   );
 
   const userName = (
-    <span className="hidden sm:inline text-xs font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[90px]">
-      {currentUser?.lastName || "User"} {currentUser?.firstName || "User"}
+    <span className="hidden sm:inline text-xs font-semibold text-neutral-700 dark:text-neutral-200 truncate max-w-[90px]">
+      {Number(currentUser?.is_fullname) === 1
+        ? `${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`.trim()
+        : `${currentUser?.lastName || ""} ${currentUser?.firstName || ""}`.trim() ||
+          "User"}
     </span>
   );
 
@@ -173,7 +157,7 @@ export default function Navbar({ setMobileMenuOpen }) {
       </div>
 
       {/* Desktop Navigation Links */}
-      <div className="hidden lg:flex items-center space-x-6 text-sm font-medium text-slate-600 dark:text-slate-300">
+      <div className="hidden lg:flex items-center space-x-6 text-sm font-medium text-neutral-600 dark:text-neutral-300">
         {navLinks.map((link) => {
           const isActive =
             location.pathname === "/" && activeSection === link.id;
@@ -227,7 +211,16 @@ export default function Navbar({ setMobileMenuOpen }) {
         <button
           type="button"
           onClick={() => navigate("/cart")}
-          className="relative w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-accent-600 hover:bg-accent-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+          // className="relative w-10 h-10 rounded-xl bg-neutral-200/70 dark:bg-white/10 text-neutral-700 dark:text-neutral-300 hover:text-accent-600 hover:bg-neutral-300/80  dark:hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+          className="relative w-10 h-10 rounded-xl
+bg-neutral-200/70 dark:bg-white/10
+border border-transparent
+text-neutral-700 dark:text-neutral-300
+hover:text-accent-700 dark:hover:text-accent-300
+hover:bg-accent-100 dark:hover:bg-accent-950/40
+hover:border-accent-400 dark:hover:border-accent-500
+flex items-center justify-center
+transition-all duration-200 cursor-pointer shrink-0"
           title={t("cart")}
           aria-label={`Shopping cart${
             cartCount > 0 ? `, ${cartCount} items` : ""
@@ -249,17 +242,20 @@ export default function Navbar({ setMobileMenuOpen }) {
                 title={t("my_profile")}
                 aria-label="Open my profile"
                 aria-current={onProfilePage ? "page" : undefined}
-                className={`h-10 w-10 sm:w-auto rounded-xl flex items-center justify-center sm:justify-start bg-slate-100 dark:bg-slate-800 hover:bg-accent-100 dark:hover:bg-slate-700 transition-colors cursor-pointer shrink-0 sm:px-2.5 sm:space-x-2 ${
-                  onProfilePage
-                    ? "ring-2 ring-accent-500"
-                    : "border border-transparent"
-                }`}
+                className={`h-10 w-10 sm:w-auto rounded-xl flex items-center justify-center sm:justify-start
+  bg-neutral-200/70 dark:bg-white/10
+  hover:bg-accent-100 dark:hover:bg-accent-950/40
+  border border-transparent
+  hover:border-accent-400 dark:hover:border-accent-500
+  transition-all duration-200 cursor-pointer shrink-0
+  sm:px-2.5 sm:space-x-2
+  ${onProfilePage ? "ring-2 ring-accent-500" : ""}`}
               >
                 {avatarNode}
                 {userName}
               </Link>
             ) : (
-              <div className="h-10 w-10 sm:w-auto rounded-xl flex items-center justify-center sm:justify-start bg-slate-100 dark:bg-slate-800 shrink-0 sm:px-2.5 sm:space-x-2">
+              <div className="h-10 w-10 sm:w-auto rounded-xl flex items-center justify-center sm:justify-start bg-neutral-200/70 dark:bg-white/10 shrink-0 sm:px-2.5 sm:space-x-2">
                 {avatarNode}
                 {userName}
               </div>
@@ -271,11 +267,16 @@ export default function Navbar({ setMobileMenuOpen }) {
               disabled={isSubmitting}
               title={actionLabel}
               aria-label={actionLabel}
-              className={`hidden sm:inline-flex items-center justify-center gap-1.5 h-10 px-3 ml-2 sm:ml-3 text-xs font-semibold rounded-xl transition-all cursor-pointer whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed ${
-                isImpersonating
-                  ? "bg-accent-100 text-accent-800 hover:bg-accent-200 dark:bg-accent-950 dark:text-accent-300"
-                  : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-red-500 hover:text-white"
-              }`}
+className={`hidden sm:inline-flex items-center justify-center gap-1.5
+  h-10 px-3 ml-2 sm:ml-3 text-xs font-semibold rounded-xl
+  border border-transparent
+  transition-all duration-200 cursor-pointer whitespace-nowrap
+  disabled:opacity-60 disabled:cursor-not-allowed
+  ${
+    isImpersonating
+      ? "bg-accent-100 text-accent-800 hover:bg-accent-200 border-accent-200 hover:border-accent-400 dark:bg-accent-950 dark:text-accent-300 dark:border-accent-900 dark:hover:bg-accent-900 dark:hover:border-accent-500"
+      : "bg-neutral-200/70 dark:bg-white/10 text-neutral-700 dark:text-neutral-200 hover:bg-red-50 hover:text-red-600 hover:border-red-400 dark:hover:bg-red-950/40 dark:hover:text-red-400 dark:hover:border-red-500"
+  }`}
             >
               <LogOut className="w-4 h-4 shrink-0" />
               {actionLabel}
@@ -285,7 +286,7 @@ export default function Navbar({ setMobileMenuOpen }) {
           <button
             type="button"
             onClick={() => navigate("/login")}
-            className="hidden sm:inline-flex items-center justify-center h-10 px-4 text-sm font-semibold text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-blue-950/50 hover:bg-accent-100 dark:hover:bg-blue-900/50 rounded-xl border border-accent-200 dark:border-accent-800 transition-all cursor-pointer"
+            className="hidden sm:inline-flex items-center justify-center h-10 px-4 text-sm font-semibold text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-950/50 hover:bg-accent-100 dark:hover:bg-accent-900/50 rounded-xl border border-accent-200 dark:border-accent-800 transition-all cursor-pointer"
           >
             {t("login")}
           </button>
@@ -294,7 +295,11 @@ export default function Navbar({ setMobileMenuOpen }) {
         <button
           type="button"
           onClick={() => setMobileMenuOpen(true)}
-          className="flex lg:hidden w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 items-center justify-center transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer shrink-0"
+          className="flex lg:hidden w-10 h-10 rounded-xl bg-neutral-200/70 dark:bg-white/10
+border border-transparent
+hover:bg-accent-100 dark:hover:bg-accent-950/40
+hover:border-accent-400 dark:hover:border-accent-500
+transition-all duration-200 items-center justify-center cursor-pointer shrink-0"
           title="Menu"
           aria-label="Open navigation menu"
         >
@@ -307,14 +312,8 @@ export default function Navbar({ setMobileMenuOpen }) {
   return (
     <>
       {/* 1) SECTION NAVBAR: in the page flow, scrolls away with the page */}
-      {/* <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-        <nav className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm px-4 sm:px-6">
-          {renderBar()}
-        </nav>
-      </header> */}
-
       <header className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-        <nav className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm px-3 sm:px-4">
+        <nav className="rounded-2xl bg-white/60 dark:bg-neutral-900/40 backdrop-blur-xl backdrop-saturate-150 border border-white/50 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/30 px-3 sm:px-4">
           {renderBar()}
         </nav>
       </header>
@@ -322,7 +321,7 @@ export default function Navbar({ setMobileMenuOpen }) {
       {/* 2) STICKY NAVBAR: slides in only after scrolling */}
       <nav
         aria-hidden={!scrolled}
-        className={`fixed top-0 inset-x-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-[transform,visibility] duration-300 ${
+        className={`fixed top-0 inset-x-0 z-40 bg-white/60 dark:bg-neutral-900/40 backdrop-blur-xl backdrop-saturate-150 border-b border-white/50 dark:border-white/10 shadow-lg shadow-black/5 dark:shadow-black/30 transition-[transform,visibility] duration-300 ${
           scrolled
             ? "translate-y-0 visible"
             : "-translate-y-full invisible pointer-events-none"
@@ -345,17 +344,17 @@ export default function Navbar({ setMobileMenuOpen }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="logout-modal-title"
-            className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 border border-slate-200 dark:border-slate-800"
+            className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 border border-neutral-200 dark:border-neutral-800"
             onClick={(event) => event.stopPropagation()}
           >
             <h3
               id="logout-modal-title"
-              className="text-lg font-bold text-slate-900 dark:text-white"
+              className="text-lg font-bold text-neutral-900 dark:text-white"
             >
               {isImpersonating ? t("exit_impersonation") : t("confirm_logout")}
             </h3>
 
-            <p className="text-sm text-slate-600 dark:text-slate-300">
+            <p className="text-sm text-neutral-600 dark:text-neutral-300">
               {isImpersonating
                 ? t("return_to_admin_acc")
                 : t("are_you_sure_logout")}
@@ -366,7 +365,7 @@ export default function Navbar({ setMobileMenuOpen }) {
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => setShowLogoutModal(false)}
-                className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-60"
+                className="px-4 py-2 text-sm font-medium rounded-xl border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer disabled:opacity-60"
               >
                 {t("cancel")}
               </button>

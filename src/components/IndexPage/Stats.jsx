@@ -1,3 +1,4 @@
+// IndexPage/Stats.jsx
 import React from "react";
 
 export default function Stats({ stats }) {
@@ -9,14 +10,14 @@ export default function Stats({ stats }) {
       {stats.map((stat, idx) => (
         <div
           key={idx}
-          className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 hover:shadow-md transition-all"
+          className="bg-white dark:bg-neutral-900 p-6 rounded-2xl shadow-sm border border-neutral-200 dark:border-neutral-800 hover:shadow-md transition-all"
         >
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+          <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
             {stat.label}
           </p>
 
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-3xl font-bold text-slate-900 dark:text-white">
+            <span className="text-3xl font-bold text-neutral-900 dark:text-white">
               {stat.value}
             </span>
 

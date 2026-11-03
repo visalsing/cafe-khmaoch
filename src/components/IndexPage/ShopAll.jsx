@@ -1,8 +1,24 @@
-import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  Check,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  Star,
+  X,
+} from "lucide-react";
 import Navbar from "./Navbar";
 import MobileMenu from "./MobileMenu";
 import Footer from "./Footer";
-import { ChevronDown, ChevronUp } from "lucide-react";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
@@ -60,6 +76,22 @@ const sizeOptions = (p) =>
     unit: unitPrice(p[s.field], p.discount_percent),
   }));
 
+// ----------------- Unite Price ------------------------
+const EXCHANGE_RATE = 4100; // 1$ = 4100៛
+const formatPriceWithUSD = (rielValue) => {
+  const usd = rielValue / EXCHANGE_RATE;
+  // Omit decimals if it's a whole dollar amount, otherwise show 2 decimals
+  const usdFormatted =
+    usd % 1 === 0 ? `$${usd.toFixed(0)}` : `$${usd.toFixed(2)}`;
+  return {
+    riel: `${Math.round(rielValue).toLocaleString()}៛`,
+    usd: `≈ ${usdFormatted}`,
+  };
+};
+
+const focusRing =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-stone-900";
+
 /* ---------- 5 stars component ---------- */
 const STAR_PATH =
   "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z";
@@ -101,56 +133,344 @@ function Stars({ value = 0, className = "w-4 h-4", t }) {
   );
 }
 
-function SizeChips({ options, active, onPick, t, compact = false }) {
+/* ---------- size picker (segmented control) ---------- */
+function SizeSegment({
+  options,
+  active,
+  onPick,
+  t,
+  withPrice = false,
+  large = false,
+}) {
   return (
     <div
-      className={`flex flex-wrap items-center ${
-        compact ? "gap-1 pt-0.5" : "gap-1.5 pt-1"
+      role="radiogroup"
+      aria-label={t("size") !== "size" ? t("size") : "Size"}
+      className={`inline-flex max-w-full rounded-xl bg-stone-100 p-1 dark:bg-stone-800 ${
+        large ? "w-full" : ""
       }`}
     >
-      {options.map((option) => (
-        <button
-          key={option.key}
-          type="button"
-          onClick={() => onPick(option.key)}
-          className={`inline-flex items-center justify-center
-            font-semibold border transition-colors cursor-pointer
-            ${
-              compact
-                ? "px-2 py-0.5 text-[10px] sm:text-[11px] rounded-md"
-                : "px-3 py-1 text-xs rounded-lg"
-            }
-            ${
-              active === option.key
-                ? "bg-accent-600 border-accent-600 text-white"
-                : "bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:border-accent-500"
+      {options.map((option) => {
+        const isActive = active === option.key;
+        return (
+          <button
+            key={option.key}
+            type="button"
+            role="radio"
+            aria-checked={isActive}
+            onClick={() => onPick(option.key)}
+            className={`min-w-0 cursor-pointer rounded-lg font-semibold transition-colors ${focusRing} ${
+              large
+                ? "flex flex-1 flex-col items-center px-3 py-2 text-sm"
+                : "px-2.5 py-1 text-[11px]"
+            } ${
+              isActive
+                ? "bg-white text-accent-700 shadow-sm dark:bg-stone-700 dark:text-accent-300"
+                : "text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
             }`}
+          >
+            <span className="truncate">{t(option.labelKey)}</span>
+            {withPrice && (
+              <span
+                className={`mt-0.5 text-xs font-medium ${
+                  isActive
+                    ? "text-accent-600 dark:text-accent-400"
+                    : "text-stone-400"
+                }`}
+              >
+                {formatPriceWithUSD(option.unit).riel}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---------- one group of choices in the modal (sugar / ice / coffee) ---------- */
+function ChoiceGroup({
+  title,
+  requiredLabel,
+  levels,
+  selectedId,
+  onPick,
+  name,
+  translate,
+  showExtra = false,
+}) {
+  const selected = levels.find((level) => level.id === selectedId);
+
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <h4 className="text-sm font-bold text-stone-900 dark:text-white">
+          {title}
+          <span className="ml-1 text-rose-500" aria-hidden="true">
+            *
+          </span>
+        </h4>
+        <span
+          className={`truncate text-xs font-semibold ${
+            selected
+              ? "text-accent-600 dark:text-accent-400"
+              : "text-stone-400 dark:text-stone-500"
+          }`}
         >
-          {t(option.labelKey)}
-        </button>
+          {selected ? translate(selected.name) : requiredLabel}
+        </span>
+      </div>
+
+      <div
+        role="radiogroup"
+        aria-label={title}
+        className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+      >
+        {levels.map((level) => {
+          const checked = level.id === selectedId;
+          const extra = showExtra ? Number(level.price || 0) : 0;
+          return (
+            <label key={level.id} className="relative block cursor-pointer">
+              <input
+                type="radio"
+                name={name}
+                checked={checked}
+                onChange={() => onPick(level)}
+                className="peer sr-only"
+              />
+              <span
+                className={`flex h-full min-h-[44px] items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent-500 ${
+                  checked
+                    ? "border-accent-600 bg-accent-50 font-semibold text-accent-800 dark:border-accent-500 dark:bg-accent-950/40 dark:text-accent-200"
+                    : "border-stone-200 bg-white text-stone-700 hover:border-accent-400 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+                }`}
+              >
+                <span className="min-w-0 break-words leading-snug">
+                  {translate(level.name)}
+                  {extra > 0 && (
+                    <span className="mt-0.5 block text-[11px] font-medium text-accent-600 dark:text-accent-400">
+                      +{formatPriceWithUSD(extra).riel}
+                    </span>
+                  )}
+                </span>
+                {checked && (
+                  <Check className="h-4 w-4 shrink-0 text-accent-600 dark:text-accent-400" />
+                )}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- product card (row on phones, tile from sm up) ---------- */
+function ProductCard({
+  img,
+  name,
+  description,
+  categoryName,
+  badge,
+  discount,
+  rating,
+  reviews,
+  options,
+  option,
+  onPick,
+  price,
+  basePrice,
+  canAdd,
+  added,
+  loggedIn,
+  onOpen,
+  onAdd,
+  t,
+}) {
+  const money = formatPriceWithUSD(price);
+  const wasMoney = formatPriceWithUSD(basePrice);
+  const moreLabel =
+    t("show_more_options") !== "show_more_options"
+      ? t("show_more_options")
+      : "More options";
+
+  return (
+    <article className="group flex min-w-0 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:border-accent-400/60 hover:shadow-md dark:border-stone-800 dark:bg-stone-900 sm:flex-col">
+      {/* photo */}
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={name}
+        className={`relative w-28 shrink-0 self-stretch overflow-hidden bg-stone-100 dark:bg-stone-800 sm:aspect-[4/3] sm:w-full sm:self-auto ${focusRing}`}
+      >
+        {img ? (
+          <img
+            src={img}
+            alt=""
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <span className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-accent-50 to-stone-100 text-4xl dark:from-accent-950/40 dark:to-stone-800">
+            ☕
+          </span>
+        )}
+        {(discount > 0 || badge) && (
+          <span className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-wrap gap-1">
+            {discount > 0 && (
+              <span className="rounded-md bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-white shadow-sm sm:px-2 sm:py-1 sm:text-xs">
+                -{discount}%
+              </span>
+            )}
+            {badge && (
+              <span className="max-w-full break-words rounded-md bg-stone-900/75 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-white backdrop-blur-sm sm:px-2 sm:py-1 sm:text-xs">
+                {badge}
+              </span>
+            )}
+          </span>
+        )}
+      </button>
+
+      {/* details */}
+      <div className="flex min-w-0 flex-1 flex-col gap-2 p-3 sm:p-4">
+        <div className="min-w-0">
+          {categoryName && (
+            <p className="mb-0.5 truncate text-[11px] font-semibold text-accent-600 dark:text-accent-400">
+              {categoryName}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={onOpen}
+            className={`block w-full rounded text-left ${focusRing}`}
+          >
+            <h3 className="line-clamp-2 break-words text-sm font-bold leading-snug text-stone-900 dark:text-white sm:text-base">
+              {name}
+            </h3>
+          </button>
+          {description && (
+            <p className="mt-1 line-clamp-2 break-words text-[11px] leading-relaxed text-stone-500 dark:text-stone-400 sm:text-xs">
+              {description}
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5 text-[11px] text-stone-500 dark:text-stone-400">
+          <Star
+            className="h-3.5 w-3.5 fill-amber-400 text-amber-400"
+            aria-hidden="true"
+          />
+          <span className="font-semibold text-stone-700 dark:text-stone-200">
+            {rating.toFixed(1)}
+          </span>
+          <span>({reviews})</span>
+        </div>
+
+        {options.length > 1 && (
+          <SizeSegment
+            options={options}
+            active={option.key}
+            onPick={onPick}
+            t={t}
+          />
+        )}
+
+        <div className="mt-auto flex items-end justify-between gap-2 pt-1">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <span className="text-base font-extrabold leading-none text-stone-900 dark:text-white sm:text-lg">
+                {money.riel}
+              </span>
+              {discount > 0 && (
+                <span className="text-[11px] text-stone-400 line-through">
+                  {wasMoney.riel}
+                </span>
+              )}
+            </div>
+            <span className="mt-1 block text-[11px] font-medium text-stone-400 dark:text-stone-500">
+              {money.usd}
+            </span>
+          </div>
+
+          {loggedIn ? (
+            canAdd ? (
+              <button
+                type="button"
+                onClick={onAdd}
+                aria-label={t("add_to_order")}
+                title={t("add_to_order")}
+                className={`flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-white shadow-sm transition-colors ${focusRing} ${
+                  added ? "bg-emerald-600" : "bg-accent-600 hover:bg-accent-700"
+                }`}
+              >
+                {added ? (
+                  <Check className="h-5 w-5" />
+                ) : (
+                  <Plus className="h-5 w-5" />
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onOpen}
+                aria-label={moreLabel}
+                title={moreLabel}
+                className={`flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-accent-600 bg-accent-50 text-accent-700 transition-colors hover:bg-accent-100 dark:bg-accent-950/40 dark:text-accent-300 ${focusRing}`}
+              >
+                <SlidersHorizontal className="h-[18px] w-[18px]" />
+              </button>
+            )
+          ) : (
+            <button
+              type="button"
+              onClick={onOpen}
+              className={`shrink-0 cursor-pointer rounded px-1 py-1 text-xs font-semibold text-accent-600 underline decoration-accent-500/60 underline-offset-4 transition-colors hover:text-accent-700 dark:text-accent-400 dark:hover:text-accent-300 ${focusRing}`}
+            >
+              {t("see_more") !== "see_more" ? t("see_more") : "See more"}
+            </button>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function MenuSkeleton() {
+  return (
+    <div
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-5"
+      aria-hidden="true"
+    >
+      {Array.from({ length: 6 }, (_, i) => (
+        <div
+          key={i}
+          className="flex animate-pulse overflow-hidden rounded-2xl border border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900 sm:flex-col"
+        >
+          <div className="h-32 w-28 shrink-0 bg-stone-200 dark:bg-stone-800 sm:aspect-[4/3] sm:h-auto sm:w-full" />
+          <div className="flex-1 space-y-3 p-4">
+            <div className="h-3 w-1/3 rounded bg-stone-200 dark:bg-stone-800" />
+            <div className="h-4 w-2/3 rounded bg-stone-200 dark:bg-stone-800" />
+            <div className="h-3 w-full rounded bg-stone-100 dark:bg-stone-800/70" />
+            <div className="h-6 w-1/2 rounded bg-stone-200 dark:bg-stone-800" />
+          </div>
+        </div>
       ))}
     </div>
   );
 }
 
-// ----------------- Unite Price ------------------------
-const EXCHANGE_RATE = 4100; // 1$ = 4100៛
-const formatPriceWithUSD = (rielValue) => {
-  const usd = rielValue / EXCHANGE_RATE;
-  // Omit decimals if it's a whole dollar amount, otherwise show 2 decimals
-  const usdFormatted =
-    usd % 1 === 0 ? `$${usd.toFixed(0)}` : `$${usd.toFixed(2)}`;
-  return {
-    riel: `${Math.round(rielValue).toLocaleString()}៛`,
-    usd: `≈ ${usdFormatted}`,
-  };
-};
-
 export default function ShopAll() {
   const { addItem } = useCart();
   const { currentUser } = useAuth();
   const { language, t } = useLanguage();
+  const navigate = useNavigate();
   const activeLanguage = language || "en";
+
+  // translation with an English fallback for texts that have no key yet
+  const tt = (key, fallback) => {
+    const value = t(key);
+    return value && value !== key ? value : fallback;
+  };
 
   // Database text is stored as multilingual JSON; show the active language.
   const translateJson = useCallback(
@@ -174,7 +494,6 @@ export default function ShopAll() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [addedId, setAddedId] = useState(null);
   const [picked, setPicked] = useState({});
-  const [showOptionsId, setShowOptionsId] = useState(null);
   const [customizations, setCustomizations] = useState({}); // prod.id -> { sugar, ice, coffee }
 
   const loadMenu = useCallback(async () => {
@@ -247,6 +566,14 @@ export default function ShopAll() {
       .sort(bySort);
   }, [cats, items]);
 
+  const countByCategory = useMemo(() => {
+    const counts = new Map();
+    items.forEach((p) =>
+      counts.set(p.category_id, (counts.get(p.category_id) || 0) + 1),
+    );
+    return counts;
+  }, [items]);
+
   useEffect(() => {
     if (
       selectedCategory !== "All" &&
@@ -262,9 +589,27 @@ export default function ShopAll() {
       .concat([translateJson(p.name)])
       .join(" ")
       .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+      .includes(searchTerm.trim().toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  // "All" without a search reads like a printed menu: one section per category
+  const grouped = selectedCategory === "All" && !searchTerm.trim();
+  const sections = useMemo(() => {
+    if (!grouped) return [];
+    const result = tabs
+      .map((cat) => ({
+        key: cat.id,
+        cat,
+        list: filteredProducts.filter((p) => p.category_id === cat.id),
+      }))
+      .filter((section) => section.list.length > 0);
+    const known = new Set(tabs.map((c) => c.id));
+    const rest = filteredProducts.filter((p) => !known.has(p.category_id));
+    if (rest.length) result.push({ key: "rest", cat: null, list: rest });
+    return result;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grouped, tabs, items, searchTerm, selectedCategory]);
 
   const chosenOption = (p) => {
     const options = sizeOptions(p);
@@ -348,7 +693,6 @@ export default function ShopAll() {
   const handleAdd = (product) => {
     if (!isCompleteCustomization(product)) return;
 
-    const options = sizeOptions(product);
     const option = chosenOption(product);
     const cust = customizations[product.id] || {};
 
@@ -366,21 +710,6 @@ export default function ShopAll() {
       coffeeObj ? translateJson(coffeeObj.name) : null,
     ].filter(Boolean);
 
-    // addItem({
-    //   id: `${product.id}:${option.key}:${sugarObj?.id || 0}:${iceObj?.id || 0}:${coffeeObj?.id || 0}`,
-    //   productId: product.id,
-    //   size: option.key,
-    //   title: `${translateJson(product.name)} (${chosenLabels.join(", ")})`,
-    //   price: finalUnitPrice,
-    //   basePrice: option.base + extraCoffeePrice,
-    //   discountPercent: Number(product.discount_percent || 0),
-    //   taxPercent: hasValue(product.tax_percent)
-    //     ? Number(product.tax_percent)
-    //     : null,
-    //   img: assetUrl(product.img || product.thumbnail),
-    //   category: catName.get(product.category_id) || "",
-    // });
-
     addItem({
       id: `${product.id}:${option.key}:${sugarObj?.id || 0}:${iceObj?.id || 0}:${coffeeObj?.id || 0}`,
       productId: product.id,
@@ -395,17 +724,18 @@ export default function ShopAll() {
       img: assetUrl(product.img || product.thumbnail),
       category: catName.get(product.category_id) || "",
 
-      sugarLevelId: sugarObj?.id || null, // ← new
-      iceLevelId: iceObj?.id || null, // ← new
-      coffeeLevelId: coffeeObj?.id || null, // ← new
+      sugarLevelId: sugarObj?.id || null,
+      iceLevelId: iceObj?.id || null,
+      coffeeLevelId: coffeeObj?.id || null,
     });
 
     setAddedId(product.id);
-    setTimeout(() => setAddedId(null), 1000);
+    setTimeout(() => setAddedId(null), 1200);
   };
 
   // ------------------ Item Modal ----------------------
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const dialogRef = useRef(null);
 
   useEffect(() => {
     if (!selectedProduct) return;
@@ -419,6 +749,7 @@ export default function ShopAll() {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKeyDown);
+    dialogRef.current?.focus();
 
     return () => {
       document.body.style.overflow = previousOverflow;
@@ -426,8 +757,369 @@ export default function ShopAll() {
     };
   }, [selectedProduct]);
 
+  /* ---------- one product card, wired to this page's state ---------- */
+  const renderCard = (product) => {
+    const options = sizeOptions(product);
+    const option = chosenOption(product);
+    const discount = Number(product.discount_percent || 0);
+    const rating =
+      Number(product.rating) > 0 ? Number(product.rating) : STATIC_RATING;
+    const reviews = hasValue(product.reviews)
+      ? Number(product.reviews)
+      : STATIC_REVIEWS;
+    const cust = customizations[product.id] || {};
+    const extraCoffeePrice = Number(cust.coffee?.price || 0);
+
+    return (
+      <ProductCard
+        key={product.id}
+        img={assetUrl(product.img || product.thumbnail)}
+        name={translateJson(product.name)}
+        description={translateJson(product.description).trim()}
+        categoryName={grouped ? "" : catName.get(product.category_id) || ""}
+        badge={translateJson(product.badge).trim()}
+        discount={discount}
+        rating={rating}
+        reviews={reviews}
+        options={options}
+        option={option}
+        onPick={(key) =>
+          setPicked((previous) => ({ ...previous, [product.id]: key }))
+        }
+        price={option.unit + extraCoffeePrice}
+        basePrice={option.base + extraCoffeePrice}
+        canAdd={isCompleteCustomization(product)}
+        added={addedId === product.id}
+        loggedIn={Boolean(currentUser)}
+        onOpen={() => setSelectedProduct(product)}
+        onAdd={() => handleAdd(product)}
+        t={t}
+      />
+    );
+  };
+
+  const gridCls =
+    "grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-5";
+
+  /* ================= PRODUCT DETAIL MODAL =================
+     Phones and small tablets (below md): a full-screen page. The photo is the first
+     thing in the scrolling area, so the choices get all the room.
+     md and up: a centred window with the photo on the left. */
+  const renderModal = () => {
+    if (!selectedProduct) return null;
+
+    const product = selectedProduct;
+    const options = sizeOptions(product);
+    const option = chosenOption(product);
+    const discount = Number(product.discount_percent || 0);
+    const img = assetUrl(product.img || product.thumbnail);
+    const cust = customizations[product.id] || {};
+
+    const availSugar = availableLevels(1, sugarLevels, product);
+    const availIce = availableLevels(2, iceLevels, product);
+    const availCoffee = availableLevels(3, coffeeLevels, product);
+
+    const extraCoffeePrice = Number(cust.coffee?.price || 0);
+    const displayPrice = option.unit + extraCoffeePrice;
+    const basePrice = option.base + extraCoffeePrice;
+    const money = formatPriceWithUSD(displayPrice);
+    const wasMoney = formatPriceWithUSD(basePrice);
+    const canAdd = isCompleteCustomization(product);
+
+    const rating =
+      Number(product.rating) > 0 ? Number(product.rating) : STATIC_RATING;
+    const reviews = hasValue(product.reviews)
+      ? Number(product.reviews)
+      : STATIC_REVIEWS;
+
+    const groups = [
+      {
+        field: "sugar",
+        title: tt("sugar_levels", "Sugar level"),
+        levels: availSugar,
+        extra: false,
+      },
+      {
+        field: "ice",
+        title: tt("ice_levels", "Ice level"),
+        levels: availIce,
+        extra: false,
+      },
+      {
+        field: "coffee",
+        title: tt("coffee_levels", "Coffee level"),
+        levels: availCoffee,
+        extra: true,
+      },
+    ].filter((group) => group.levels.length > 0);
+
+    const missing = groups.filter((group) => !cust[group.field]);
+    const productName = translateJson(product.name);
+    const description = translateJson(product.description).trim();
+    const badge = translateJson(product.badge).trim();
+    const categoryLabel = catName.get(product.category_id) || "";
+    const closeLabel = tt("close", "Close");
+    const completeHint = tt(
+      "complete_required_levels",
+      "Choose all required options first",
+    );
+
+    // The photo sits on a blurred copy of itself, so product shots (often on white,
+    // often tall) are shown whole instead of being cropped.
+    const photo = (
+      <div className="relative h-full w-full overflow-hidden bg-stone-100 dark:bg-stone-950">
+        {img ? (
+          <>
+            <img
+              src={img}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full scale-125 object-cover opacity-60 blur-2xl dark:opacity-40"
+            />
+            <img
+              src={img}
+              alt={productName}
+              className="relative h-full w-full object-contain p-3 sm:p-5"
+            />
+          </>
+        ) : (
+          <span className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-accent-50 to-stone-100 text-7xl dark:from-accent-950/40 dark:to-stone-900">
+            ☕
+          </span>
+        )}
+
+        {(discount > 0 || badge) && (
+          <span className="absolute left-4 top-4 flex flex-wrap gap-2">
+            {discount > 0 && (
+              <span className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm font-bold text-white shadow-sm">
+                -{discount}%
+              </span>
+            )}
+            {badge && (
+              <span className="rounded-lg bg-stone-900/75 px-3 py-1.5 text-sm font-bold text-white backdrop-blur-sm">
+                {badge}
+              </span>
+            )}
+          </span>
+        )}
+      </div>
+    );
+
+    return (
+      <div
+        className="fixed inset-0 z-[100] flex md:items-center md:justify-center md:p-6"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setSelectedProduct(null);
+        }}
+      >
+        {/* backdrop (only visible around the centred window) */}
+        <div className="menu-fade-in absolute inset-0 bg-stone-950/70 backdrop-blur-sm" />
+
+        <div
+          ref={dialogRef}
+          tabIndex={-1}
+          role="dialog"
+          aria-modal="true"
+          aria-label={productName}
+          onMouseDown={(event) => event.stopPropagation()}
+          className="menu-sheet-in relative z-10 flex h-dvh w-full flex-col overflow-hidden bg-white outline-none dark:bg-stone-900 md:h-[88dvh] md:max-h-[780px] md:max-w-5xl md:flex-row md:rounded-3xl md:shadow-2xl"
+        >
+          {/* photo pane (md and up) */}
+          <div className="relative hidden shrink-0 md:block md:w-5/12">
+            {photo}
+          </div>
+
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            {/* page bar (below md): back button + category */}
+            <div className="flex shrink-0 items-center gap-1 border-b border-stone-200 bg-white px-2 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] dark:border-stone-800 dark:bg-stone-900 md:hidden">
+              <button
+                type="button"
+                onClick={() => setSelectedProduct(null)}
+                aria-label={closeLabel}
+                className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-stone-700 transition-colors hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800 ${focusRing}`}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <span className="min-w-0 truncate text-sm font-semibold text-accent-600 dark:text-accent-400">
+                {categoryLabel}
+              </span>
+            </div>
+
+            {/* window header (md and up) */}
+            <div className="hidden shrink-0 items-center justify-between gap-3 border-b border-stone-100 px-6 py-4 dark:border-stone-800 md:flex">
+              <span className="truncate text-sm font-semibold text-accent-600 dark:text-accent-400">
+                {categoryLabel}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedProduct(null)}
+                aria-label={closeLabel}
+                className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 dark:hover:bg-stone-800 dark:hover:text-white ${focusRing}`}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* everything scrolls together: photo first on small screens */}
+            <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <div className="relative h-[min(20rem,40dvh)] md:hidden">
+                {photo}
+              </div>
+
+              <div className="space-y-6 p-5 sm:p-6">
+                <div className="space-y-3">
+                  <h2 className="break-words text-2xl font-extrabold leading-tight text-stone-900 dark:text-white sm:text-3xl">
+                    {productName}
+                  </h2>
+
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
+                    <Stars value={rating} t={t} />
+                    <span className="font-semibold text-stone-800 dark:text-stone-200">
+                      {rating.toFixed(1)}
+                    </span>
+                    <span>
+                      ({reviews} {reviews === 1 ? t("review") : t("reviews")})
+                    </span>
+                  </div>
+
+                  {description && (
+                    <p className="whitespace-pre-line text-sm leading-7 text-stone-600 dark:text-stone-300">
+                      {description}
+                    </p>
+                  )}
+                </div>
+
+                {options.length > 1 && (
+                  <div className="space-y-2.5">
+                    <h4 className="text-sm font-bold text-stone-900 dark:text-white">
+                      {tt("size", "Size")}
+                    </h4>
+                    <SizeSegment
+                      options={options}
+                      active={option.key}
+                      t={t}
+                      large
+                      withPrice
+                      onPick={(key) =>
+                        setPicked((prev) => ({ ...prev, [product.id]: key }))
+                      }
+                    />
+                  </div>
+                )}
+
+                {groups.length > 0 && (
+                  <div className="space-y-6">
+                    {groups.map((group) => (
+                      <ChoiceGroup
+                        key={group.field}
+                        title={group.title}
+                        requiredLabel={tt("required", "Required")}
+                        levels={group.levels}
+                        selectedId={cust[group.field]?.id}
+                        name={`modal-${group.field}-${product.id}`}
+                        translate={translateJson}
+                        showExtra={group.extra}
+                        onPick={(level) =>
+                          handleCustomizationChange(
+                            product.id,
+                            group.field,
+                            level,
+                          )
+                        }
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* total + add: always visible at the bottom */}
+            <div className="shrink-0 space-y-3 border-t border-stone-200 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 dark:border-stone-800 dark:bg-stone-900 sm:px-6 md:pb-5">
+              {currentUser && !canAdd && (
+                <p
+                  className="text-xs font-medium text-accent-700 dark:text-accent-300"
+                  role="status"
+                >
+                  {completeHint}
+                  {missing.length > 0 && (
+                    <span className="font-semibold">
+                      {" "}
+                      ({missing.map((group) => group.title).join(", ")})
+                    </span>
+                  )}
+                </p>
+              )}
+
+              <div className="flex items-center gap-4">
+                <div className="min-w-0 shrink-0">
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="text-xl font-extrabold leading-none text-stone-900 dark:text-white sm:text-2xl">
+                      {money.riel}
+                    </span>
+                    {discount > 0 && (
+                      <span className="text-xs text-stone-400 line-through">
+                        {wasMoney.riel}
+                      </span>
+                    )}
+                  </div>
+                  <span className="mt-1 block text-xs font-medium text-stone-400 dark:text-stone-500">
+                    {money.usd}
+                  </span>
+                </div>
+
+                {currentUser ? (
+                  <button
+                    type="button"
+                    disabled={!canAdd}
+                    onClick={() => {
+                      if (!isCompleteCustomization(product)) return;
+                      handleAdd(product);
+                      setSelectedProduct(null);
+                    }}
+                    title={!canAdd ? completeHint : ""}
+                    className={`flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold text-white transition-colors ${focusRing} ${
+                      canAdd
+                        ? "cursor-pointer bg-accent-600 hover:bg-accent-700"
+                        : "cursor-not-allowed bg-stone-300 text-stone-500 dark:bg-stone-700 dark:text-stone-400"
+                    }`}
+                  >
+                    <Plus className="h-5 w-5 shrink-0" />
+                    <span className="truncate">{t("add_to_order")}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/login")}
+                    className={`flex h-12 min-w-0 flex-1 cursor-pointer items-center justify-center rounded-xl bg-accent-600 px-5 text-sm font-bold text-white transition-colors hover:bg-accent-700 ${focusRing}`}
+                  >
+                    <span className="truncate">
+                      {tt("login_to_order", "Log in to order")}
+                    </span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 transition-colors duration-300">
+    <div className="min-h-screen bg-stone-50 text-stone-900 transition-colors duration-300 dark:bg-stone-950 dark:text-stone-100">
+      <style>{`
+        @keyframes menuFadeIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes menuSheetIn {
+          from { opacity: 0; transform: translateY(24px) }
+          to { opacity: 1; transform: translateY(0) }
+        }
+        .menu-fade-in { animation: menuFadeIn .18s ease-out both }
+        .menu-sheet-in { animation: menuSheetIn .24s cubic-bezier(.2,.8,.2,1) both }
+        @media (prefers-reduced-motion: reduce) {
+          .menu-fade-in, .menu-sheet-in { animation: none }
+        }
+      `}</style>
+
       <Navbar
         setMobileMenuOpen={setMobileMenuOpen}
         isLoggedIn={isLoggedIn}
@@ -440,822 +1132,182 @@ export default function ShopAll() {
         setIsLoggedIn={setIsLoggedIn}
       />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <section id="shop" className="space-y-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight">
+      <main className="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8 lg:pt-10">
+        <section id="shop" className="scroll-mt-24">
+          {/* title + search */}
+          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
                 {t("cafe_khmaoch_menu")}
               </h1>
-              <p className="text-sm text-stone-500 dark:text-stone-400">
+              <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-stone-500 dark:text-stone-400">
                 {t("shop_all_subtitle")}
               </p>
             </div>
-            <div className="w-full md:w-72">
+
+            <div className="relative w-full md:w-80">
+              <Search
+                className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400"
+                aria-hidden="true"
+              />
               <input
-                type="text"
+                type="search"
                 placeholder={t("search_drinks_pastries")}
+                aria-label={t("search_drinks_pastries")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 text-sm bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl focus:outline-none focus:border-accent-500"
+                className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-10 pr-10 text-sm shadow-sm outline-none transition placeholder:text-stone-400 focus:border-accent-500 focus:ring-4 focus:ring-accent-500/15 dark:border-stone-800 dark:bg-stone-900 [&::-webkit-search-cancel-button]:hidden"
               />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  aria-label={tt("clear_search", "Clear search")}
+                  className={`absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-200 ${focusRing}`}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {[{ id: "All", name: null }, ...tabs].map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-                  selectedCategory === cat.id
-                    ? "bg-accent-600 text-white shadow-md"
-                    : "bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-800 hover:border-accent-500"
-                }`}
-              >
-                {cat.id === "All" ? t("all") : translateJson(cat.name)}
-              </button>
-            ))}
+          {/* category tabs: stay visible while scrolling the menu */}
+          <div className="sticky top-16 z-30 -mx-4 mt-6 border-b border-stone-200/80 bg-stone-50/90 px-4 backdrop-blur-md dark:border-stone-800 dark:bg-stone-950/90 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+            <div
+              role="tablist"
+              aria-label={t("cafe_khmaoch_menu")}
+              className="menu-category-scrollbar flex gap-2 overflow-x-auto overflow-y-hidden py-3"
+            >
+              {[{ id: "All", name: null }, ...tabs].map((cat) => {
+                const active = selectedCategory === cat.id;
+                const count =
+                  cat.id === "All"
+                    ? items.length
+                    : countByCategory.get(cat.id) || 0;
+
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`flex shrink-0 cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${focusRing} ${
+                      active
+                        ? "bg-accent-600 text-white shadow-sm"
+                        : "border border-stone-200 bg-white text-stone-600 hover:border-accent-500 hover:text-accent-700 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300 dark:hover:text-accent-300"
+                    }`}
+                  >
+                    {cat.id === "All" ? t("all") : translateJson(cat.name)}
+
+                    <span
+                      className={`rounded-full px-1.5 text-[11px] font-bold leading-5 ${
+                        active
+                          ? "bg-white/25 text-white"
+                          : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {loadError && (
-            <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 text-sm flex items-center justify-between">
-              {loadError === "could_not_load_menu_options"
-                ? t("could_not_load_menu_options")
-                : loadError}
+            <div
+              role="alert"
+              className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300"
+            >
+              <span className="min-w-0 break-words">
+                {loadError === "could_not_load_menu_options"
+                  ? t("could_not_load_menu_options")
+                  : loadError}
+              </span>
               <button
+                type="button"
                 onClick={loadMenu}
-                className="font-semibold underline cursor-pointer"
+                className="shrink-0 cursor-pointer font-semibold underline"
               >
                 {t("retry")}
               </button>
             </div>
           )}
 
-          {loading && products.length === 0 ? (
-            <div className="text-center py-16 text-stone-500 dark:text-stone-400">
-              {t("loading_menu")}
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            !loadError && (
-              <div className="text-center py-16 text-stone-500 dark:text-stone-400">
-                <div className="text-5xl mb-3">☕</div>
-                <p className="font-semibold">{t("no_items_match_search")}</p>
-              </div>
-            )
-          ) : (
-            // <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-              {filteredProducts.map((product) => {
-                const options = sizeOptions(product);
-                const option = chosenOption(product);
-                const discount = Number(product.discount_percent || 0);
-                const rating =
-                  Number(product.rating) > 0
-                    ? Number(product.rating)
-                    : STATIC_RATING;
-                const reviews = hasValue(product.reviews)
-                  ? Number(product.reviews)
-                  : STATIC_REVIEWS;
-                const img = assetUrl(product.img || product.thumbnail);
-                const isExpanded = showOptionsId === product.id;
-                const canAdd = isCompleteCustomization(product);
-                const prodCust = customizations[product.id] || {};
-
-                const availSugar = availableLevels(1, sugarLevels, product);
-                const availIce = availableLevels(2, iceLevels, product);
-                const availCoffee = availableLevels(3, coffeeLevels, product);
-                const hasAnyOptions =
-                  availSugar.length > 0 ||
-                  availIce.length > 0 ||
-                  availCoffee.length > 0;
-
-                const extraCoffeePrice = Number(prodCust.coffee?.price || 0);
-                const currentDisplayPrice = option.unit + extraCoffeePrice;
-                const currentBasePrice = option.base + extraCoffeePrice;
-
-                return (
-                  <React.Fragment key={product.id}>
-                    {/* Compact horizontal card for phones and small tablets */}
-                    <article className="lg:hidden group flex min-w-0 items-stretch overflow-hidden rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-sm transition-shadow hover:shadow-md">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedProduct(product)}
-                        aria-label={`View ${translateJson(product.name)} details`}
-                        className="relative w-[34%] min-w-[112px] sm:w-36 md:w-40 shrink-0 self-stretch overflow-hidden bg-stone-100 dark:bg-stone-800 text-left"
-                      >
-                        {img ? (
-                          <img
-                            src={img}
-                            alt={translateJson(product.name)}
-                            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          />
-                        ) : (
-                          <span className="absolute inset-0 flex items-center justify-center text-4xl">
-                            ☕
-                          </span>
-                        )}
-                        <span className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/10 pointer-events-none" />
-                        <span className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-wrap gap-1">
-                          {discount > 0 && (
-                            <span className="rounded-md bg-rose-600/95 px-2 py-1 text-[10px] font-bold leading-tight text-white">
-                              -{discount}%
-                            </span>
-                          )}
-                          {translateJson(product.badge).trim() && (
-                            <span className="max-w-full break-words rounded-md bg-black/65 px-2 py-1 text-[10px] font-bold leading-tight text-white">
-                              {translateJson(product.badge)}
-                            </span>
-                          )}
-                        </span>
-                      </button>
-
-                      <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5 p-2 sm:p-2.5">
-                        {catName.get(product.category_id) && (
-                          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-accent-600 dark:text-accent-400">
-                            {catName.get(product.category_id)}
-                          </span>
-                        )}
-                        <div className="w-full min-w-0">
-                          <h3 className="break-words text-xs sm:text-sm font-bold leading-snug text-stone-900 dark:text-white">
-                            {translateJson(product.name)}
-                          </h3>
-                          {translateJson(product.description).trim() && (
-                            <p className="mt-0.5 break-words whitespace-pre-line line-clamp-2 text-[10px] sm:text-[11px] leading-snug text-stone-500 dark:text-stone-400">
-                              {translateJson(product.description)}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400">
-                          <Stars value={rating} className="h-3 w-3" t={t} />
-                          <span className="text-[10px] font-semibold text-stone-700 dark:text-stone-300">
-                            {rating.toFixed(1)}
-                          </span>
-                          <span className="text-[10px]">({reviews})</span>
-                        </div>
-
-                        {options.length > 1 && (
-                          <div className="w-full min-w-0">
-                            <SizeChips
-                              options={options}
-                              active={option.key}
-                              t={t}
-                              compact
-                              // onPick={(key) =>
-                              //   setPicked((prev) => ({ ...prev, [product.id]: key }))
-                              // }
-                              onPick={(key) =>
-                                setPicked((previous) => ({
-                                  ...previous,
-                                  [product.id]: key,
-                                }))
-                              }
-                            />
-                          </div>
-                        )}
-
-                        <div className="mt-auto flex w-full min-w-0 flex-wrap items-end justify-between gap-2 pt-1">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                              <span className="text-xs sm:text-sm font-extrabold text-stone-900 dark:text-white">
-                                {formatPriceWithUSD(currentDisplayPrice).riel}
-                              </span>
-                              {discount > 0 && (
-                                <span className="text-[10px] line-through text-stone-400">
-                                  {formatPriceWithUSD(currentBasePrice).riel}
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-[10px] font-medium text-stone-400 dark:text-stone-500">
-                              {formatPriceWithUSD(currentDisplayPrice).usd}
-                            </div>
-                          </div>
-                          {/* <button
-                            type="button"
-                            onClick={() => setSelectedProduct(product)}
-                            className="shrink-0 px-0.5 py-1 text-[11px] sm:text-xs font-semibold text-accent-600 dark:text-accent-400 underline underline-offset-4 decoration-accent-500/70 hover:text-accent-700 dark:hover:text-accent-300 transition-colors focus:outline-none focus:ring-2 focus:ring-accent-500 rounded"
-                          >
-                            {t("see_more") && t("see_more") !== "see_more"
-                              ? t("see_more")
-                              : "See more"}
-                          </button> */}
-                          <button
-                            type="button"
-                            onClick={() => setSelectedProduct(product)}
-                            className="!m-0 !min-h-0 !h-auto !w-auto
-    !border-0 !bg-transparent !px-0 !py-0
-    !text-[10px] sm:!text-[11px]
-    !font-medium !leading-tight
-    text-accent-600 dark:text-accent-400
-    underline underline-offset-2
-    decoration-accent-500/70
-    hover:text-accent-700 dark:hover:text-accent-300
-    transition-colors rounded"
-                          >
-                            {t("see_more") !== "see_more"
-                              ? t("see_more")
-                              : "See more"}
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-
-                    {/* Existing desktop card — kept unchanged at large screens */}
-                    <div className="hidden lg:flex group relative bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 hover:shadow-xl hover:border-accent-500/50 transition-all duration-300 flex-col justify-between overflow-hidden">
-                      <div>
-                        {/* <div className="relative h-56 overflow-hidden bg-stone-100 dark:bg-stone-800"> */}
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`View ${translateJson(product.name)} details`}
-                          onClick={() => setSelectedProduct(product)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              setSelectedProduct(product);
-                            }
-                          }}
-                          // className="relative h-56 overflow-hidden bg-stone-100 dark:bg-stone-800 cursor-zoom-in"
-                          className="relative h-32 xs:h-36 sm:h-40 md:h-44 lg:h-56 overflow-hidden bg-stone-100 dark:bg-stone-800 cursor-zoom-in"
-                        >
-                          {img ? (
-                            <img
-                              src={img}
-                              alt={translateJson(product.name)}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-5xl">
-                              ☕
-                            </div>
-                          )}
-
-                          <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                            {discount > 0 && (
-                              <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider bg-rose-600/90 backdrop-blur-md text-white rounded-lg">
-                                -{discount}%
-                              </span>
-                            )}
-
-                            {translateJson(product.badge).trim() && (
-                              <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider bg-black/60 backdrop-blur-md text-white rounded-lg">
-                                {translateJson(product.badge)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {/* <div className="p-5 space-y-2"> */}
-                        <div className="p-2.5 sm:p-3 md:p-4 lg:p-5 space-y-1.5 sm:space-y-2">
-                          <span className="text-xs font-bold uppercase tracking-wider text-accent-600 dark:text-accent-400">
-                            {catName.get(product.category_id)}
-                          </span>
-                          {/* <h3 className="font-semibold text-stone-900 dark:text-white line-clamp-1">
-                          {translateJson(product.name)}
-                        </h3> */}
-                          <h3 className="font-semibold text-sm sm:text-base text-stone-900 dark:text-white line-clamp-2">
-                            {translateJson(product.name)}
-                          </h3>
-                          <div className="flex items-center gap-2 text-xs text-stone-500">
-                            <Stars value={rating} t={t} />
-                            <span className="font-semibold text-stone-700 dark:text-stone-300">
-                              {rating.toFixed(1)}
-                            </span>
-                            <span>
-                              ({reviews}{" "}
-                              {reviews === 1 ? t("review") : t("reviews")})
-                            </span>
-                          </div>
-                          {options.length > 1 && (
-                            <SizeChips
-                              options={options}
-                              active={option.key}
-                              t={t}
-                              // onPick={(key) =>
-                              //   setPicked((prev) => ({
-                              //     ...prev,
-                              //     [product.id]: key,
-                              //   }))
-                              // }
-                              onPick={(key) =>
-                                setPicked((previous) => ({
-                                  ...previous,
-                                  [product.id]: key,
-                                }))
-                              }
-                            />
-                          )}
-
-                          {/* Show more options toggle button */}
-                          {hasAnyOptions && (
-                            <div className="pt-2">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setShowOptionsId(
-                                    isExpanded ? null : product.id,
-                                  )
-                                }
-                                className="w-full flex items-center justify-between text-xs font-semibold text-accent-600 dark:text-accent-400 py-1.5 px-3 rounded-lg bg-accent-50 dark:bg-accent-950/30 hover:bg-accent-100 transition-colors cursor-pointer"
-                              >
-                                <span>{t("show_more_options")}</span>
-                                {isExpanded ? (
-                                  <ChevronUp className="w-4 h-4" />
-                                ) : (
-                                  <ChevronDown className="w-4 h-4" />
-                                )}
-                              </button>
-
-                              {/* Expandable options panel with radio buttons */}
-                              {isExpanded && (
-                                <div className="mt-3 p-3 bg-stone-50 dark:bg-stone-800/50 rounded-xl space-y-3 text-xs border border-stone-200 dark:border-stone-700 animate-fadeIn">
-                                  {/* Sugar Level */}
-                                  {availSugar.length > 0 && (
-                                    <div>
-                                      <span className="font-bold text-stone-700 dark:text-stone-300 block mb-1.5">
-                                        {t("sugar_level")}{" "}
-                                        <span className="text-rose-500">*</span>
-                                      </span>
-                                      <div className="space-y-1.5">
-                                        {availSugar.map((sug) => (
-                                          <label
-                                            key={sug.id}
-                                            className="flex items-center gap-2 cursor-pointer text-stone-700 dark:text-stone-300 hover:text-accent-600"
-                                          >
-                                            <input
-                                              type="radio"
-                                              name={`sugar-${product.id}`}
-                                              checked={
-                                                prodCust.sugar?.id === sug.id
-                                              }
-                                              onChange={() =>
-                                                handleCustomizationChange(
-                                                  product.id,
-                                                  "sugar",
-                                                  sug,
-                                                )
-                                              }
-                                              className="accent-accent-600 cursor-pointer"
-                                            />
-                                            <span>
-                                              {translateJson(sug.name)}
-                                            </span>
-                                          </label>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Ice Level */}
-                                  {availIce.length > 0 && (
-                                    <div>
-                                      <span className="font-bold text-stone-700 dark:text-stone-300 block mb-1.5">
-                                        {t("ice_level")}{" "}
-                                        <span className="text-rose-500">*</span>
-                                      </span>
-                                      <div className="space-y-1.5">
-                                        {availIce.map((ice) => (
-                                          <label
-                                            key={ice.id}
-                                            className="flex items-center gap-2 cursor-pointer text-stone-700 dark:text-stone-300 hover:text-accent-600"
-                                          >
-                                            <input
-                                              type="radio"
-                                              name={`ice-${product.id}`}
-                                              checked={
-                                                prodCust.ice?.id === ice.id
-                                              }
-                                              onChange={() =>
-                                                handleCustomizationChange(
-                                                  product.id,
-                                                  "ice",
-                                                  ice,
-                                                )
-                                              }
-                                              className="accent-accent-600 cursor-pointer"
-                                            />
-                                            <span>
-                                              {translateJson(ice.name)}
-                                            </span>
-                                          </label>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Coffee Level */}
-                                  {availCoffee.length > 0 && (
-                                    <div>
-                                      <span className="font-bold text-stone-700 dark:text-stone-300 block mb-1.5">
-                                        {t("coffee_level")}{" "}
-                                        <span className="text-rose-500">*</span>
-                                      </span>
-                                      <div className="space-y-1.5">
-                                        {availCoffee.map((cof) => {
-                                          const extra = Number(cof.price || 0);
-                                          return (
-                                            <label
-                                              key={cof.id}
-                                              className="flex items-center gap-2 cursor-pointer text-stone-700 dark:text-stone-300 hover:text-accent-600"
-                                            >
-                                              <input
-                                                type="radio"
-                                                name={`coffee-${product.id}`}
-                                                checked={
-                                                  prodCust.coffee?.id === cof.id
-                                                }
-                                                onChange={() =>
-                                                  handleCustomizationChange(
-                                                    product.id,
-                                                    "coffee",
-                                                    cof,
-                                                  )
-                                                }
-                                                className="accent-accent-600 cursor-pointer"
-                                              />
-                                              <span>
-                                                {translateJson(cof.name)}
-                                                {/* {extra > 0 &&
-                                                ` (+$${extra.toFixed(2)})`} */}
-                                                {extra > 0 &&
-                                                  ` (+${formatPriceWithUSD(extra).riel})`}
-                                              </span>
-                                            </label>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="p-5 pt-0 flex items-center justify-between mt-auto">
-                        {/* <div className="flex items-baseline gap-2">
-                        <span className="text-xl font-extrabold text-stone-900 dark:text-white">
-                          {currentDisplayPrice.toFixed(2)}៛
-                        </span>
-                        {discount > 0 && (
-                          <span className="text-sm line-through text-stone-400">
-                            {currentBasePrice.toFixed(2)}៛
-                          </span>
-                        )}
-                      </div> */}
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-baseline gap-2">
-                            {/* <span className="text-xl font-extrabold text-stone-900 dark:text-white">
-                            {formatPriceWithUSD(currentDisplayPrice).riel}
-                          </span> */}
-                            <span className="text-sm sm:text-lg lg:text-xl font-extrabold text-stone-900 dark:text-white">
-                              {formatPriceWithUSD(currentDisplayPrice).riel}
-                            </span>
-                            {discount > 0 && (
-                              <span className="text-sm line-through text-stone-400">
-                                {formatPriceWithUSD(currentBasePrice).riel}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-stone-400 dark:text-stone-500 font-medium">
-                            <span>
-                              {formatPriceWithUSD(currentDisplayPrice).usd}
-                            </span>
-                            {discount > 0 && (
-                              <span className="line-through">
-                                {formatPriceWithUSD(currentBasePrice).usd}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {/* <button
-                        onClick={() => handleAdd(product)}
-                        disabled={!canAdd}
-                        className={`px-4 py-2 text-white font-semibold text-xs rounded-xl shadow-sm transition-all cursor-pointer ${
-                          !canAdd
-                            ? "bg-stone-300 dark:bg-stone-700 text-stone-500 cursor-not-allowed opacity-60"
-                            : addedId === product.id
-                              ? "bg-emerald-600"
-                              : "bg-accent-600 hover:bg-accent-700"
-                        }`}
-                        title={
-                          !canAdd
-                            ? t("complete_required_levels")
-                            : ""
-                        }
-                      >
-                        {addedId === product.id ? t("added") : t("add_to_order")}
-                      </button> */}
-                        {currentUser && (
-                          <button
-                            type="button"
-                            onClick={() => handleAdd(product)}
-                            disabled={!canAdd}
-                            className={`px-4 py-2 text-white font-semibold text-xs rounded-xl shadow-sm transition-all cursor-pointer ${
-                              !canAdd
-                                ? "bg-stone-300 dark:bg-stone-700 text-stone-500 cursor-not-allowed opacity-60"
-                                : addedId === product.id
-                                  ? "bg-emerald-600"
-                                  : "bg-accent-600 hover:bg-accent-700"
-                            }`}
-                            title={!canAdd ? t("complete_required_levels") : ""}
-                          >
-                            {addedId === product.id
-                              ? t("added")
-                              : t("add_to_order")}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        {/* ================= PRODUCT DETAIL MODAL ================= */}
-        {selectedProduct &&
-          (() => {
-            const product = selectedProduct;
-            const options = sizeOptions(product);
-            const option = chosenOption(product);
-            const discount = Number(product.discount_percent || 0);
-            const img = assetUrl(product.img || product.thumbnail);
-            const cust = customizations[product.id] || {};
-
-            const availSugar = availableLevels(1, sugarLevels, product);
-            const availIce = availableLevels(2, iceLevels, product);
-            const availCoffee = availableLevels(3, coffeeLevels, product);
-
-            const extraCoffeePrice = Number(cust.coffee?.price || 0);
-            const displayPrice = option.unit + extraCoffeePrice;
-            const basePrice = option.base + extraCoffeePrice;
-            const canAdd = isCompleteCustomization(product);
-
-            const renderLevels = (titleKey, field, levels) => {
-              if (!levels.length) return null;
-
-              return (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-stone-800 dark:text-stone-200">
-                    {t(titleKey)}
-                    <span className="ml-1 text-rose-500">*</span>
-                  </h4>
-
-                  <div className="space-y-2">
-                    {levels.map((level) => {
-                      const extra =
-                        field === "coffee" ? Number(level.price || 0) : 0;
-
-                      return (
-                        <label
-                          key={level.id}
-                          className="flex items-center gap-3 p-3 rounded-xl border border-stone-200 dark:border-stone-700 hover:border-accent-500 transition-colors cursor-pointer"
-                        >
-                          <input
-                            type="radio"
-                            name={`modal-${field}-${product.id}`}
-                            checked={cust[field]?.id === level.id}
-                            onChange={() =>
-                              handleCustomizationChange(
-                                product.id,
-                                field,
-                                level,
-                              )
-                            }
-                            className="accent-accent-600"
-                          />
-
-                          <span className="flex-1 text-sm text-stone-700 dark:text-stone-300">
-                            {translateJson(level.name)}
-                          </span>
-
-                          {extra > 0 && (
-                            <span className="text-xs font-semibold text-accent-600">
-                              +{formatPriceWithUSD(extra).riel}
-                            </span>
-                          )}
-                        </label>
-                      );
-                    })}
+          <div className="mt-6" aria-busy={loading}>
+            {loading && products.length === 0 ? (
+              <>
+                <p className="sr-only">{t("loading_menu")}</p>
+                <MenuSkeleton />
+              </>
+            ) : filteredProducts.length === 0 ? (
+              !loadError && (
+                <div className="rounded-2xl border border-dashed border-stone-300 px-6 py-16 text-center dark:border-stone-700">
+                  <div className="text-5xl" aria-hidden="true">
+                    ☕
                   </div>
-                </div>
-              );
-            };
-
-            return (
-              <div
-                className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6"
-                onMouseDown={(event) => {
-                  if (event.target === event.currentTarget) {
-                    setSelectedProduct(null);
-                  }
-                }}
-              >
-                {/* Backdrop */}
-                <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-
-                {/* Modal window */}
-                <div
-                  role="dialog"
-                  aria-modal="true"
-                  aria-label={translateJson(product.name)}
-                  onMouseDown={(event) => event.stopPropagation()}
-                  className="relative z-10 flex flex-col md:flex-row w-full max-w-6xl h-[90dvh] max-h-[850px] overflow-hidden rounded-2xl sm:rounded-3xl bg-white dark:bg-stone-900 shadow-2xl"
-                >
-                  {/* LEFT: PRODUCT IMAGE */}
-                  <div className="relative shrink-0 w-full h-[35%] min-h-[180px] md:min-h-0 md:w-1/2 md:h-full flex items-center justify-center bg-stone-100 dark:bg-stone-950">
-                    {img ? (
-                      <img
-                        src={img}
-                        alt={translateJson(product.name)}
-                        className="w-full h-full object-contain"
-                      />
-                    ) : (
-                      <div className="text-7xl">☕</div>
-                    )}
-
-                    {discount > 0 && (
-                      <span className="absolute top-4 left-4 px-3 py-1.5 rounded-lg bg-rose-600 text-white text-sm font-bold">
-                        -{discount}%
-                      </span>
-                    )}
-
+                  <p className="mt-3 font-semibold text-stone-700 dark:text-stone-200">
+                    {t("no_items_match_search")}
+                  </p>
+                  {(searchTerm || selectedCategory !== "All") && (
                     <button
                       type="button"
-                      onClick={() => setSelectedProduct(null)}
-                      aria-label="Close product details"
-                      className="absolute top-3 right-3 md:hidden flex items-center justify-center w-10 h-10 rounded-full bg-white/90 dark:bg-stone-900/90 text-stone-800 dark:text-white shadow-md"
+                      onClick={() => {
+                        setSearchTerm("");
+                        setSelectedCategory("All");
+                      }}
+                      className={`mt-4 cursor-pointer rounded-xl border border-accent-600 px-4 py-2 text-sm font-semibold text-accent-700 transition-colors hover:bg-accent-50 dark:text-accent-300 dark:hover:bg-accent-950/30 ${focusRing}`}
                     >
-                      <span className="text-2xl leading-none">&times;</span>
+                      {tt("show_full_menu", "Show the full menu")}
                     </button>
-                  </div>
-
-                  {/* RIGHT: PRODUCT INFORMATION */}
-                  <div className="flex flex-col flex-1 min-w-0 min-h-0">
-                    {/* Header */}
-                    <div className="shrink-0 flex items-center justify-between gap-3 p-5 sm:p-6 border-b border-stone-200 dark:border-stone-800">
-                      <span className="text-xs font-bold uppercase tracking-wider text-accent-600 dark:text-accent-400">
-                        {catName.get(product.category_id) || ""}
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() => setSelectedProduct(null)}
-                        aria-label="Close product details"
-                        className="hidden md:flex items-center justify-center w-9 h-9 rounded-full text-stone-500 hover:text-white hover:bg-rose-500 transition-colors"
-                      >
-                        <span className="text-2xl leading-none">&times;</span>
-                      </button>
-                    </div>
-
-                    {/* Scrollable details */}
-                    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-5 sm:p-6 space-y-6">
-                      <div className="space-y-3">
-                        <h2 className="text-2xl sm:text-3xl font-extrabold break-words text-stone-900 dark:text-white">
-                          {translateJson(product.name)}
-                        </h2>
-
-                        {translateJson(product.badge).trim() && (
-                          <span className="inline-flex px-3 py-1 rounded-lg bg-accent-100 dark:bg-accent-950/50 text-accent-700 dark:text-accent-300 text-xs font-bold">
-                            {translateJson(product.badge)}
-                          </span>
-                        )}
-
-                        <div className="flex flex-wrap items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
-                          <Stars
-                            value={
-                              Number(product.rating) > 0
-                                ? Number(product.rating)
-                                : STATIC_RATING
-                            }
-                            t={t}
-                          />
-
-                          <span className="font-semibold text-stone-800 dark:text-stone-200">
-                            {(Number(product.rating) > 0
-                              ? Number(product.rating)
-                              : STATIC_RATING
-                            ).toFixed(1)}
-                          </span>
-
-                          <span>
-                            (
-                            {hasValue(product.reviews)
-                              ? Number(product.reviews)
-                              : STATIC_REVIEWS}{" "}
-                            {Number(
-                              hasValue(product.reviews)
-                                ? product.reviews
-                                : STATIC_REVIEWS,
-                            ) === 1
-                              ? t("review")
-                              : t("reviews")}
-                            )
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Optional product description */}
-                      {translateJson(product.description).trim() && (
-                        <p className="text-sm leading-7 whitespace-pre-line text-stone-600 dark:text-stone-300">
-                          {translateJson(product.description)}
-                        </p>
-                      )}
-
-                      {/* Price */}
-                      <div className="p-4 rounded-xl bg-accent-50 dark:bg-accent-950/30 border border-accent-100 dark:border-accent-900/50">
-                        <div className="flex flex-wrap items-baseline gap-3">
-                          <span className="text-2xl font-extrabold text-stone-900 dark:text-white">
-                            {formatPriceWithUSD(displayPrice).riel}
-                          </span>
-
-                          {discount > 0 && (
-                            <span className="text-sm line-through text-stone-400">
-                              {formatPriceWithUSD(basePrice).riel}
-                            </span>
-                          )}
-                        </div>
-
-                        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-                          {formatPriceWithUSD(displayPrice).usd}
-                        </p>
-                      </div>
-
-                      {/* Size choices */}
-                      {options.length > 1 && (
-                        <div className="space-y-2">
-                          <h4 className="text-sm font-semibold text-stone-800 dark:text-stone-200">
-                            {t("size") || "Size"}
-                          </h4>
-
-                          <SizeChips
-                            options={options}
-                            active={option.key}
-                            t={t}
-                            onPick={(key) =>
-                              setPicked((prev) => ({
-                                ...prev,
-                                [product.id]: key,
-                              }))
-                            }
-                          />
-                        </div>
-                      )}
-
-                      {/* Drink customizations */}
-                      {(availSugar.length > 0 ||
-                        availIce.length > 0 ||
-                        availCoffee.length > 0) && (
-                        <div className="space-y-5">
-                          <h3 className="text-lg font-bold text-stone-900 dark:text-white">
-                            {t("show_more_options")}
-                          </h3>
-
-                          {renderLevels("sugar_level", "sugar", availSugar)}
-                          {renderLevels("ice_level", "ice", availIce)}
-                          {renderLevels("coffee_level", "coffee", availCoffee)}
-                        </div>
-                      )}
-
-                      <div className="h-1" />
-                    </div>
-
-                    {/* Fixed bottom action */}
-                    <div className="shrink-0 p-4 sm:p-6 border-t border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900">
-                      {currentUser ? (
-                        <button
-                          type="button"
-                          disabled={!canAdd}
-                          onClick={() => {
-                            if (!isCompleteCustomization(product)) return;
-
-                            handleAdd(product);
-                            setSelectedProduct(null);
-                          }}
-                          className={`w-full py-3.5 px-5 rounded-xl text-sm font-bold text-white transition-colors ${
-                            !canAdd
-                              ? "bg-stone-300 dark:bg-stone-700 text-stone-500 cursor-not-allowed"
-                              : "bg-accent-600 hover:bg-accent-700"
-                          }`}
-                          title={!canAdd ? t("complete_required_levels") : ""}
-                        >
-                          {t("add_to_order")}
-                        </button>
-                      ) : (
-                        <p className="text-center text-sm text-stone-500 dark:text-stone-400">
-                          {t("login_to_order") ||
-                            "Please log in to add items to your order."}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                  )}
                 </div>
+              )
+            ) : grouped ? (
+              <div className="space-y-12">
+                {sections.map((section) => (
+                  <section
+                    key={section.key}
+                    aria-labelledby={`menu-${section.key}`}
+                  >
+                    {section.cat && (
+                      <div className="mb-5">
+                        <div className="flex items-center gap-4">
+                          <h2
+                            id={`menu-${section.key}`}
+                            className="shrink-0 text-xl font-extrabold tracking-tight sm:text-2xl"
+                          >
+                            {translateJson(section.cat.name)}
+                          </h2>
+                          <span
+                            className="h-px flex-1 bg-stone-200 dark:bg-stone-800"
+                            aria-hidden="true"
+                          />
+                          <span className="shrink-0 text-sm font-semibold text-stone-400">
+                            {section.list.length}
+                          </span>
+                        </div>
+                        {translateJson(section.cat.description).trim() && (
+                          <p className="mt-1.5 max-w-2xl text-sm text-stone-500 dark:text-stone-400">
+                            {translateJson(section.cat.description)}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    <div className={gridCls}>
+                      {section.list.map(renderCard)}
+                    </div>
+                  </section>
+                ))}
               </div>
-            );
-          })()}
+            ) : (
+              <div className={gridCls}>{filteredProducts.map(renderCard)}</div>
+            )}
+          </div>
+        </section>
+
+        {renderModal()}
       </main>
 
       <Footer />

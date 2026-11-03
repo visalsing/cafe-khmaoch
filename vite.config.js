@@ -1,3 +1,14 @@
+// import { defineConfig } from 'vite'
+// import react from '@vitejs/plugin-react'
+// import tailwindcss from '@tailwindcss/vite'
+
+// export default defineConfig({
+//   plugins: [react(), tailwindcss()],
+//   resolve: { dedupe: ["react", "react-dom"] },
+//   server: { proxy: { "/api": "http://localhost:4000" } },
+//   //  server: { proxy: { "/api": "https://cafe-khmaoch.vercel.app/" } },
+// });
+
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -5,9 +16,19 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: { dedupe: ["react", "react-dom"] },
-  server: { proxy: { "/api": "http://localhost:4000" } },
-  //  server: { proxy: { "/api": "https://cafe-khmaoch.vercel.app/" } },
+  server: { 
+    proxy: { 
+      "/api": {
+        target: "http://127.0.0.1:4000",
+        changeOrigin: true,
+      }
+    } 
+  },
 });
+
+// app.listen(4000, '0.0.0.0', () => {
+//   console.log('Server running on http://localhost:4000');
+// });
 
 // https://vite.dev/config/
 // export default defineConfig({

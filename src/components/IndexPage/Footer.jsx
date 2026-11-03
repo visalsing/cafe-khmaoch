@@ -4,24 +4,45 @@ import logoImg from "../../assets/logo/cafe-khmaoch2-rmbg.png";
 
 // Temporary data until the footer API/database is ready.
 // Later, replace this with data returned by your backend.
+// const FOOTER_DATA = {
+//   name: "Café ខ្មោច",
+//   description:
+//     "Your neighborhood specialty coffee shop and cozy pastry sanctuary. Come for the brews, stay for the warmth.",
+//   address: "742 Evergreen Terrace, Blossom District, CA",
+//   phone: "+1 (555) 839-2041",
+//   phoneLink: "+15558392041",
+//   hours: [
+//     { days: "Mon - Fri", time: "6:30 AM - 8:00 PM" },
+//     { days: "Sat - Sun", time: "7:30 AM - 9:00 PM" },
+//   ],
+// };
+
+// const QUICK_LINKS = [
+//   { href: "#hero", label: "Home" },
+//   { href: "#shop", label: "Specialty Menu" },
+//   { href: "#about", label: "Our Vibe & Story" },
+//   { href: "#contact", label: "Location & Hours" },
+// ];
+
 const FOOTER_DATA = {
   name: "Café ខ្មោច",
   description:
-    "Your neighborhood specialty coffee shop and cozy pastry sanctuary. Come for the brews, stay for the warmth.",
-  address: "742 Evergreen Terrace, Blossom District, CA",
-  phone: "+1 (555) 839-2041",
-  phoneLink: "+15558392041",
+    "A little mysterious, a lot of comfort. Café ខ្មោច is your cozy corner for good coffee, refreshing drinks, delicious treats, and moments worth staying for.",
+  address: "Your café's actual address",
+  phone: "Your phone number",
+  phoneLink: "",
+  email: "",
   hours: [
-    { days: "Mon - Fri", time: "6:30 AM - 8:00 PM" },
-    { days: "Sat - Sun", time: "7:30 AM - 9:00 PM" },
+    { days: "Monday - Friday", time: "6:30 AM - 8:00 PM" },
+    { days: "Saturday - Sunday", time: "7:30 AM - 9:00 PM" },
   ],
 };
 
 const QUICK_LINKS = [
   { href: "#hero", label: "Home" },
-  { href: "#shop", label: "Specialty Menu" },
-  { href: "#about", label: "Our Vibe & Story" },
-  { href: "#contact", label: "Location & Hours" },
+  { href: "#shop", label: "Our Menu" },
+  { href: "#about", label: "About Us" },
+  { href: "#contact", label: "Contact Us" },
 ];
 
 export default function Footer() {
@@ -59,7 +80,8 @@ export default function Footer() {
         {/* Quick Links */}
         <div>
           <h4 className="font-bold text-white text-sm uppercase tracking-wider mb-4">
-            Quick Links
+            {/* Quick Links */}
+            Explore
           </h4>
 
           <ul className="space-y-2.5 text-sm">
@@ -79,7 +101,8 @@ export default function Footer() {
         {/* Location & Contact */}
         <div>
           <h4 className="font-bold text-white text-sm uppercase tracking-wider mb-4">
-            Visit Our Lounge
+            {/* Visit Our Lounge */}
+            Find Us
           </h4>
 
           <ul className="space-y-3 text-sm text-stone-400">
@@ -122,13 +145,20 @@ export default function Footer() {
 
       {/* Copyright */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-stone-500">
-        <p>
+        {/* <p>
           &copy; {new Date().getFullYear()} {footer.name} Cafe. All rights
           reserved.
         </p>
 
         <p className="mt-2 sm:mt-0">
           Crafted with ❤️ and fresh roasted espresso beans.
+        </p> */}
+        <p>
+          &copy; {new Date().getFullYear()} {footer.name}. All rights reserved.
+        </p>
+
+        <p className="mt-2 sm:mt-0">
+          Made with care, served with a little mystery. ☕❤️👻
         </p>
       </div>
     </footer>
