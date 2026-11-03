@@ -32,56 +32,63 @@ const DualPrice = ({ rielVal, align = "right" }) => {
   );
 };
 
-// Convert canvas -> ESC/POS raster bytes (80mm = 576 dots wide)
-const canvasToEscPos = (src, width = 576) => {
-  const h = Math.round(src.height * (width / src.width));
+const PRINT_WIDTH = 576; // 72mm x 8 dots/mm, from your self-test
+
+// canvas -> ESC/POS raster bytes, sent in 255-row chunks (safer for printers)
+const canvasToEscPos = (src) => {
+  const w = PRINT_WIDTH;
+  const h = Math.round(src.height * (w / src.width));
   const c = document.createElement("canvas");
-  c.width = width;
+  c.width = w;
   c.height = h;
   const ctx = c.getContext("2d");
   ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, width, h);
-  ctx.drawImage(src, 0, 0, width, h);
-  const { data } = ctx.getImageData(0, 0, width, h);
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(src, 0, 0, w, h);
+  const { data } = ctx.getImageData(0, 0, w, h);
 
-  const bpr = width / 8;
-  const head = [
-    0x1b,
-    0x40,
-    0x1d,
-    0x76,
-    0x30,
-    0x00,
-    bpr & 255,
-    bpr >> 8,
-    h & 255,
-    h >> 8,
-  ];
-  const tail = [0x0a, 0x0a, 0x0a, 0x1d, 0x56, 0x42, 0x00]; // feed + cut
-  const out = new Uint8Array(head.length + bpr * h + tail.length);
-  out.set(head, 0);
-  let p = head.length;
+  const bpr = w / 8; // 72 bytes per row
+  const CHUNK = 255;
+  const parts = [new Uint8Array([0x1b, 0x40])]; // init
 
-  for (let y = 0; y < h; y++) {
-    for (let xb = 0; xb < bpr; xb++) {
-      let byte = 0;
-      for (let bit = 0; bit < 8; bit++) {
-        const i = (y * width + xb * 8 + bit) * 4;
-        const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        if (lum < 160) byte |= 0x80 >> bit;
+  for (let y0 = 0; y0 < h; y0 += CHUNK) {
+    const rows = Math.min(CHUNK, h - y0);
+    const buf = new Uint8Array(8 + bpr * rows);
+    buf.set(
+      [0x1d, 0x76, 0x30, 0x00, bpr & 255, bpr >> 8, rows & 255, rows >> 8],
+      0,
+    );
+    let p = 8;
+    for (let y = y0; y < y0 + rows; y++) {
+      for (let xb = 0; xb < bpr; xb++) {
+        let byte = 0;
+        for (let bit = 0; bit < 8; bit++) {
+          const i = (y * w + xb * 8 + bit) * 4;
+          const lum =
+            0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          if (lum < 160) byte |= 0x80 >> bit;
+        }
+        buf[p++] = byte;
       }
-      out[p++] = byte;
     }
+    parts.push(buf);
   }
-  out.set(tail, p);
+  parts.push(new Uint8Array([0x0a, 0x0a, 0x0a, 0x1d, 0x56, 0x42, 0x00])); // feed + cut
+
+  const total = parts.reduce((n, a) => n + a.length, 0);
+  const out = new Uint8Array(total);
+  let o = 0;
+  parts.forEach((a) => {
+    out.set(a, o);
+    o += a.length;
+  });
   return out;
 };
 
 const toBase64 = (bytes) => {
   let bin = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
   }
   return btoa(bin);
 };
@@ -207,11 +214,10 @@ export default function ReceiptModal({ order, onClose }) {
     try {
       const el = ref.current;
       const canvas = await html2canvas(el, {
-        scale: 576 / el.offsetWidth, // output is exactly 576px wide
+        scale: PRINT_WIDTH / el.offsetWidth,
         backgroundColor: "#ffffff",
         useCORS: true,
         onclone: (doc) => {
-          // remove the shadow and rounded corners so no gray edges are printed
           const n = doc.querySelector("[data-receipt]");
           if (n) {
             n.style.boxShadow = "none";
@@ -219,7 +225,7 @@ export default function ReceiptModal({ order, onClose }) {
           }
         },
       });
-      const bytes = canvasToEscPos(canvas, 576);
+      const bytes = canvasToEscPos(canvas);
       window.location.href = "rawbt:base64," + toBase64(bytes);
     } catch (e) {
       console.error(e);
