@@ -77,24 +77,46 @@ import { AuthProvider } from "./context/AuthContext.jsx";
 import { applyAccent, getSavedAccent } from "./utils/accent.js";
 applyAccent(getSavedAccent()); // before ReactDOM render, avoids a color flash
 
+// createRoot(document.getElementById("root")).render(
+//   <StrictMode>
+//     <HelmetProvider>
+//       <ThemeProvider>
+//         <LanguageProvider>
+//           <BrowserRouter>
+//           <AuthProvider>
+//             <MenuProvider>
+//               <CartProvider>
+//                 <HeroProvider>
+//                   <App />
+//                 </HeroProvider>
+//               </CartProvider>
+//             </MenuProvider>
+//             </AuthProvider>
+//           </BrowserRouter>
+//         </LanguageProvider>
+//       </ThemeProvider>
+//     </HelmetProvider>
+//   </StrictMode>,
+// );
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <HelmetProvider>
-      <ThemeProvider>
-        <LanguageProvider>
-          <BrowserRouter>
-          <AuthProvider>
-            <MenuProvider>
-              <CartProvider>
-                <HeroProvider>
-                  <App />
-                </HeroProvider>
-              </CartProvider>
-            </MenuProvider>
-            </AuthProvider>
-          </BrowserRouter>
-        </LanguageProvider>
-      </ThemeProvider>
+      <BrowserRouter>
+        <AuthProvider>        {/* 1. AuthProvider must be higher up */}
+          <ThemeProvider>     {/* 2. ThemeProvider can now safely use useAuth() */}
+            <LanguageProvider>
+              <MenuProvider>
+                <CartProvider>
+                  <HeroProvider>
+                    <App />
+                  </HeroProvider>
+                </CartProvider>
+              </MenuProvider>
+            </LanguageProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </HelmetProvider>
   </StrictMode>,
 );
