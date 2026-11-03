@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import { Printer, X } from "lucide-react";
 import logoImg from "../../assets/logo/cafe-khmaoch-rmbg.png";
+import html2canvas from "html2canvas";
 
 const EXCHANGE_RATE = 4100; // 1$ = 4100៛
 
@@ -29,6 +30,60 @@ const DualPrice = ({ rielVal, align = "right" }) => {
       </div>
     </div>
   );
+};
+
+// Convert canvas -> ESC/POS raster bytes (80mm = 576 dots wide)
+const canvasToEscPos = (src, width = 576) => {
+  const h = Math.round(src.height * (width / src.width));
+  const c = document.createElement("canvas");
+  c.width = width;
+  c.height = h;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, width, h);
+  ctx.drawImage(src, 0, 0, width, h);
+  const { data } = ctx.getImageData(0, 0, width, h);
+
+  const bpr = width / 8;
+  const head = [
+    0x1b,
+    0x40,
+    0x1d,
+    0x76,
+    0x30,
+    0x00,
+    bpr & 255,
+    bpr >> 8,
+    h & 255,
+    h >> 8,
+  ];
+  const tail = [0x0a, 0x0a, 0x0a, 0x1d, 0x56, 0x42, 0x00]; // feed + cut
+  const out = new Uint8Array(head.length + bpr * h + tail.length);
+  out.set(head, 0);
+  let p = head.length;
+
+  for (let y = 0; y < h; y++) {
+    for (let xb = 0; xb < bpr; xb++) {
+      let byte = 0;
+      for (let bit = 0; bit < 8; bit++) {
+        const i = (y * width + xb * 8 + bit) * 4;
+        const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        if (lum < 160) byte |= 0x80 >> bit;
+      }
+      out[p++] = byte;
+    }
+  }
+  out.set(tail, p);
+  return out;
+};
+
+const toBase64 = (bytes) => {
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
 };
 
 export default function ReceiptModal({ order, onClose }) {
@@ -95,57 +150,72 @@ export default function ReceiptModal({ order, onClose }) {
   //   }, 300);
   // };
 
-  const print = () => {
-    const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <title>Receipt ${order?.number || ""}</title>
-        <style>
-          @page { size: 80mm auto; margin: 0; }
-          body {
-            margin: 0; padding: 4mm; background: #fff; color: #000;
-            font-family: 'Courier New', Courier, monospace, 'Noto Sans Khmer', 'Khmer OS';
-            font-size: 11px; line-height: 1.3; width: 72mm;
-          }
-          img { display: block; margin: 0 auto 4px auto; width: 48px; height: 48px; object-fit: contain; }
-        </style>
-      </head>
-      <body>${ref.current.innerHTML}</body>
-    </html>`;
+  // const print = () => {
+  //   const html = `
+  //   <!DOCTYPE html>
+  //   <html>
+  //     <head>
+  //       <meta charset="utf-8" />
+  //       <title>Receipt ${order?.number || ""}</title>
+  //       <style>
+  //         @page { size: 80mm auto; margin: 0; }
+  //         body {
+  //           margin: 0; padding: 4mm; background: #fff; color: #000;
+  //           font-family: 'Courier New', Courier, monospace, 'Noto Sans Khmer', 'Khmer OS';
+  //           font-size: 11px; line-height: 1.3; width: 72mm;
+  //         }
+  //         img { display: block; margin: 0 auto 4px auto; width: 48px; height: 48px; object-fit: contain; }
+  //       </style>
+  //     </head>
+  //     <body>${ref.current.innerHTML}</body>
+  //   </html>`;
 
-    const iframe = document.createElement("iframe");
-    Object.assign(iframe.style, {
-      position: "fixed",
-      right: "0",
-      bottom: "0",
-      width: "0",
-      height: "0",
-      border: "0",
-    });
-    document.body.appendChild(iframe);
+  //   const iframe = document.createElement("iframe");
+  //   Object.assign(iframe.style, {
+  //     position: "fixed",
+  //     right: "0",
+  //     bottom: "0",
+  //     width: "0",
+  //     height: "0",
+  //     border: "0",
+  //   });
+  //   document.body.appendChild(iframe);
 
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
+  //   const doc = iframe.contentWindow.document;
+  //   doc.open();
+  //   doc.write(html);
+  //   doc.close();
 
-    // wait for the logo to load, then print
-    const waitImages = Array.from(doc.images).map((img) =>
-      img.complete
-        ? Promise.resolve()
-        : new Promise((r) => {
-            img.onload = img.onerror = r;
-          }),
-    );
+  //   // wait for the logo to load, then print
+  //   const waitImages = Array.from(doc.images).map((img) =>
+  //     img.complete
+  //       ? Promise.resolve()
+  //       : new Promise((r) => {
+  //           img.onload = img.onerror = r;
+  //         }),
+  //   );
 
-    Promise.all(waitImages).then(() => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-      // remove later, never immediately
-      setTimeout(() => document.body.removeChild(iframe), 60000);
-    });
+  //   Promise.all(waitImages).then(() => {
+  //     iframe.contentWindow.focus();
+  //     iframe.contentWindow.print();
+  //     // remove later, never immediately
+  //     setTimeout(() => document.body.removeChild(iframe), 60000);
+  //   });
+  // };
+
+  const print = async () => {
+    try {
+      const canvas = await html2canvas(ref.current, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+      });
+      const bytes = canvasToEscPos(canvas, 576);
+      window.location.href = "rawbt:base64," + toBase64(bytes);
+    } catch (e) {
+      console.error(e);
+      alert("Print failed. Is RawBT installed?");
+    }
   };
 
   const MetaRow = ({ labelKm, labelEn, value }) => (
