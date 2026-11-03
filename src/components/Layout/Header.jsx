@@ -1,3 +1,4 @@
+// Dashboard/Layouts/Header.jsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -12,12 +13,16 @@ import {
   Moon,
   Monitor,
   Eye,
-  ExternalLink
+  ExternalLink,
 } from "lucide-react";
 
 import { useTheme } from "../../context/ThemeContext.jsx"; // adjust path
 
-function Header({ sideBarCollapsed, onToggleSidebar, currentPage = "dashboard" }) {
+function Header({
+  sideBarCollapsed,
+  onToggleSidebar,
+  currentPage = "dashboard",
+}) {
   const navigate = useNavigate();
   const { theme, cycleTheme } = useTheme();
   const ThemeIcon = theme === "light" ? Sun : theme === "dark" ? Moon : Monitor;
@@ -26,25 +31,29 @@ function Header({ sideBarCollapsed, onToggleSidebar, currentPage = "dashboard" }
   const pageLabel = (currentPage || "dashboard").replace("-", " ");
 
   return (
-    <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50 px-6 py-4">
+    <div className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border-b border-neutral-200/50 dark:border-neutral-700/50 px-6 py-4">
       <div className="flex items-center justify-between">
         {/* Left Section */}
         <div className="flex items-center space-x-4">
           <button
-            className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-accent-50 hover:text-accent-600 dark:hover:bg-accent-950/30 dark:hover:text-accent-400 transition-colors"
+            className="p-2 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-accent-50 hover:text-accent-600 dark:hover:bg-accent-950/30 dark:hover:text-accent-400 transition-colors"
             onClick={onToggleSidebar}
           >
             <Menu className="w-5 h-5" />
           </button>
 
           <div className="hidden md:block">
-            <h1 className="text-2xl font-black text-slate-800 dark:text-white capitalize">
+            <h1 className="text-2xl font-black text-neutral-800 dark:text-white capitalize">
               {pageLabel}
             </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
               {currentPage === "dashboard" ? (
                 <>
-                  Welcome back, <span className="font-semibold text-accent-600 dark:text-accent-400">Sing</span>! Here's what's happening today.
+                  Welcome back,{" "}
+                  <span className="font-semibold text-accent-600 dark:text-accent-400">
+                    Sing
+                  </span>
+                  ! Here's what's happening today.
                 </>
               ) : (
                 `Viewing your ${pageLabel} stats.`
@@ -59,7 +68,7 @@ function Header({ sideBarCollapsed, onToggleSidebar, currentPage = "dashboard" }
           <button
             onClick={cycleTheme}
             title={`Theme: ${theme}`}
-            className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-accent-50 hover:text-accent-600 dark:hover:bg-accent-950/30 dark:hover:text-accent-400 transition-colors cursor-pointer"
+            className="p-2.5 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-accent-50 hover:text-accent-600 dark:hover:bg-accent-950/30 dark:hover:text-accent-400 transition-colors cursor-pointer"
           >
             <ThemeIcon className="w-5 h-5" />
           </button>
@@ -68,7 +77,7 @@ function Header({ sideBarCollapsed, onToggleSidebar, currentPage = "dashboard" }
           <button
             onClick={() => navigate("/")}
             title="Preview Website"
-            className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-accent-50 hover:text-accent-600 dark:hover:bg-accent-950/30 dark:hover:text-accent-400 transition-colors cursor-pointer"
+            className="p-2.5 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-accent-50 hover:text-accent-600 dark:hover:bg-accent-950/30 dark:hover:text-accent-400 transition-colors cursor-pointer"
           >
             <ExternalLink className="w-5 h-5" />
           </button>
@@ -77,7 +86,7 @@ function Header({ sideBarCollapsed, onToggleSidebar, currentPage = "dashboard" }
           <button
             onClick={() => navigate("/dashboard/settings")}
             title="Settings"
-            className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-accent-50 hover:text-accent-600 dark:hover:bg-accent-950/30 dark:hover:text-accent-400 transition-colors cursor-pointer"
+            className="p-2.5 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-accent-50 hover:text-accent-600 dark:hover:bg-accent-950/30 dark:hover:text-accent-400 transition-colors cursor-pointer"
           >
             <Settings className="w-5 h-5" />
           </button>

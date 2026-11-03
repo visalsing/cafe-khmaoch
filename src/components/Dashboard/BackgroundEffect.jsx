@@ -4,13 +4,13 @@ import { useBackgroundStyle } from "../../utils/background.js";
 const rand = (min, max) => Math.random() * (max - min) + min;
 
 // type:      "none" | "particles" | "bubbles" | "rain" | "stars" |
-//            "lightning" | "ghosts" | "bats" (defaults to the saved setting)
+//            "lightning" | "ghosts" | "bats" | "skulls" | "jack-o-lantern" |
+//            "halloween" | "cats" | "moons" | "snow" | "cafe-khmaoch" | "cafe-khmaoch-2" (defaults to the saved setting)
 // contained: true = small preview inside a card, false = full-page fixed background
 export default function BackgroundEffect({ type, contained = false }) {
   const canvasRef = useRef(null);
   const [stored] = useBackgroundStyle();
   const style = type ?? stored;
-  console.log("BackgroundEffect:", { type, stored, style });
 
   useEffect(() => {
     if (style === "none") return undefined;
@@ -39,8 +39,6 @@ export default function BackgroundEffect({ type, contained = false }) {
     let boost = 1;
     const refreshTheme = () => {
       color = getComputedStyle(probe).color || color;
-      //   const dark =
-      //     contained || document.documentElement.classList.contains("dark");
       const dark = document.documentElement.classList.contains("dark");
       boost = dark ? 1 : 1.5; // a bit stronger on light backgrounds
     };
@@ -71,6 +69,9 @@ export default function BackgroundEffect({ type, contained = false }) {
           halloween: 12,
           cats: 10,
           moons: 8,
+          snow: 18,
+          "cafe-khmaoch": 12,
+          "cafe-khmaoch-2": 16,
         };
         return c[style] ?? 0;
       }
@@ -95,6 +96,12 @@ export default function BackgroundEffect({ type, contained = false }) {
           return Math.min(32, Math.max(12, Math.round(area / 45000)));
         case "cats":
           return Math.min(24, Math.max(10, Math.round(area / 55000)));
+        case "cafe-khmaoch-2":
+          return Math.min(40, Math.max(16, Math.round(area / 38000)));
+        case "cafe-khmaoch":
+          return Math.min(30, Math.max(12, Math.round(area / 48000)));
+        case "snow":
+          return Math.min(130, Math.max(30, Math.round(area / 15000)));
         case "moons":
           return Math.min(20, Math.max(8, Math.round(area / 75000)));
         default:
@@ -131,19 +138,53 @@ export default function BackgroundEffect({ type, contained = false }) {
       return { paths: [main, branch], life };
     };
 
+    const MOON_PHASES = ["half", "gibbous", "gibbous", "full", "full", "crescent"];
+
+    const makeMoonProps = () => {
+      const phaseType = MOON_PHASES[Math.floor(rand(0, MOON_PHASES.length))];
+      const illumination = {
+        crescent: rand(0.3, 0.4),
+        half: 0.5,
+        gibbous: rand(0.7, 0.88),
+        full: 1,
+      }[phaseType];
+      // craters, in units of the moon radius
+      const craters = Array.from({ length: 5 }, () => {
+        const ang = rand(0, Math.PI * 2);
+        const dist = rand(0.1, 0.65);
+        return {
+          x: Math.cos(ang) * dist,
+          y: Math.sin(ang) * dist,
+          r: rand(0.08, 0.2),
+        };
+      });
+      return {
+        phaseType,
+        illumination,
+        waxing: Math.random() < 0.5,
+        glow: rand(5, 14),
+        craters,
+      };
+    };
+
+    // Halloween mix: rain, lightning (handled separately), cats, pumpkins,
+    // ghosts, skulls, moons (+ bats). Remove "bat" entries to drop bats.
     const createHalloweenItem = (initial = true) => {
       const types = [
         "ghost",
         "ghost",
         "bat",
-        "bat",
         "rain",
         "rain",
         "rain",
         "pumpkin",
+        "pumpkin",
+        "skull",
         "skull",
         "cat",
-        "moons",
+        "cat",
+        "moon",
+        "moon",
       ];
 
       const type = types[Math.floor(Math.random() * types.length)];
@@ -165,42 +206,24 @@ export default function BackgroundEffect({ type, contained = false }) {
       if (type === "ghost") {
         item.vy = rand(0.15, 0.5) * speed;
         item.sway = rand(0.2, 0.6);
+        item.y = initial ? rand(0, h) : h + s * 2;
       }
 
       if (type === "bat") {
         const dir = Math.random() < 0.5 ? 1 : -1;
-
         item.x = initial ? rand(0, w) : dir === 1 ? -s * 3 : w + s * 3;
-
         item.vx = dir * rand(0.8, 2) * speed;
         item.flap = rand(0.25, 0.4);
       }
 
       if (type === "moon") {
-        const phaseTypes = ["crescent", "half", "gibbous", "full"];
-
-        item.phaseType = phaseTypes[Math.floor(rand(0, phaseTypes.length))];
-
-        item.illumination = {
-          crescent: rand(0.15, 0.3),
-          half: 0.5,
-          gibbous: rand(0.7, 0.88),
-          full: 1,
-        }[item.phaseType];
-
-        item.waxing = Math.random() < 0.5;
-        item.size = s * 0.5;
-        item.glow = rand(5, 14);
+        Object.assign(item, makeMoonProps());
+        item.size = s * 1.3;
+        item.vx = rand(-0.18, 0.18) * speed; // moons drift slowly
+        item.vy = rand(-0.12, 0.12) * speed;
+        item.alpha = rand(0.55, 0.9);
       }
 
-      // if (type === "rain") {
-      //   item.len = rand(18, 38) * Math.max(scale, 0.7);
-      //   item.vy = rand(7, 13) * speed;
-      //   item.vx = rand(-1.8, -1.2) * speed;
-      //   item.alpha = rand(0.65, 0.95);
-      //   item.width = rand(1, 1.6);
-      //   item.y = initial ? rand(0, h) : -item.len;
-      // }
       if (type === "rain") {
         item.len = rand(18, 38) * Math.max(scale, 0.7);
         item.vy = rand(7, 13) * speed;
@@ -212,6 +235,58 @@ export default function BackgroundEffect({ type, contained = false }) {
 
       return item;
     };
+
+    // Café Khmaoch ("khmaoch" = ghost in Khmer): ghosts + coffee
+    const createCafeItem = (initial = true) => {
+      const types = [
+        "ghost",
+        "ghost",
+        "cup",
+        "cup",
+        "takeaway",
+        "bean",
+        "bean",
+        "bean",
+      ];
+      const type = types[Math.floor(Math.random() * types.length)];
+      const s = (type === "bean" ? rand(9, 17) : rand(18, 34)) * sz;
+
+      const item = {
+        type,
+        x: rand(0, w),
+        y: rand(0, h),
+        s,
+        phase: rand(0, 360),
+        rotation: rand(-0.2, 0.2),
+        vr: rand(-0.0012, 0.0012),
+        vx: rand(-0.3, 0.3) * speed,
+        vy: rand(-0.25, 0.25) * speed,
+        alpha: rand(0.5, 0.85),
+      };
+
+      if (type === "ghost") {
+        item.vy = rand(0.15, 0.5) * speed;
+        item.sway = rand(0.2, 0.6);
+        item.y = initial ? rand(0, h) : h + s * 2;
+      }
+
+      if (type === "bean") {
+        item.vy = rand(0.3, 0.9) * speed;
+        item.vx = 0;
+        item.sway = rand(0.1, 0.4);
+        item.rotation = rand(0, Math.PI * 2);
+        item.vr = rand(-0.02, 0.02);
+        item.y = initial ? rand(0, h) : -s * 2;
+      }
+
+      return item;
+    };
+
+    // Café Khmaoch v2: the café mix + every Halloween item (and lightning)
+    const createCafe2Item = (initial = true) =>
+      Math.random() < 0.45
+        ? createCafeItem(initial)
+        : createHalloweenItem(initial);
 
     const create = (initial) => {
       switch (style) {
@@ -268,7 +343,6 @@ export default function BackgroundEffect({ type, contained = false }) {
         }
         case "skulls": {
           const s = rand(20, 38) * sz;
-
           return {
             x: rand(0, w),
             y: rand(0, h),
@@ -283,7 +357,6 @@ export default function BackgroundEffect({ type, contained = false }) {
         }
         case "jack-o-lantern": {
           const s = rand(22, 38) * sz;
-
           return {
             x: rand(0, w),
             y: rand(0, h),
@@ -298,11 +371,14 @@ export default function BackgroundEffect({ type, contained = false }) {
         }
         case "halloween":
           return createHalloweenItem(initial);
+        case "cafe-khmaoch":
+          return createCafeItem(initial);
+        case "cafe-khmaoch-2":
+          return createCafe2Item(initial);
         case "cats":
           return {
             x: rand(0, w),
             y: rand(0, h),
-            // size: rand(13, 23) * scale,
             size: rand(18, 26) * Math.max(scale, 0.75),
             vx: rand(-0.35, 0.35) * speed,
             vy: rand(-0.25, 0.25) * speed,
@@ -314,32 +390,49 @@ export default function BackgroundEffect({ type, contained = false }) {
               Math.floor(rand(0, 5))
             ],
           };
-        case "moons": {
-          const phaseTypes = ["crescent", "half", "gibbous", "full"];
-
-          const phase = phaseTypes[Math.floor(rand(0, phaseTypes.length))];
-
-          const illumination = {
-            crescent: rand(0.15, 0.3),
-            half: 0.5,
-            gibbous: rand(0.7, 0.88),
-            full: 1,
-          }[phase];
-
+        case "snow": {
+          const kinds = [
+            "dot",
+            "dot",
+            "dot",
+            "ring",
+            "star6",
+            "star6",
+            "crystal",
+            "crystal",
+            "hex",
+            "spike",
+            "plus",
+          ];
+          const kind = kinds[Math.floor(Math.random() * kinds.length)];
+          const depth = rand(0.45, 1); // far (small, slow) -> near (big, fast)
+          const base = kind === "dot" || kind === "ring" ? rand(3, 7) : rand(8, 17);
+          const s = base * depth * Math.max(scale, 0.55);
+          return {
+            kind,
+            x: rand(0, w),
+            y: initial ? rand(0, h) : -s * 2,
+            s,
+            vy: rand(0.5, 1.2) * depth * speed + 0.2,
+            sway: rand(0.2, 0.7),
+            drift: rand(-0.1, 0.25) * speed,
+            phase: rand(0, 360),
+            rot: rand(0, Math.PI * 2),
+            vr: rand(-0.02, 0.02),
+            alpha: rand(0.45, 0.9) * (0.55 + 0.45 * depth),
+          };
+        }
+        case "moons":
           return {
             x: rand(0, w),
             y: rand(0, h),
-            size: rand(15, 29) * Math.max(scale, 0.75),
+            size: rand(22, 38) * Math.max(scale, 0.75),
             vx: rand(-0.18, 0.18) * speed,
             vy: rand(-0.12, 0.12) * speed,
-            phase,
-            illumination,
-            waxing: Math.random() < 0.5,
             rotation: rand(-0.15, 0.15),
             alpha: rand(0.55, 0.9),
-            glow: rand(5, 14),
+            ...makeMoonProps(),
           };
-        }
         default: {
           // rain
           const len = rand(12, 26) * Math.max(scale, 0.5);
@@ -438,19 +531,22 @@ export default function BackgroundEffect({ type, contained = false }) {
       ctx.restore();
     };
 
-    const drawSkull = (skulls) => {
-      const { s } = skulls;
+    // NOTE: skull / pumpkin / cat / moon cut-outs use the "evenodd" fill rule
+    // instead of "destination-out", so they never erase other items on the canvas.
+    const drawSkull = (skull) => {
+      const { s } = skull;
 
       ctx.save();
-      ctx.translate(skulls.x, skulls.y);
-      ctx.rotate(skulls.rotation);
+      ctx.translate(skull.x, skull.y);
+      ctx.rotate(skull.rotation);
 
-      ctx.globalAlpha = a(skulls.alpha);
+      ctx.globalAlpha = a(skull.alpha);
       ctx.fillStyle = color;
       ctx.strokeStyle = color;
 
-      // Main jagged skulls silhouette
       ctx.beginPath();
+
+      // Main jagged skull silhouette
       ctx.moveTo(-s * 0.48, -s * 0.12);
       ctx.lineTo(-s * 0.46, -s * 0.42);
       ctx.lineTo(-s * 0.32, -s * 0.52);
@@ -473,12 +569,7 @@ export default function BackgroundEffect({ type, contained = false }) {
       ctx.lineTo(-s * 0.4, s * 0.3);
       ctx.closePath();
 
-      ctx.fill();
-
-      // Eye sockets
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.beginPath();
-
+      // Eye sockets (holes)
       ctx.moveTo(-s * 0.4, -s * 0.12);
       ctx.lineTo(-s * 0.15, -s * 0.04);
       ctx.lineTo(-s * 0.19, s * 0.19);
@@ -491,21 +582,16 @@ export default function BackgroundEffect({ type, contained = false }) {
       ctx.lineTo(s * 0.39, s * 0.14);
       ctx.closePath();
 
-      // Nose cavity
+      // Nose cavity (hole)
       ctx.moveTo(0, s * 0.12);
       ctx.lineTo(-s * 0.09, s * 0.3);
       ctx.lineTo(s * 0.09, s * 0.3);
       ctx.closePath();
 
-      ctx.fill();
-
-      // Restore accent color for teeth details
-      ctx.globalCompositeOperation = "source-over";
-      ctx.globalAlpha = a(skulls.alpha);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = Math.max(0.8, s * 0.035);
+      ctx.fill("evenodd");
 
       // Jaw and teeth
+      ctx.lineWidth = Math.max(0.8, s * 0.035);
       ctx.beginPath();
       ctx.moveTo(-s * 0.3, s * 0.4);
       ctx.lineTo(-s * 0.25, s * 0.55);
@@ -514,7 +600,6 @@ export default function BackgroundEffect({ type, contained = false }) {
       ctx.lineTo(s * 0.12, s * 0.48);
       ctx.lineTo(s * 0.25, s * 0.55);
       ctx.lineTo(s * 0.3, s * 0.4);
-
       ctx.stroke();
 
       for (let i = -2; i <= 2; i++) {
@@ -550,7 +635,6 @@ export default function BackgroundEffect({ type, contained = false }) {
       // Pumpkin body
       ctx.beginPath();
       ctx.moveTo(0, -s * 0.42);
-
       ctx.bezierCurveTo(
         -s * 0.35,
         -s * 0.62,
@@ -559,39 +643,30 @@ export default function BackgroundEffect({ type, contained = false }) {
         -s * 0.62,
         0,
       );
-
       ctx.bezierCurveTo(-s * 0.7, s * 0.42, -s * 0.25, s * 0.62, 0, s * 0.52);
-
       ctx.bezierCurveTo(s * 0.25, s * 0.62, s * 0.7, s * 0.42, s * 0.62, 0);
-
       ctx.bezierCurveTo(s * 0.65, -s * 0.35, s * 0.35, -s * 0.62, 0, -s * 0.42);
-
       ctx.closePath();
-      ctx.fill();
 
-      // Carved face
-      ctx.globalCompositeOperation = "destination-out";
-
-      // Left eye
-      ctx.beginPath();
+      // Left eye (hole)
       ctx.moveTo(-s * 0.42, -s * 0.18);
       ctx.lineTo(-s * 0.12, -s * 0.12);
       ctx.lineTo(-s * 0.32, s * 0.08);
       ctx.closePath();
 
-      // Right eye
+      // Right eye (hole)
       ctx.moveTo(s * 0.42, -s * 0.18);
       ctx.lineTo(s * 0.12, -s * 0.12);
       ctx.lineTo(s * 0.32, s * 0.08);
       ctx.closePath();
 
-      // Nose
+      // Nose (hole)
       ctx.moveTo(0, -s * 0.02);
       ctx.lineTo(-s * 0.09, s * 0.16);
       ctx.lineTo(s * 0.09, s * 0.16);
       ctx.closePath();
 
-      // Jagged spooky smile
+      // Jagged smile (hole)
       ctx.moveTo(-s * 0.4, s * 0.2);
       ctx.lineTo(-s * 0.2, s * 0.26);
       ctx.lineTo(-s * 0.12, s * 0.18);
@@ -604,11 +679,12 @@ export default function BackgroundEffect({ type, contained = false }) {
       ctx.lineTo(-s * 0.3, s * 0.42);
       ctx.closePath();
 
-      ctx.fill();
+      ctx.fill("evenodd");
 
       ctx.restore();
     };
 
+    // Silhouette cat (used in the Halloween mix)
     const drawCat = (cat) => {
       const { x, y, s } = cat;
 
@@ -617,6 +693,7 @@ export default function BackgroundEffect({ type, contained = false }) {
       ctx.rotate(cat.rotation);
 
       ctx.fillStyle = color;
+      ctx.strokeStyle = color;
       ctx.globalAlpha = a(cat.alpha);
 
       // Body
@@ -624,17 +701,29 @@ export default function BackgroundEffect({ type, contained = false }) {
       ctx.ellipse(0, s * 0.12, s * 0.34, s * 0.2, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Head
+      // Head with eye holes
       ctx.beginPath();
+      ctx.moveTo(s * 0.2, -s * 0.16);
       ctx.arc(0, -s * 0.16, s * 0.2, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(-s * 0.075 + s * 0.025, -s * 0.17);
+      ctx.ellipse(
+        -s * 0.075,
+        -s * 0.17,
+        s * 0.025,
+        s * 0.06,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.moveTo(s * 0.075 + s * 0.025, -s * 0.17);
+      ctx.ellipse(s * 0.075, -s * 0.17, s * 0.025, s * 0.06, 0, 0, Math.PI * 2);
+      ctx.fill("evenodd");
 
       // Pointed ears
       ctx.beginPath();
       ctx.moveTo(-s * 0.16, -s * 0.27);
       ctx.lineTo(-s * 0.22, -s * 0.52);
       ctx.lineTo(-s * 0.02, -s * 0.35);
-
       ctx.moveTo(s * 0.16, -s * 0.27);
       ctx.lineTo(s * 0.22, -s * 0.52);
       ctx.lineTo(s * 0.02, -s * 0.35);
@@ -655,28 +744,10 @@ export default function BackgroundEffect({ type, contained = false }) {
       );
       ctx.stroke();
 
-      // Eyes
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.beginPath();
-      ctx.ellipse(
-        -s * 0.075,
-        -s * 0.17,
-        s * 0.025,
-        s * 0.06,
-        0,
-        0,
-        Math.PI * 2,
-      );
-      ctx.ellipse(s * 0.075, -s * 0.17, s * 0.025, s * 0.06, 0, 0, Math.PI * 2);
-      ctx.fill();
-
       ctx.restore();
     };
 
-    // const drawCuteCat = (ctx, item, time) => {
-    //   const s = item.size;
-    //   const tailWag = Math.sin(time * 0.002 + item.tailPhase) * 0.35;
-    //   const blink = Math.sin(time * 0.0015 + item.phase) > 0.985;
+    // Colorful cute cat (used by the "cats" style)
     const drawCuteCat = (ctx, item, frame) => {
       const s = item.size;
       const tailWag = Math.sin(frame * 0.04 + item.tailPhase) * 0.35;
@@ -684,7 +755,6 @@ export default function BackgroundEffect({ type, contained = false }) {
 
       ctx.save();
       ctx.translate(item.x, item.y);
-      // ctx.rotate(item.rotation + Math.sin(time * 0.0008 + item.phase) * 0.04);
       ctx.rotate(item.rotation + Math.sin(frame * 0.016 + item.phase) * 0.04);
 
       ctx.globalAlpha = item.alpha;
@@ -750,6 +820,7 @@ export default function BackgroundEffect({ type, contained = false }) {
 
       // Eyes
       ctx.fillStyle = "#35313A";
+      ctx.strokeStyle = "#35313A";
 
       [-1, 1].forEach((side) => {
         ctx.beginPath();
@@ -820,32 +891,311 @@ export default function BackgroundEffect({ type, contained = false }) {
       ctx.restore();
     };
 
+    // Classic crescent moon with a little twinkling star.
+    // Uses a clip (not destination-out), so it never erases other items.
     const drawMoon = (moon) => {
-      const { x, y } = moon;
       const s = moon.size ?? moon.s;
-
       if (!s) return;
 
+      const al = moon.alpha ?? 0.8;
+      const tw = 0.6 + 0.4 * Math.sin(frame * 0.06 + (moon.glow ?? 0));
+
       ctx.save();
-      ctx.translate(x, y);
+      ctx.translate(moon.x, moon.y);
       ctx.rotate(moon.rotation ?? 0);
+      if (!moon.waxing) ctx.scale(-1, 1); // mirror for variety
 
-      ctx.globalAlpha = a(moon.alpha ?? 0.8);
       ctx.fillStyle = color;
+      ctx.strokeStyle = color;
 
-      // Main crescent
+      // Crescent: clip away the cut-out circle, then fill the full circle
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(-s * 2, -s * 2, s * 4, s * 4);
+      ctx.arc(s * 0.22, -s * 0.12, s * 0.42, 0, Math.PI * 2);
+      ctx.clip("evenodd");
+      ctx.globalAlpha = a(al);
       ctx.beginPath();
       ctx.arc(0, 0, s * 0.5, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
 
-      // Inner cutout
-      ctx.globalCompositeOperation = "destination-out";
-
+      // Tiny 4-point star in the opening of the crescent
+      const sx = s * 0.36;
+      const sy = -s * 0.1;
+      const sr = s * 0.13 * (0.7 + tw * 0.5);
+      ctx.globalAlpha = a(al * tw);
       ctx.beginPath();
-      ctx.arc(s * 0.24, -s * 0.17, s * 0.43, 0, Math.PI * 2);
+      ctx.moveTo(sx, sy - sr);
+      ctx.quadraticCurveTo(sx, sy, sx + sr, sy);
+      ctx.quadraticCurveTo(sx, sy, sx, sy + sr);
+      ctx.quadraticCurveTo(sx, sy, sx - sr, sy);
+      ctx.quadraticCurveTo(sx, sy, sx, sy - sr);
       ctx.fill();
 
       ctx.restore();
+    };
+
+    // Coffee cup on a saucer with wavy steam
+    const drawCup = (c) => {
+      const s = c.s;
+
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate(c.rotation);
+      ctx.fillStyle = color;
+      ctx.strokeStyle = color;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      // Cup body
+      ctx.globalAlpha = a(c.alpha);
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.45, -s * 0.2);
+      ctx.lineTo(s * 0.45, -s * 0.2);
+      ctx.lineTo(s * 0.35, s * 0.25);
+      ctx.quadraticCurveTo(s * 0.3, s * 0.4, s * 0.15, s * 0.4);
+      ctx.lineTo(-s * 0.15, s * 0.4);
+      ctx.quadraticCurveTo(-s * 0.3, s * 0.4, -s * 0.35, s * 0.25);
+      ctx.closePath();
+      ctx.fill();
+
+      // Handle
+      ctx.lineWidth = Math.max(1, s * 0.09);
+      ctx.beginPath();
+      ctx.arc(s * 0.45, s * 0.02, s * 0.17, -Math.PI / 2, Math.PI / 2);
+      ctx.stroke();
+
+      // Saucer
+      ctx.beginPath();
+      ctx.ellipse(0, s * 0.46, s * 0.62, s * 0.09, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Coffee surface
+      ctx.fillStyle = "rgba(255,255,255,0.35)";
+      ctx.beginPath();
+      ctx.ellipse(0, -s * 0.2, s * 0.4, s * 0.06, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Steam
+      ctx.strokeStyle = color;
+      ctx.lineWidth = Math.max(0.8, s * 0.06);
+      [-0.18, 0.18].forEach((x0, n) => {
+        ctx.globalAlpha = a(c.alpha * 0.6);
+        ctx.beginPath();
+        for (let k = 0; k <= 6; k++) {
+          const px =
+            s * x0 + Math.sin(frame * 0.05 + c.phase + n * 2 + k * 0.9) * s * 0.09;
+          const py = -s * 0.3 - k * s * 0.13;
+          if (k === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      });
+
+      ctx.restore();
+    };
+
+    // Takeaway cup with lid and sleeve
+    const drawTakeaway = (c) => {
+      const s = c.s;
+
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate(c.rotation);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = a(c.alpha);
+
+      // Body
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.38, -s * 0.3);
+      ctx.lineTo(s * 0.38, -s * 0.3);
+      ctx.lineTo(s * 0.28, s * 0.5);
+      ctx.lineTo(-s * 0.28, s * 0.5);
+      ctx.closePath();
+      ctx.fill();
+
+      // Lid
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.46, -s * 0.3);
+      ctx.lineTo(s * 0.46, -s * 0.3);
+      ctx.lineTo(s * 0.42, -s * 0.42);
+      ctx.lineTo(s * 0.16, -s * 0.42);
+      ctx.lineTo(s * 0.12, -s * 0.52);
+      ctx.lineTo(-s * 0.12, -s * 0.52);
+      ctx.lineTo(-s * 0.16, -s * 0.42);
+      ctx.lineTo(-s * 0.42, -s * 0.42);
+      ctx.closePath();
+      ctx.fill();
+
+      // Sleeve
+      ctx.fillStyle = "rgba(255,255,255,0.35)";
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.34, -s * 0.02);
+      ctx.lineTo(s * 0.34, -s * 0.02);
+      ctx.lineTo(s * 0.31, s * 0.26);
+      ctx.lineTo(-s * 0.31, s * 0.26);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    };
+
+    // Coffee bean with its center crease
+    const drawBean = (b) => {
+      const s = b.s;
+
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.rotation);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = a(b.alpha);
+
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 0.34, s * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(255,255,255,0.5)";
+      ctx.lineWidth = Math.max(0.8, s * 0.07);
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 0.44);
+      ctx.bezierCurveTo(s * 0.2, -s * 0.15, -s * 0.2, s * 0.15, 0, s * 0.44);
+      ctx.stroke();
+
+      ctx.restore();
+    };
+
+    // Snowflakes: several different crystal shapes
+    const drawSnowflake = (f) => {
+      const s = f.s;
+
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.rotate(f.rot);
+
+      ctx.fillStyle = color;
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = a(f.alpha);
+      ctx.lineWidth = Math.max(0.7, s * 0.09);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      ctx.beginPath();
+
+      switch (f.kind) {
+        case "dot":
+          ctx.arc(0, 0, s * 0.45, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+
+        case "ring":
+          ctx.arc(0, 0, s * 0.5, 0, Math.PI * 2);
+          ctx.globalAlpha = a(f.alpha * 0.25);
+          ctx.fill();
+          ctx.globalAlpha = a(f.alpha);
+          ctx.stroke();
+          break;
+
+        case "star6": // six arms with small V branches
+          for (let i = 0; i < 6; i++) {
+            ctx.rotate(Math.PI / 3);
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, -s);
+            ctx.moveTo(-s * 0.28, -s * 0.78);
+            ctx.lineTo(0, -s * 0.52);
+            ctx.lineTo(s * 0.28, -s * 0.78);
+          }
+          ctx.stroke();
+          break;
+
+        case "crystal": // long arms with two pairs of side branches
+          for (let i = 0; i < 6; i++) {
+            ctx.rotate(Math.PI / 3);
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, -s);
+            ctx.moveTo(0, -s * 0.38);
+            ctx.lineTo(-s * 0.22, -s * 0.58);
+            ctx.moveTo(0, -s * 0.38);
+            ctx.lineTo(s * 0.22, -s * 0.58);
+            ctx.moveTo(0, -s * 0.66);
+            ctx.lineTo(-s * 0.16, -s * 0.82);
+            ctx.moveTo(0, -s * 0.66);
+            ctx.lineTo(s * 0.16, -s * 0.82);
+          }
+          ctx.stroke();
+          break;
+
+        case "hex": // hexagon plate with spokes
+          for (let i = 0; i < 6; i++) {
+            const ang = (i * Math.PI) / 3;
+            const px = Math.cos(ang) * s * 0.7;
+            const py = Math.sin(ang) * s * 0.7;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+            ctx.moveTo(0, 0);
+            ctx.lineTo(px, py);
+            ctx.moveTo(px, py);
+          }
+          ctx.closePath();
+          ctx.stroke();
+          ctx.globalAlpha = a(f.alpha * 0.18);
+          ctx.fill();
+          break;
+
+        case "spike": // arms ending in diamond tips
+          for (let i = 0; i < 6; i++) {
+            ctx.rotate(Math.PI / 3);
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, -s * 0.62);
+            ctx.moveTo(0, -s * 0.62);
+            ctx.lineTo(-s * 0.14, -s * 0.8);
+            ctx.lineTo(0, -s);
+            ctx.lineTo(s * 0.14, -s * 0.8);
+            ctx.closePath();
+          }
+          ctx.stroke();
+          break;
+
+        case "plus": // 8-arm sparkle with alternating lengths
+          for (let i = 0; i < 8; i++) {
+            ctx.rotate(Math.PI / 4);
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, i % 2 === 0 ? -s : -s * 0.6);
+          }
+          ctx.stroke();
+          break;
+
+        default:
+          break;
+      }
+
+      ctx.restore();
+    };
+
+    const drawBolts = (flicker) => {
+      bolts.forEach((bolt) => {
+        const strong = flicker ? (frame % 4 < 2 ? 1 : 0.75) : 1;
+
+        // faint flash over the whole area
+        ctx.fillStyle = color;
+        ctx.globalAlpha = a(bolt.life * 0.06);
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.strokeStyle = color;
+        ctx.lineJoin = "round";
+        ctx.shadowColor = color;
+        ctx.shadowBlur = contained ? 4 : 14;
+        bolt.paths.forEach((pts, idx) => {
+          ctx.lineWidth = (idx === 0 ? 2.2 : 1.2) * Math.max(scale, 0.6);
+          ctx.globalAlpha = a(bolt.life * 0.9 * strong);
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+          ctx.stroke();
+        });
+        ctx.shadowBlur = 0;
+      });
     };
 
     const draw = (animate) => {
@@ -959,29 +1309,13 @@ export default function BackgroundEffect({ type, contained = false }) {
           bolts.push(createBolt(0.7)); // reduced motion: one still bolt
         }
 
-        bolts.forEach((bolt) => {
-          const strong = animate && frame % 4 < 2 ? 1 : 0.75; // flicker
-
-          // faint flash over the whole area
-          ctx.globalAlpha = a(bolt.life * 0.06);
-          ctx.fillRect(0, 0, w, h);
-
-          ctx.lineJoin = "round";
-          ctx.shadowColor = color;
-          ctx.shadowBlur = contained ? 4 : 14;
-          bolt.paths.forEach((pts, idx) => {
-            ctx.lineWidth = (idx === 0 ? 2.2 : 1.2) * Math.max(scale, 0.6);
-            ctx.globalAlpha = a(bolt.life * 0.9 * strong);
-            ctx.beginPath();
-            ctx.moveTo(pts[0].x, pts[0].y);
-            for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-            ctx.stroke();
+        drawBolts(animate);
+        if (animate) {
+          bolts.forEach((bolt) => {
+            bolt.life -= 0.035;
           });
-          ctx.shadowBlur = 0;
-
-          if (animate) bolt.life -= 0.035;
-        });
-        if (animate) bolts = bolts.filter((b) => b.life > 0);
+          bolts = bolts.filter((b) => b.life > 0);
+        }
       } else if (style === "ghosts") {
         items.forEach((g, i) => {
           if (animate) {
@@ -1018,22 +1352,22 @@ export default function BackgroundEffect({ type, contained = false }) {
           ctx.stroke();
         });
       } else if (style === "skulls") {
-        items.forEach((skulls) => {
+        items.forEach((skull) => {
           if (animate) {
-            skulls.x += skulls.vx;
-            skulls.y += skulls.vy;
-            skulls.rotation += skulls.vr;
+            skull.x += skull.vx;
+            skull.y += skull.vy;
+            skull.rotation += skull.vr;
 
-            skulls.y += Math.sin((frame + skulls.phase) / 50) * 0.12;
+            skull.y += Math.sin((frame + skull.phase) / 50) * 0.12;
 
-            if (skulls.x < -skulls.s) skulls.x = w + skulls.s;
-            if (skulls.x > w + skulls.s) skulls.x = -skulls.s;
+            if (skull.x < -skull.s) skull.x = w + skull.s;
+            if (skull.x > w + skull.s) skull.x = -skull.s;
 
-            if (skulls.y < -skulls.s) skulls.y = h + skulls.s;
-            if (skulls.y > h + skulls.s) skulls.y = -skulls.s;
+            if (skull.y < -skull.s) skull.y = h + skull.s;
+            if (skull.y > h + skull.s) skull.y = -skull.s;
           }
 
-          drawSkull(skulls);
+          drawSkull(skull);
         });
       } else if (style === "jack-o-lantern") {
         items.forEach((p) => {
@@ -1055,6 +1389,7 @@ export default function BackgroundEffect({ type, contained = false }) {
           drawPumpkin(p);
         });
       } else if (style === "halloween") {
+        // rain + cats + pumpkins + ghosts + skulls + moons (+ bats), with lightning on top
         items.forEach((item, i) => {
           if (animate) {
             item.rotation += item.vr;
@@ -1087,30 +1422,35 @@ export default function BackgroundEffect({ type, contained = false }) {
                 }
                 break;
 
-              default:
+              default: {
+                // pumpkin, skull, cat, moon: drift and wrap around the edges
+                const m = (item.size ?? item.s) + 10;
                 item.x += item.vx;
                 item.y += item.vy;
 
-                if (item.x < -item.s) item.x = w + item.s;
-                if (item.x > w + item.s) item.x = -item.s;
-                if (item.y < -item.s) item.y = h + item.s;
-                if (item.y > h + item.s) item.y = -item.s;
+                if (item.x < -m) item.x = w + m;
+                if (item.x > w + m) item.x = -m;
+                if (item.y < -m) item.y = h + m;
+                if (item.y > h + m) item.y = -m;
+              }
             }
           }
 
           switch (item.type) {
             case "ghost":
+              ctx.fillStyle = color;
+              ctx.strokeStyle = color;
               drawGhost(item);
               break;
 
             case "bat":
+              ctx.fillStyle = color;
               drawBat(item);
               break;
 
             case "rain":
-              // ctx.globalAlpha = a(0.35);
+              ctx.strokeStyle = color;
               ctx.globalAlpha = a(0.75);
-              // ctx.lineWidth = 1;
               ctx.lineWidth = contained ? 1.2 : 1.5;
               ctx.beginPath();
               ctx.moveTo(item.x, item.y);
@@ -1131,7 +1471,10 @@ export default function BackgroundEffect({ type, contained = false }) {
               break;
 
             case "moon":
-              drawMoon(item, frame);
+              drawMoon(item);
+              break;
+
+            default:
               break;
           }
         });
@@ -1142,36 +1485,18 @@ export default function BackgroundEffect({ type, contained = false }) {
 
           if (nextBolt <= 0) {
             bolts.push(createBolt());
-            nextBolt = rand(180, 360);
+            nextBolt = contained ? rand(60, 140) : rand(180, 360);
           }
         } else if (bolts.length === 0) {
           bolts.push(createBolt(0.7));
         }
 
-        bolts.forEach((bolt) => {
-          ctx.globalAlpha = a(bolt.life * 0.9);
-          ctx.shadowColor = color;
-          ctx.shadowBlur = contained ? 4 : 12;
-          ctx.lineJoin = "round";
-
-          bolt.paths.forEach((pts, idx) => {
-            ctx.lineWidth = idx === 0 ? 2 : 1.2;
-            ctx.beginPath();
-            ctx.moveTo(pts[0].x, pts[0].y);
-
-            for (let i = 1; i < pts.length; i++) {
-              ctx.lineTo(pts[i].x, pts[i].y);
-            }
-
-            ctx.stroke();
-          });
-
-          ctx.shadowBlur = 0;
-
-          if (animate) bolt.life -= 0.035;
-        });
+        drawBolts(animate);
 
         if (animate) {
+          bolts.forEach((bolt) => {
+            bolt.life -= 0.035;
+          });
           bolts = bolts.filter((bolt) => bolt.life > 0);
         }
       } else if (style === "cats") {
@@ -1202,7 +1527,181 @@ export default function BackgroundEffect({ type, contained = false }) {
             if (item.y > h + 50) item.y = -50;
           }
 
-          drawMoon(item, frame);
+          drawMoon(item);
+        });
+      } else if (style === "cafe-khmaoch-2") {
+        items.forEach((item, i) => {
+          if (animate) {
+            item.rotation += item.vr;
+
+            switch (item.type) {
+              case "ghost":
+                item.y -= item.vy;
+                item.x += Math.sin((frame + item.phase) / 50) * item.sway;
+                if (item.y + item.s * 1.8 < 0) items[i] = createCafe2Item(false);
+                break;
+
+              case "bat":
+                item.x += item.vx;
+                item.y += Math.sin((frame + item.phase * 10) / 30) * 0.5;
+                if (item.x < -item.s * 4 || item.x > w + item.s * 4) {
+                  items[i] = createCafe2Item(false);
+                }
+                break;
+
+              case "rain":
+                item.y += item.vy;
+                item.x += item.vx;
+                if (item.y > h) items[i] = createCafe2Item(false);
+                break;
+
+              case "bean":
+                item.y += item.vy;
+                item.x += Math.sin((frame + item.phase) / 60) * item.sway;
+                if (item.y > h + item.s * 2) items[i] = createCafe2Item(false);
+                break;
+
+              default: {
+                // cups, takeaway, pumpkin, skull, cat, moon: drift and wrap
+                const m = (item.size ?? item.s) * 1.2 + 10;
+                item.x += item.vx;
+                item.y += item.vy;
+                if (item.x < -m) item.x = w + m;
+                if (item.x > w + m) item.x = -m;
+                if (item.y < -m) item.y = h + m;
+                if (item.y > h + m) item.y = -m;
+              }
+            }
+          }
+
+          switch (item.type) {
+            case "ghost":
+              ctx.fillStyle = color;
+              ctx.strokeStyle = color;
+              drawGhost(item);
+              break;
+            case "bat":
+              ctx.fillStyle = color;
+              drawBat(item);
+              break;
+            case "rain":
+              ctx.strokeStyle = color;
+              ctx.globalAlpha = a(0.75);
+              ctx.lineWidth = contained ? 1.2 : 1.5;
+              ctx.beginPath();
+              ctx.moveTo(item.x, item.y);
+              ctx.lineTo(item.x + item.vx * 2, item.y + item.len);
+              ctx.stroke();
+              break;
+            case "pumpkin":
+              drawPumpkin(item);
+              break;
+            case "skull":
+              drawSkull(item);
+              break;
+            case "cat":
+              drawCat(item);
+              break;
+            case "moon":
+              drawMoon(item);
+              break;
+            case "cup":
+              drawCup(item);
+              break;
+            case "takeaway":
+              drawTakeaway(item);
+              break;
+            case "bean":
+              drawBean(item);
+              break;
+            default:
+              break;
+          }
+        });
+
+        // Occasional lightning
+        if (animate) {
+          nextBolt--;
+          if (nextBolt <= 0) {
+            bolts.push(createBolt());
+            nextBolt = contained ? rand(60, 140) : rand(180, 360);
+          }
+        } else if (bolts.length === 0) {
+          bolts.push(createBolt(0.7));
+        }
+
+        drawBolts(animate);
+
+        if (animate) {
+          bolts.forEach((bolt) => {
+            bolt.life -= 0.035;
+          });
+          bolts = bolts.filter((bolt) => bolt.life > 0);
+        }
+      } else if (style === "cafe-khmaoch") {
+        items.forEach((item, i) => {
+          if (animate) {
+            item.rotation += item.vr;
+
+            switch (item.type) {
+              case "ghost":
+                item.y -= item.vy;
+                item.x += Math.sin((frame + item.phase) / 50) * item.sway;
+                if (item.y + item.s * 1.8 < 0) items[i] = createCafeItem(false);
+                break;
+
+              case "bean":
+                item.y += item.vy;
+                item.x += Math.sin((frame + item.phase) / 60) * item.sway;
+                if (item.y > h + item.s * 2) items[i] = createCafeItem(false);
+                break;
+
+              default: {
+                // cups drift gently and wrap around
+                const m = item.s * 1.2;
+                item.x += item.vx;
+                item.y += item.vy;
+                item.y += Math.sin((frame + item.phase) / 50) * 0.12;
+                if (item.x < -m) item.x = w + m;
+                if (item.x > w + m) item.x = -m;
+                if (item.y < -m) item.y = h + m;
+                if (item.y > h + m) item.y = -m;
+              }
+            }
+          }
+
+          switch (item.type) {
+            case "ghost":
+              ctx.fillStyle = color;
+              ctx.strokeStyle = color;
+              drawGhost(item);
+              break;
+            case "cup":
+              drawCup(item);
+              break;
+            case "takeaway":
+              drawTakeaway(item);
+              break;
+            case "bean":
+              drawBean(item);
+              break;
+            default:
+              break;
+          }
+        });
+      } else if (style === "snow") {
+        items.forEach((f, i) => {
+          if (animate) {
+            f.y += f.vy;
+            f.x += Math.sin((frame + f.phase) / 60) * f.sway + f.drift;
+            f.rot += f.vr;
+
+            if (f.y > h + f.s * 2) items[i] = create(false);
+            if (f.x > w + f.s * 2) f.x = -f.s * 2;
+            if (f.x < -f.s * 2) f.x = w + f.s * 2;
+          }
+
+          drawSnowflake(f);
         });
       }
 
@@ -1246,9 +1745,6 @@ export default function BackgroundEffect({ type, contained = false }) {
       />
     );
 
-  //   if (contained) {
-  //     return <div className="absolute inset-0 bg-slate-900">{canvas}</div>;
-  //   }
   if (contained) {
     return (
       <div className="absolute inset-0 bg-neutral-100 dark:bg-neutral-900 transition-colors">

@@ -1,3 +1,4 @@
+// Settings/Settings.jsx
 import React, { useState, useEffect } from "react";
 import {
   Sun,
@@ -12,6 +13,7 @@ import {
   Sparkles,
   Computer,
 } from "lucide-react";
+import { useThemeOptions } from "../Dashboard/themeOptions.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import LoadingScreen, { Loader } from "../Loading/Loading.jsx";
@@ -44,13 +46,16 @@ const themeOptions = [
   },
 ];
 
+// const { theme, setTheme } = useTheme();
+// // const { theme } = useTheme();
+// const { choices, choose } = useThemeOptions();
+
 // Number digit formatting styles options
 const digitOptions = [
   { value: "standard", label: "Standard (0-9)", sample: "12345" },
   { value: "khmer", label: "ខ្មែរ (Khmer)", sample: "១២៣៤៥" },
   { value: "lao", label: "ລາວ (Lao)", sample: "໑໒໓໔໕" },
   { value: "burmese", label: "မြန်မာ (Burmese)", sample: "၁၂၃၄၅" },
-  // { value: "chinese", label: "(Chinese)", sample: "〡〢〣〤〥"}
 ];
 
 const flagImages = {
@@ -70,12 +75,16 @@ const flagImages = {
 };
 
 export default function Settings() {
-  const { theme, setTheme } = useTheme();
+  // const { theme, setTheme } = useTheme();
+  const { theme } = useTheme();
+  const { choices, choose } = useThemeOptions();
   const { language, setLanguage, t, languages = [] } = useLanguage();
   const [loadingStyle, setLoadingStyle] = useLoadingStyle();
   const [accent, setAccent] = useAccent();
-  const [previewing, setPreviewing] = useState(false);
   const [backgroundStyle, setBackgroundStyle] = useBackgroundStyle();
+
+  // Which full-screen preview is open: "loading" | "background" | null
+  const [previewing, setPreviewing] = useState(null);
 
   // State for digit format preference (persisted in localStorage)
   const [digitStyle, setDigitStyle] = useState(() => {
@@ -88,14 +97,21 @@ export default function Settings() {
     window.dispatchEvent(new Event("digitStyleChange"));
   }, [digitStyle]);
 
-  // the full-screen preview closes by itself after 3 seconds, or with a click / the Esc key
+  // Full-screen previews close with a click or the Esc key.
+  // The loading screen preview also closes by itself after 3 seconds;
+  // the background preview stays open so you can watch the animation.
   useEffect(() => {
     if (!previewing) return undefined;
-    const timer = setTimeout(() => setPreviewing(false), 3000);
-    const onKey = (e) => e.key === "Escape" && setPreviewing(false);
+
+    const timer =
+      previewing === "loading"
+        ? setTimeout(() => setPreviewing(null), 3000)
+        : null;
+    const onKey = (e) => e.key === "Escape" && setPreviewing(null);
     window.addEventListener("keydown", onKey);
+
     return () => {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
       window.removeEventListener("keydown", onKey);
     };
   }, [previewing]);
@@ -104,18 +120,20 @@ export default function Settings() {
     "border-accent-600 bg-accent-50 dark:border-accent-500 dark:bg-accent-500/10";
 
   const inactiveCard =
-    "border-slate-200 dark:border-slate-700 hover:bg-accent-50/60 dark:hover:bg-accent-950/20";
+    "border-neutral-200 dark:border-neutral-700 hover:bg-accent-50/60 dark:hover:bg-accent-950/20";
 
   const focusStyle =
-    "focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900";
+    "focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 dark:focus:ring-offset-neutral-900";
+
+  const previewButton = `inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-accent-600 text-accent-700 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent ${focusStyle}`;
 
   return (
-    <div className="p-8 bg-white dark:bg-slate-900 rounded-2xl border border-accent-100 dark:border-slate-700 space-y-8">
+    <div className="p-8 bg-white dark:bg-neutral-900 rounded-2xl border border-accent-100 dark:border-neutral-700 space-y-8">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+        <h2 className="text-2xl font-bold text-neutral-900 dark:text-white">
           {t("settings")}
         </h2>
-        <p className="text-slate-500 dark:text-slate-400">
+        <p className="text-neutral-500 dark:text-neutral-400">
           {t("systemPreferences")}
         </p>
       </div>
@@ -124,15 +142,15 @@ export default function Settings() {
       <div>
         <div className="flex items-center space-x-2 mb-1">
           <Computer className="w-4 h-4 text-accent-700 dark:text-accent-400" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400 mb-1">
             {t("appearance")}
           </h3>
         </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
           {t("appearanceDescription")}
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {themeOptions.map(
             ({ value, labelKey, descriptionKey, icon: Icon }) => {
               const active = theme === value;
@@ -155,31 +173,92 @@ export default function Settings() {
                     className={`w-5 h-5 mb-3 ${
                       active
                         ? "text-accent-700 dark:text-accent-400"
-                        : "text-slate-500 dark:text-slate-400"
+                        : "text-neutral-500 dark:text-neutral-400"
                     }`}
                   />
-                  <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                  <p className="text-sm font-semibold text-neutral-800 dark:text-white">
                     {t(labelKey)}
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
                     {t(descriptionKey)}
                   </p>
                 </button>
               );
             },
           )}
+        </div> */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {choices.map((choice) => {
+            const active = theme === choice.value;
+            const Icon = choice.Icon;
+            return (
+              <button
+                key={choice.value}
+                type="button"
+                onClick={() => choose(choice)}
+                aria-pressed={active}
+                className={`relative text-left p-4 rounded-xl border transition-all ${focusStyle} ${active ? activeCard : inactiveCard}`}
+              >
+                {active && (
+                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center">
+                    <Check className="w-3.5 h-3.5 text-white" />
+                  </span>
+                )}
+                <Icon
+                  className={`w-5 h-5 mb-3 ${active ? "text-accent-700 dark:text-accent-400" : "text-neutral-500 dark:text-neutral-400"}`}
+                />
+                <p className="text-sm font-semibold text-neutral-800 dark:text-white">
+                  {choice.label}
+                </p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                  {choice.description}
+                </p>
+              </button>
+            );
+          })}
         </div>
+
+        {/* <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {choices.map((choice) => {
+            const active = theme === choice.value;
+            const Icon = choice.Icon;
+            return (
+              <button
+                key={choice.value}
+                type="button"
+                onClick={() => choose(choice)}
+                aria-pressed={active}
+                className={`relative text-left p-4 rounded-xl border transition-all ${focusStyle} ${active ? activeCard : inactiveCard}`}
+              >
+                {active && (
+                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center">
+                    <Check className="w-3.5 h-3.5 text-white" />
+                  </span>
+                )}
+                <Icon
+                  className={`w-5 h-5 mb-3 ${active ? "text-accent-700 dark:text-accent-400" : "text-neutral-500 dark:text-neutral-400"}`}
+                />
+                <p className="text-sm font-semibold text-neutral-800 dark:text-white">
+                  {choice.label}
+                </p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                  {choice.description}
+                </p>
+              </button>
+            );
+          })}
+        </div> */}
       </div>
 
       {/* Accent color section */}
       <div>
         <div className="flex items-center space-x-2 mb-1">
           <Palette className="w-4 h-4 text-accent-700 dark:text-accent-400" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
             Accent Color
           </h3>
         </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
           Pick the highlight color used across the app.
         </p>
 
@@ -206,7 +285,7 @@ export default function Settings() {
                   className="block w-7 h-7 rounded-full mb-3"
                   style={{ background: swatch }}
                 />
-                <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                <p className="text-sm font-semibold text-neutral-800 dark:text-white">
                   {label}
                 </p>
               </button>
@@ -219,11 +298,11 @@ export default function Settings() {
       <div>
         <div className="flex items-center space-x-2 mb-1">
           <Sparkles className="w-4 h-4 text-accent-700 dark:text-accent-400" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
             Background Effect
           </h3>
         </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
           Choose an animated effect behind the page. It follows your accent
           color and is saved in this browser.
         </p>
@@ -253,7 +332,7 @@ export default function Settings() {
                   className={`text-sm font-semibold text-center ${
                     active
                       ? "text-accent-700 dark:text-accent-400"
-                      : "text-slate-800 dark:text-white"
+                      : "text-neutral-800 dark:text-white"
                   }`}
                 >
                   {label}
@@ -262,17 +341,26 @@ export default function Settings() {
             );
           })}
         </div>
+
+        <button
+          type="button"
+          onClick={() => setPreviewing("background")}
+          disabled={backgroundStyle === "none"}
+          className={`mt-4 ${previewButton}`}
+        >
+          <Play className="w-4 h-4" /> Preview full screen
+        </button>
       </div>
 
       {/* Language section */}
       <div>
         <div className="flex items-center space-x-2 mb-1">
           <Languages className="w-4 h-4 text-accent-700 dark:text-accent-400" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
             {t("language")}
           </h3>
         </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
           {t("languageDescription")}
         </p>
 
@@ -298,7 +386,7 @@ export default function Settings() {
                     <Check className="w-3.5 h-3.5 text-white" />
                   </span>
                 )}
-                <div className="w-7 h-5 rounded shadow-sm overflow-hidden flex items-center justify-center bg-accent-50 dark:bg-slate-800 mb-3 flex-shrink-0">
+                <div className="w-7 h-5 rounded shadow-sm overflow-hidden flex items-center justify-center bg-accent-50 dark:bg-neutral-800 mb-3 flex-shrink-0">
                   <img
                     src={flagUrl}
                     alt={`${nativeLabel} flag`}
@@ -312,10 +400,10 @@ export default function Settings() {
                   />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                  <p className="text-sm font-semibold text-neutral-800 dark:text-white">
                     {nativeLabel}
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
                     {label}
                   </p>
                 </div>
@@ -329,11 +417,11 @@ export default function Settings() {
       <div>
         <div className="flex items-center space-x-2 mb-1">
           <Hash className="w-4 h-4 text-accent-700 dark:text-accent-400" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
             Number Digits Style
           </h3>
         </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
           Choose between standard numbers or localized traditional digit systems
           (e.g., Khmer, Lao, Burmese).
         </p>
@@ -360,7 +448,7 @@ export default function Settings() {
                   <p className="text-lg font-bold text-accent-700 dark:text-accent-400 mb-2">
                     {sample}
                   </p>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                  <p className="text-sm font-semibold text-neutral-800 dark:text-white">
                     {label}
                   </p>
                 </div>
@@ -374,11 +462,11 @@ export default function Settings() {
       <div>
         <div className="flex items-center space-x-2 mb-1">
           <Hourglass className="w-4 h-4 text-accent-700 dark:text-accent-400" />
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
             Loading Screen
           </h3>
         </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
           Choose the animation shown while a page or your account is loading. It
           is saved in this browser.
         </p>
@@ -408,7 +496,7 @@ export default function Settings() {
                   className={`text-sm font-semibold text-center ${
                     active
                       ? "text-accent-700 dark:text-accent-400"
-                      : "text-slate-800 dark:text-white"
+                      : "text-neutral-800 dark:text-white"
                   }`}
                 >
                   {label}
@@ -420,22 +508,36 @@ export default function Settings() {
 
         <button
           type="button"
-          onClick={() => setPreviewing(true)}
-          className={`mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-accent-600 text-accent-700 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-500/10 transition-colors ${focusStyle}`}
+          onClick={() => setPreviewing("loading")}
+          className={`mt-4 ${previewButton}`}
         >
           <Play className="w-4 h-4" /> Preview full screen
         </button>
       </div>
 
       {/* Full-screen preview of the chosen loading screen */}
-      {previewing && (
+      {previewing === "loading" && (
         <div
           className="fixed inset-0 z-[100] cursor-pointer"
-          onClick={() => setPreviewing(false)}
+          onClick={() => setPreviewing(null)}
           role="presentation"
         >
           <LoadingScreen />
-          <p className="absolute bottom-8 inset-x-0 text-center text-xs text-stone-400">
+          <p className="absolute bottom-8 inset-x-0 text-center text-xs text-neutral-400">
+            Click anywhere or press Esc to close
+          </p>
+        </div>
+      )}
+
+      {/* Full-screen preview of the chosen background effect */}
+      {previewing === "background" && (
+        <div
+          className="fixed inset-0 z-[100] cursor-pointer bg-neutral-50 dark:bg-neutral-950"
+          onClick={() => setPreviewing(null)}
+          role="presentation"
+        >
+          <BackgroundEffect type={backgroundStyle} />
+          <p className="absolute bottom-8 inset-x-0 text-center text-xs text-neutral-400">
             Click anywhere or press Esc to close
           </p>
         </div>

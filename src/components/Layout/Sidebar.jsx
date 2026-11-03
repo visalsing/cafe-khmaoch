@@ -1,3 +1,4 @@
+// Dashboard/Layouts/Sidebar.jsx
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
@@ -23,6 +24,7 @@ import {
   Flag,
   User,
   QrCode,
+  Palette,
 } from "lucide-react";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import { useAuth } from "../../context/AuthContext";
@@ -126,6 +128,7 @@ const menuItems = [
       { id: "pages-overview", path: "/dashboard/pages", label: "Pages" },
       { id: "pages-hero", path: "/dashboard/pages/hero", label: "Hero" },
       { id: "map", path: "/dashboard/pages/maps", label: "Map" },
+      { id: "pages-about", path: "/dashboard/pages/about", label: "About" },
     ],
   },
   {
@@ -205,6 +208,12 @@ const menuItems = [
         path: "/dashboard/qr-management",
         icon: QrCode,
         label: "QR Website",
+      },
+      {
+        id: "themes",
+        path: "/dashboard/themes",
+        icon: Palette,
+        label: "Themes",
       },
     ],
   },
@@ -393,22 +402,22 @@ function Sidebar({ collapsed, onToggle }) {
   const renderSearchBar = () => (
     <div className="px-4 pt-4">
       <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+        <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search menu..."
-          className="w-full pl-9 pr-9 py-2.5 bg-slate-100
-            dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl
-            text-sm text-slate-800 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2
+          className="w-full pl-9 pr-9 py-2.5 bg-neutral-100
+            dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl
+            text-sm text-neutral-800 dark:text-white placeholder-neutral-500 focus:outline-none focus:ring-2
             focus:ring-accent-500 focus:border-transparent transition-all"
         />
         {isSearching && (
           <button
             onClick={clearSearch}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-md text-slate-400
-              hover:text-slate-600 dark:hover:text-slate-300"
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-md text-neutral-400
+              hover:text-neutral-600 dark:hover:text-neutral-300"
           >
             <X className="w-4 h-4" />
           </button>
@@ -418,9 +427,9 @@ function Sidebar({ collapsed, onToggle }) {
   );
 
   const renderNavContent = (isMobile = false) => (
-    <nav className="flex-1 p-4 space-y-2 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-slate-600">
+    <nav className="flex-1 p-4 space-y-2 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-neutral-300 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-neutral-400 dark:hover:[&::-webkit-scrollbar-thumb]:bg-neutral-600">
       {filteredMenuItems.length === 0 ? (
-        <div className="flex flex-col items-center justify-center text-center py-10 px-4 text-slate-400 dark:text-slate-500">
+        <div className="flex flex-col items-center justify-center text-center py-10 px-4 text-neutral-400 dark:text-neutral-500">
           <SearchX className="w-8 h-8 mb-2" />
           <p className="text-sm">No menu items match "{searchQuery}"</p>
         </div>
@@ -439,14 +448,13 @@ function Sidebar({ collapsed, onToggle }) {
                   className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
                     isParentActive
                       ? "bg-gradient-to-r from-accent-500 to-accent-600 text-white shadow-lg shadow-accent-500/25"
-                      : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
+                      : "text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/50"
                   }`}
                   onClick={() => toggleExpanded(item.id)}
                 >
                   <div className="flex items-center space-x-3">
                     <item.icon className="w-5 h-5 flex-shrink-0" />
                     {(!collapsed || isMobile) && (
-                      // <span className="font-medium ml-2">{item.label}</span>
                       <span className="font-medium ml-2">
                         {t(
                           {
@@ -484,14 +492,13 @@ function Sidebar({ collapsed, onToggle }) {
                     `w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 ${
                       isActive
                         ? "bg-gradient-to-r from-accent-500 to-accent-600 text-white shadow-lg shadow-accent-500/25"
-                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50"
+                        : "text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800/50"
                     }`
                   }
                 >
                   <div className="flex items-center space-x-3">
                     <item.icon className="w-5 h-5 flex-shrink-0" />
                     {(!collapsed || isMobile) && (
-                      // <span className="font-medium ml-2">{item.label}</span>
                       <span className="font-medium ml-2">
                         {t(
                           {
@@ -529,11 +536,10 @@ function Sidebar({ collapsed, onToggle }) {
                           `block w-full text-left p-2 text-sm rounded-lg transition-all ${
                             isActive
                               ? "bg-accent-100 text-accent-700 font-medium dark:bg-accent-500/15 dark:text-accent-400"
-                              : "text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50"
+                              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/50"
                           }`
                         }
                       >
-                        {/* {subitem.label} */}
                         {t(
                           {
                             menu: "menu_items",
@@ -574,12 +580,12 @@ function Sidebar({ collapsed, onToggle }) {
   //  - normal mode:        desktop = small "Log out" icon, phone menu = a "Log out" button
   //  - impersonation mode: an accent card with an "Exit impersonation" button (desktop and phone)
   const renderUserCard = (isMobile = false) => (
-    <div className="p-4 border-t border-slate-200/50 dark:border-slate-700/50">
+    <div className="p-4 border-t border-neutral-200/50 dark:border-neutral-700/50">
       <div
         className={`rounded-xl p-3 ${
           isImpersonating
             ? "bg-accent-50 ring-1 ring-accent-200 dark:bg-accent-950/30 dark:ring-accent-800/60"
-            : "bg-slate-50 dark:bg-slate-800/50"
+            : "bg-neutral-50 dark:bg-neutral-800/50"
         }`}
       >
         <div className="flex items-center space-x-3">
@@ -588,10 +594,10 @@ function Sidebar({ collapsed, onToggle }) {
             className="w-10 h-10 rounded-full ring-2 ring-accent-500 flex-shrink-0"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
+            <p className="text-sm font-medium text-neutral-800 dark:text-white truncate">
               {fullName(currentUser) || "User"}
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
               {ROLE_INFO[currentUser?.role]?.label ||
                 currentUser?.role ||
                 "Member"}
@@ -604,7 +610,7 @@ function Sidebar({ collapsed, onToggle }) {
               onClick={() => askLogout(false)}
               title="Log out"
               aria-label="Log out"
-              className="p-2 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30 transition-colors"
+              className="p-2 rounded-lg text-neutral-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30 transition-colors"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -646,9 +652,9 @@ function Sidebar({ collapsed, onToggle }) {
       <div
         className={`hidden md:flex ${
           collapsed ? "w-20" : "w-72"
-        } h-screen transition-all duration-300 ease-in-out bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-700/50 flex-col relative z-10`}
+        } h-screen transition-all duration-300 ease-in-out bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border-r border-neutral-200/50 dark:border-neutral-700/50 flex-col relative z-10`}
       >
-        <div className="p-6 border-b border-slate-200/50 dark:border-slate-700/50">
+        <div className="p-6 border-b border-neutral-200/50 dark:border-neutral-700/50">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-tr from-accent-500 to-accent-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden p-1.5">
               <img
@@ -659,10 +665,10 @@ function Sidebar({ collapsed, onToggle }) {
             </div>
             {!collapsed && (
               <div>
-                <h1 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">
+                <h1 className="text-xl font-bold text-neutral-800 dark:text-white leading-tight">
                   Café ខ្មោច
                 </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
                   {t("coffee_relaxed_spooky")}
                 </p>
               </div>
@@ -678,7 +684,7 @@ function Sidebar({ collapsed, onToggle }) {
 
         {/* narrow sidebar: only an icon (accent while impersonating) */}
         {collapsed && (
-          <div className="flex justify-center border-t border-slate-200/50 p-3 dark:border-slate-700/50">
+          <div className="flex justify-center border-t border-neutral-200/50 p-3 dark:border-neutral-700/50">
             <button
               type="button"
               onClick={() => askLogout(false)}
@@ -687,7 +693,7 @@ function Sidebar({ collapsed, onToggle }) {
               className={`p-2.5 rounded-xl transition-colors ${
                 isImpersonating
                   ? "bg-accent-100 text-accent-700 hover:bg-accent-200 dark:bg-accent-900/40 dark:text-accent-300 dark:hover:bg-accent-900/60"
-                  : "text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"
+                  : "text-neutral-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950/30"
               }`}
             >
               {isImpersonating ? (
@@ -701,8 +707,8 @@ function Sidebar({ collapsed, onToggle }) {
       </div>
 
       {collapsed && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900 md:hidden transition-all duration-300 ease-in-out transform animate-in slide-in-from-top fade-in">
-          <div className="flex items-center justify-between p-6 border-b border-slate-200/50 dark:border-slate-700/50">
+        <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-neutral-900 md:hidden transition-all duration-300 ease-in-out transform animate-in slide-in-from-top fade-in">
+          <div className="flex items-center justify-between p-6 border-b border-neutral-200/50 dark:border-neutral-700/50">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-to-tr from-accent-500 to-accent-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden p-1.5">
                 <img
@@ -712,17 +718,17 @@ function Sidebar({ collapsed, onToggle }) {
                 />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">
+                <h1 className="text-xl font-bold text-neutral-800 dark:text-white leading-tight">
                   Café ខ្មោច
                 </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
                   {t("coffee_relaxed_spooky")}
                 </p>
               </div>
             </div>
             <button
               onClick={onToggle}
-              className="p-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="p-2.5 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
             >
               <X className="w-6 h-6" />
             </button>

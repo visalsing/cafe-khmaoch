@@ -14,6 +14,7 @@ import {
   ComputerIcon,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useThemeOptions } from "../Dashboard/themeOptions.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import LoadingScreen, { Loader } from "../Loading/Loading.jsx";
@@ -74,13 +75,17 @@ const flagImages = {
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { theme, setTheme } = useTheme();
+  // const { theme, setTheme } = useTheme();
+  const { theme } = useTheme();
+  const { choices, choose } = useThemeOptions();
   const { language, setLanguage, t, languages = [] } = useLanguage();
   const [backgroundStyle, setBackgroundStyle] = useBackgroundStyle();
 
   // Loading screen style: the same store Settings.jsx uses, so both pages always agree
   const [loadingStyle, setLoadingStyle] = useLoadingStyle();
-  const [previewing, setPreviewing] = useState(false);
+
+  // Which full-screen preview is open: "loading" | "background" | null
+  const [previewing, setPreviewing] = useState(null);
 
   // Accent color: the same store Settings.jsx uses
   const [accent, setAccent] = useAccent();
@@ -110,14 +115,21 @@ export default function SettingsPage() {
     window.dispatchEvent(new Event("digitStyleChange"));
   };
 
-  // the full-screen preview closes by itself after 3 seconds, or with a click / the Esc key
+  // Full-screen previews close with a click or the Esc key.
+  // The loading screen preview also closes by itself after 3 seconds;
+  // the background preview stays open so you can watch the animation.
   useEffect(() => {
     if (!previewing) return undefined;
-    const timer = setTimeout(() => setPreviewing(false), 3000);
-    const onKey = (e) => e.key === "Escape" && setPreviewing(false);
+
+    const timer =
+      previewing === "loading"
+        ? setTimeout(() => setPreviewing(null), 3000)
+        : null;
+    const onKey = (e) => e.key === "Escape" && setPreviewing(null);
     window.addEventListener("keydown", onKey);
+
     return () => {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
       window.removeEventListener("keydown", onKey);
     };
   }, [previewing]);
@@ -126,15 +138,17 @@ export default function SettingsPage() {
     "border-accent-600 bg-accent-50/70 dark:border-accent-500 dark:bg-accent-950/30 shadow-sm";
 
   const inactiveCard =
-    "border-accent-100 dark:border-slate-800 hover:border-accent-400 dark:hover:border-accent-700 bg-white dark:bg-slate-900/50";
+    "border-accent-100 dark:border-neutral-800 hover:border-accent-400 dark:hover:border-accent-700 bg-white dark:bg-neutral-900/50";
 
   const focusStyle =
-    "focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900";
+    "focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 dark:focus:ring-offset-neutral-900";
+
+  const previewButton = `inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-accent-600 text-accent-700 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-950/30 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent ${focusStyle}`;
 
   return (
-    <div className="min-h-screen bg-accent-50/40 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    <div className="min-h-screen bg-accent-50/40 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 transition-colors duration-300">
       {/* ================= NAVBAR SECTION ================= */}
-      <nav className="sticky top-0 z-40 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-b border-accent-100 dark:border-slate-800">
+      <nav className="sticky top-0 z-40 bg-white/85 dark:bg-neutral-900/85 backdrop-blur-md border-b border-accent-100 dark:border-neutral-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div
             className="flex items-center space-x-3 cursor-pointer"
@@ -166,7 +180,7 @@ export default function SettingsPage() {
             {t("settings") || "Settings"}
           </h1>
 
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
             {t("systemPreferences") ||
               "Manage system configuration, appearance themes, and language preferences"}
           </p>
@@ -174,22 +188,22 @@ export default function SettingsPage() {
 
         <div className="space-y-6">
           {/* Appearance Section Card */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-slate-800 space-y-4">
+          <div className="bg-white dark:bg-neutral-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-neutral-800 space-y-4">
             <div>
               <div className="flex items-center space-x-2">
-              <ComputerIcon className="w-4 h-4 text-accent-700 dark:text-accent-400" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white mb-1">
-                {t("appearance") || "Appearance"}
-              </h3>
+                <ComputerIcon className="w-4 h-4 text-accent-700 dark:text-accent-400" />
+                <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-900 dark:text-white mb-1">
+                  {t("appearance") || "Appearance"}
+                </h3>
               </div>
 
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
                 {t("appearanceDescription") ||
                   "Choose how the dashboard looks on this device."}
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {themeOptions.map(
                 ({ value, labelKey, descriptionKey, icon: Icon }) => {
                   const active = theme === value;
@@ -215,36 +229,100 @@ export default function SettingsPage() {
                           className={`w-6 h-6 mb-3 ${
                             active
                               ? "text-accent-700 dark:text-accent-400"
-                              : "text-slate-500 dark:text-slate-400"
+                              : "text-neutral-500 dark:text-neutral-400"
                           }`}
                         />
 
-                        <p className="text-sm font-bold text-slate-900 dark:text-white">
+                        <p className="text-sm font-bold text-neutral-900 dark:text-white">
                           {t(labelKey)}
                         </p>
                       </div>
 
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
                         {t(descriptionKey)}
                       </p>
                     </button>
                   );
                 },
               )}
+            </div> */}
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {choices.map((choice) => {
+                const active = theme === choice.value;
+                const Icon = choice.Icon;
+                return (
+                  <button
+                    key={choice.value}
+                    type="button"
+                    onClick={() => choose(choice)}
+                    aria-pressed={active}
+                    className={`relative p-5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between text-left ${focusStyle} ${active ? activeCard : inactiveCard}`}
+                  >
+                    {active && (
+                      <span className="absolute top-4 right-4 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center shadow-md">
+                        <Check className="w-3.5 h-3.5 text-white" />
+                      </span>
+                    )}
+                    <div>
+                      <Icon
+                        className={`w-6 h-6 mb-3 ${active ? "text-accent-700 dark:text-accent-400" : "text-neutral-500 dark:text-neutral-400"}`}
+                      />
+                      <p className="text-sm font-bold text-neutral-900 dark:text-white">
+                        {choice.label}
+                      </p>
+                    </div>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
+                      {choice.description}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
+
+            {/* <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {choices.map((choice) => {
+                const active = theme === choice.value;
+                const Icon = choice.Icon;
+                return (
+                  <button
+                    key={choice.value}
+                    type="button"
+                    onClick={() => choose(choice)}
+                    aria-pressed={active}
+                    className={`relative text-left p-4 rounded-xl border transition-all ${focusStyle} ${active ? activeCard : inactiveCard}`}
+                  >
+                    {active && (
+                      <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center">
+                        <Check className="w-3.5 h-3.5 text-white" />
+                      </span>
+                    )}
+                    <Icon
+                      className={`w-5 h-5 mb-3 ${active ? "text-accent-700 dark:text-accent-400" : "text-neutral-500 dark:text-neutral-400"}`}
+                    />
+                    <p className="text-sm font-semibold text-neutral-800 dark:text-white">
+                      {choice.label}
+                    </p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                      {choice.description}
+                    </p>
+                  </button>
+                );
+              })}
+            </div> */}
           </div>
 
           {/* Accent Color Card */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-slate-800 space-y-4">
+          <div className="bg-white dark:bg-neutral-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-neutral-800 space-y-4">
             <div className="flex items-center space-x-2">
               <Palette className="w-4 h-4 text-accent-700 dark:text-accent-400" />
 
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-900 dark:text-white">
                   {t("accentColor") || "Accent Color"}
                 </h3>
 
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   {t("accentColorDescription") ||
                     "Pick the highlight color used across the app."}
                 </p>
@@ -277,7 +355,7 @@ export default function SettingsPage() {
                       style={{ background: swatch }}
                     />
 
-                    <p className="text-xs font-bold text-slate-900 dark:text-white">
+                    <p className="text-xs font-bold text-neutral-900 dark:text-white">
                       {label}
                     </p>
                   </button>
@@ -287,16 +365,16 @@ export default function SettingsPage() {
           </div>
 
           {/* Background Effect Card */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-slate-800 space-y-4">
+          <div className="bg-white dark:bg-neutral-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-neutral-800 space-y-4">
             <div className="flex items-center space-x-2">
               <Sparkles className="w-4 h-4 text-accent-700 dark:text-accent-400" />
 
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-900 dark:text-white">
                   Background Effect
                 </h3>
 
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   Choose an animated effect behind the page. It follows your
                   accent color and is saved in this browser.
                 </p>
@@ -332,7 +410,7 @@ export default function SettingsPage() {
                       className={`text-xs font-bold text-center ${
                         active
                           ? "text-accent-700 dark:text-accent-400"
-                          : "text-slate-900 dark:text-white"
+                          : "text-neutral-900 dark:text-white"
                       }`}
                     >
                       {label}
@@ -341,19 +419,28 @@ export default function SettingsPage() {
                 );
               })}
             </div>
+
+            <button
+              type="button"
+              onClick={() => setPreviewing("background")}
+              disabled={backgroundStyle === "none"}
+              className={previewButton}
+            >
+              <Play className="w-4 h-4" /> Preview full screen
+            </button>
           </div>
 
           {/* Language Section Card */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-slate-800 space-y-4">
+          <div className="bg-white dark:bg-neutral-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-neutral-800 space-y-4">
             <div className="flex items-center space-x-2">
               <Languages className="w-4 h-4 text-accent-700 dark:text-accent-400" />
 
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-900 dark:text-white">
                   {t("language") || "Language"}
                 </h3>
 
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   {t("languageDescription") ||
                     "Choose the language used throughout the dashboard."}
                 </p>
@@ -384,7 +471,7 @@ export default function SettingsPage() {
                     )}
 
                     {/* Language flag */}
-                    <div className="w-7 h-5 rounded shadow-sm overflow-hidden flex items-center justify-center bg-accent-50 dark:bg-slate-800 flex-shrink-0">
+                    <div className="w-7 h-5 rounded shadow-sm overflow-hidden flex items-center justify-center bg-accent-50 dark:bg-neutral-800 flex-shrink-0">
                       <img
                         src={flagUrl}
                         alt={`${nativeLabel} flag`}
@@ -400,11 +487,11 @@ export default function SettingsPage() {
                     </div>
 
                     <div>
-                      <p className="text-sm font-bold text-slate-900 dark:text-white">
+                      <p className="text-sm font-bold text-neutral-900 dark:text-white">
                         {nativeLabel}
                       </p>
 
-                      <p className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 mt-0.5">
+                      <p className="text-xs uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mt-0.5">
                         {label}
                       </p>
                     </div>
@@ -415,16 +502,16 @@ export default function SettingsPage() {
           </div>
 
           {/* Number Digits System Card */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-slate-800 space-y-4">
+          <div className="bg-white dark:bg-neutral-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-neutral-800 space-y-4">
             <div className="flex items-center space-x-2">
               <Hash className="w-4 h-4 text-accent-700 dark:text-accent-400" />
 
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-900 dark:text-white">
                   {t("numberDigitsStyle") || "Number Digits Style"}
                 </h3>
 
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   {t("numberDigitsDescription") ||
                     "Choose standard digits or localized numerical systems (Khmer, Lao, Burmese)."}
                 </p>
@@ -455,7 +542,7 @@ export default function SettingsPage() {
                       {sample}
                     </p>
 
-                    <p className="text-xs font-bold text-slate-900 dark:text-white">
+                    <p className="text-xs font-bold text-neutral-900 dark:text-white">
                       {label}
                     </p>
                   </button>
@@ -465,16 +552,16 @@ export default function SettingsPage() {
           </div>
 
           {/* Loading Screen Card */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-slate-800 space-y-4">
+          <div className="bg-white dark:bg-neutral-900 p-6 rounded-3xl shadow-sm border border-accent-100 dark:border-neutral-800 space-y-4">
             <div className="flex items-center space-x-2">
               <Hourglass className="w-4 h-4 text-accent-700 dark:text-accent-400" />
 
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-neutral-900 dark:text-white">
                   Loading Screen
                 </h3>
 
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   Choose the animation shown while a page or your account is
                   loading. It is saved in this browser.
                 </p>
@@ -510,7 +597,7 @@ export default function SettingsPage() {
                       className={`text-xs font-bold ${
                         active
                           ? "text-accent-700 dark:text-accent-400"
-                          : "text-slate-900 dark:text-white"
+                          : "text-neutral-900 dark:text-white"
                       }`}
                     >
                       {label}
@@ -522,8 +609,8 @@ export default function SettingsPage() {
 
             <button
               type="button"
-              onClick={() => setPreviewing(true)}
-              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-accent-600 text-accent-700 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-950/30 transition-colors cursor-pointer ${focusStyle}`}
+              onClick={() => setPreviewing("loading")}
+              className={previewButton}
             >
               <Play className="w-4 h-4" /> Preview full screen
             </button>
@@ -532,14 +619,28 @@ export default function SettingsPage() {
       </main>
 
       {/* Full-screen preview of the chosen loading screen */}
-      {previewing && (
+      {previewing === "loading" && (
         <div
           className="fixed inset-0 z-[100] cursor-pointer"
-          onClick={() => setPreviewing(false)}
+          onClick={() => setPreviewing(null)}
           role="presentation"
         >
           <LoadingScreen />
-          <p className="absolute bottom-8 inset-x-0 text-center text-xs text-stone-400">
+          <p className="absolute bottom-8 inset-x-0 text-center text-xs text-neutral-400">
+            Click anywhere or press Esc to close
+          </p>
+        </div>
+      )}
+
+      {/* Full-screen preview of the chosen background effect */}
+      {previewing === "background" && (
+        <div
+          className="fixed inset-0 z-[100] cursor-pointer bg-neutral-50 dark:bg-neutral-950"
+          onClick={() => setPreviewing(null)}
+          role="presentation"
+        >
+          <BackgroundEffect type={backgroundStyle} />
+          <p className="absolute bottom-8 inset-x-0 text-center text-xs text-neutral-400">
             Click anywhere or press Esc to close
           </p>
         </div>
