@@ -134,9 +134,29 @@ const isActiveStatus = (v) =>
   v === true ||
   String(v).toLowerCase() === "active" ||
   String(v) === "1";
+
+// 1 / 0 from a number, boolean or string; anything else gives the fallback
+const toBit = (v, fallback) => {
+  if (v === true || v === 1 || v === "1" || v === "true") return 1;
+  if (v === false || v === 0 || v === "0" || v === "false") return 0;
+  return fallback;
+};
+
+// firstThenLast: 1 = "First Last", 0 = "Last First" (anything else counts as 1)
+const joinName = (first, last, firstThenLast) =>
+  (firstThenLast === 0 ? [last, first] : [first, last])
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
 const normalizeUser = (u) => ({
   firstName: pick(u, "firstName", "first_name") ?? "",
   lastName: pick(u, "lastName", "last_name") ?? "",
+  firstNameNative: pick(u, "firstNameNative", "first_name_native") ?? "",
+  lastNameNative: pick(u, "lastNameNative", "last_name_native") ?? "",
+  // is_fullname = Latin name order, is_nfullname = native name order
+  isFullname: toBit(pick(u, "isFullname", "is_fullname"), 1),
+  isNfullname: toBit(pick(u, "isNfullname", "is_nfullname"), 1),
   email: pick(u, "email") ?? "",
   phone: pick(u, "phone") ?? "",
   role: pick(u, "role", "roleCode", "role_code") ?? "customer",
@@ -791,8 +811,15 @@ export default function Profile() {
   const me = normalizeUser(currentUser);
   // roles are stored in every language: {"en":"Customer","km":"..."}. The code is only the fallback
   const roleLabel = tr(pick(currentUser, "roleTitle", "role_title")) || me.role;
+
+  // name order comes from the account: is_fullname (Latin) and is_nfullname (native)
   const displayName =
-    [me.firstName, me.lastName].filter(Boolean).join(" ") || "Customer";
+    joinName(me.firstName, me.lastName, me.isFullname) || "Customer";
+  const nativeDisplayName = joinName(
+    me.firstNameNative,
+    me.lastNameNative,
+    me.isNfullname,
+  );
   const initial = (me.firstName || me.email || "U")[0].toUpperCase();
 
   const notify = (type, title, message) => {
@@ -1064,9 +1091,16 @@ export default function Profile() {
           </div>
 
           <div className="mt-4 space-y-2">
-            <h2 className="break-words text-2xl font-extrabold tracking-tight text-stone-900 dark:text-white">
-              {displayName}
-            </h2>
+            <div>
+              <h2 className="break-words text-2xl font-extrabold tracking-tight text-stone-900 dark:text-white">
+                {displayName}
+              </h2>
+              {nativeDisplayName && (
+                <p className="break-words text-base font-semibold text-stone-500 dark:text-stone-400">
+                  {nativeDisplayName}
+                </p>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-semibold capitalize text-stone-600 ring-1 ring-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:ring-stone-700">
                 {roleLabel}
@@ -1698,6 +1732,11 @@ export default function Profile() {
                   <div className="truncate text-sm font-bold text-stone-900 dark:text-white">
                     {displayName}
                   </div>
+                  {nativeDisplayName && (
+                    <div className="truncate text-xs text-stone-400">
+                      {nativeDisplayName}
+                    </div>
+                  )}
                   <div className="truncate text-xs text-stone-500">
                     {me.email}
                   </div>

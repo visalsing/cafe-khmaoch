@@ -80,12 +80,12 @@ export default function CartPage() {
       <nav className="sticky top-0 z-40 bg-white/80 dark:bg-stone-900/80 backdrop-blur-md border-b border-stone-200 dark:border-stone-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center text-white text-xl shadow-md">☕</div>
-            <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">Café ខ្មោច</span>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-accent-500 to-orange-600 flex items-center justify-center text-white text-xl shadow-md">☕</div>
+            <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-accent-600 to-orange-600 bg-clip-text text-transparent">Café ខ្មោច</span>
           </div>
           <button
             onClick={() => navigate("/shop")}
-            className="px-4 py-2 text-sm font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded-xl border border-amber-200 dark:border-amber-800 transition-all cursor-pointer"
+            className="px-4 py-2 text-sm font-semibold text-accent-700 dark:text-accent-400 bg-accent-50 dark:bg-accent-950/50 hover:bg-accent-100 dark:hover:bg-accent-900/50 rounded-xl border border-accent-200 dark:border-accent-800 transition-all cursor-pointer"
           >
             &larr; Continue Ordering
           </button>
@@ -99,7 +99,7 @@ export default function CartPage() {
         </div>
 
         {oldItems.length > 0 && (
-          <div role="alert" className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-sm flex items-center justify-between gap-3">
+          <div role="alert" className="p-4 rounded-2xl bg-accent-50 dark:bg-accent-950/30 border border-accent-200 dark:border-accent-800 text-sm flex items-center justify-between gap-3">
             <span>
               {oldItems.length} item{oldItems.length > 1 ? "s were" : " was"} added before the menu was updated and cannot be ordered.
               Remove {oldItems.length > 1 ? "them" : "it"} and add {oldItems.length > 1 ? "them" : "it"} again from the menu.
@@ -115,7 +115,7 @@ export default function CartPage() {
             <div className="text-5xl">🛒</div>
             <h3 className="text-xl font-bold">Your cart is empty</h3>
             <p className="text-sm text-stone-500">You haven't added any drinks yet.</p>
-            <button onClick={() => navigate("/shop")} className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-md transition-all cursor-pointer">
+            <button onClick={() => navigate("/shop")} className="px-6 py-3 bg-accent-600 hover:bg-accent-700 text-white font-semibold rounded-xl shadow-md transition-all cursor-pointer">
               Browse the Menu
             </button>
           </div>
@@ -128,7 +128,7 @@ export default function CartPage() {
                   <div key={item.id} className="bg-white dark:bg-stone-900 p-5 rounded-2xl shadow-sm border border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row items-center gap-5">
                     <img src={item.img} alt={item.title} className="w-24 h-24 sm:w-28 sm:h-28 object-cover rounded-xl bg-stone-100 dark:bg-stone-800 shrink-0" />
                     <div className="flex-1 space-y-1 text-center sm:text-left">
-                      <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">{item.category}</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-accent-600 dark:text-accent-400">{item.category}</span>
                       <h3 className="font-semibold">{item.title}</h3>
                       <div className="flex flex-col sm:items-start">
                         <span className="text-lg font-bold">{unit.riel}</span>
@@ -157,12 +157,12 @@ export default function CartPage() {
                         key={m.id}
                         onClick={() => setShippingMethod(m.id)}
                         className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                          shippingMethod === m.id ? "border-amber-600 bg-amber-50/50 dark:bg-amber-950/30" : "border-stone-200 dark:border-stone-800 hover:border-amber-400"
+                          shippingMethod === m.id ? "border-accent-600 bg-accent-50/50 dark:bg-accent-950/30" : "border-stone-200 dark:border-stone-800 hover:border-accent-400"
                         }`}
                       >
                         <div className="flex justify-between items-center font-semibold text-sm">
                           <span>{m.label}</span>
-                          <span className="text-amber-600 dark:text-amber-400">{m.price === 0 ? "Free" : fee.riel}</span>
+                          <span className="text-accent-600 dark:text-accent-400">{m.price === 0 ? "Free" : fee.riel}</span>
                         </div>
                         {m.price > 0 && <div className="text-right text-xs text-stone-400 font-medium">{fee.usd}</div>}
                         {m.sub && <p className="text-xs text-stone-500 mt-1">{m.sub}</p>}
@@ -187,7 +187,7 @@ export default function CartPage() {
                       setPromoApplied(false); // typing again cancels an applied code
                       setPromoMsg("");
                     }}
-                    className="flex-1 px-3 py-2 text-xs bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl focus:outline-none focus:border-amber-500"
+                    className="flex-1 px-3 py-2 text-xs bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-xl focus:outline-none focus:border-accent-500"
                   />
                   <button type="submit" className="px-4 py-2 bg-stone-900 dark:bg-stone-800 text-white font-semibold text-xs rounded-xl hover:bg-stone-700 transition-colors cursor-pointer">Apply</button>
                 </form>
@@ -217,7 +217,7 @@ export default function CartPage() {
                 </div>
                 <div className="border-t border-stone-200 dark:border-stone-800 pt-3 flex justify-between text-base font-extrabold items-center">
                   <span>Total Amount</span>
-                  <div className="text-right text-amber-600 dark:text-amber-400">{amount(quote?.total)}</div>
+                  <div className="text-right text-accent-600 dark:text-accent-400">{amount(quote?.total)}</div>
                 </div>
               </div>
 
@@ -230,7 +230,7 @@ export default function CartPage() {
               <button
                 disabled={!canCheckout}
                 onClick={() => navigate("/checkout", { state: { shippingMethod, promoCode: promoApplied ? promoCode : "" } })}
-                className="w-full py-3.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl shadow-lg shadow-amber-500/20 transition-all text-center cursor-pointer"
+                className="w-full py-3.5 bg-accent-600 hover:bg-accent-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl shadow-lg shadow-accent-500/20 transition-all text-center cursor-pointer"
               >
                 {pending ? "Updating prices..." : "Proceed to Checkout"}
               </button>

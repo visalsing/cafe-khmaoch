@@ -140,18 +140,28 @@ const toBit = (v, fallback) => {
     return 0;
   return fallback;
 };
+// the positions of a user: always an array of numbers (also reads a single old positionId)
+const toIdList = (u) => {
+  const raw = pick(u, "positionIds", "position_ids");
+  if (Array.isArray(raw)) return raw.map(Number).filter(Number.isFinite);
+  const single = pick(u, "positionId", "position_id");
+  return single !== undefined && single !== "" ? [Number(single)] : [];
+};
 const normalizeUser = (u) => ({
   id: u.id,
   firstName: pick(u, "firstName", "first_name") ?? "",
   lastName: pick(u, "lastName", "last_name") ?? "",
   firstNameNative: pick(u, "firstNameNative", "first_name_native") ?? "",
   lastNameNative: pick(u, "lastNameNative", "last_name_native") ?? "",
+  // is_fullname = Latin name order, is_nfullname = native name order
+  isFullname: toBit(pick(u, "isFullname", "is_fullname"), 1),
+  isNfullname: toBit(pick(u, "isNfullname", "is_nfullname"), 1),
   email: pick(u, "email") ?? "",
   phone: pick(u, "phone") ?? "",
   role: pick(u, "role", "roleCode", "role_code") ?? "",
   genderId: pick(u, "genderId", "gender_id") ?? "",
   nationalityId: pick(u, "nationalityId", "nationality_id") ?? "",
-  positionId: pick(u, "positionId", "position_id") ?? "",
+  positionIds: toIdList(u),
   permissionId: pick(u, "permissionId", "permission_id") ?? "",
   address: pick(u, "address") ?? "",
   region: pick(u, "region") ?? "",
@@ -167,8 +177,16 @@ const normalizeUser = (u) => ({
   lastLoginAt: pick(u, "lastLoginAt", "last_login_at"),
 });
 
-const fullName = (u) => `${u.lastName} ${u.firstName}`.trim();
-const nativeName = (u) => `${u.lastNameNative} ${u.firstNameNative}`.trim();
+// firstThenLast: 1 = "First Last", 0 = "Last First" (anything else counts as 1)
+const joinName = (first, last, firstThenLast) =>
+  (firstThenLast === 0 ? [last, first] : [first, last])
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+const fullName = (u) => joinName(u.firstName, u.lastName, u.isFullname);
+const nativeName = (u) =>
+  joinName(u.firstNameNative, u.lastNameNative, u.isNfullname);
 
 // text of a translated field; position titles are lists ({"en": ["Owner", "Manager"]})
 const labelOf = (value) => {
@@ -191,6 +209,8 @@ const emptyForm = {
   lastName: "",
   firstNameNative: "",
   lastNameNative: "",
+  isFullname: 1,
+  isNfullname: 1,
   email: "",
   phone: "",
   genderId: "",
@@ -209,6 +229,8 @@ const formFromProfile = (u) => ({
   lastName: u.lastName,
   firstNameNative: u.firstNameNative,
   lastNameNative: u.lastNameNative,
+  isFullname: u.isFullname,
+  isNfullname: u.isNfullname,
   email: u.email,
   phone: u.phone,
   genderId: u.genderId,
@@ -227,6 +249,8 @@ const fingerprint = (f) =>
     lastName: f.lastName.trim(),
     firstNameNative: f.firstNameNative.trim(),
     lastNameNative: f.lastNameNative.trim(),
+    isFullname: Number(f.isFullname),
+    isNfullname: Number(f.isNfullname),
     email: f.email.trim().toLowerCase(),
     phone: f.phone.trim(),
     gender: idOrNull(f.genderId),
@@ -397,9 +421,26 @@ export default function Profile() {
     const item = list.find((x) => x.id === Number(id));
     return item ? labelOf(item[key]) || "—" : `#${id}?`;
   };
+
+  // "Owner, Manager · Barista" for a user with several positions
+  const positionsLabel = (ids) =>
+    ids && ids.length
+      ? ids
+          .map((id) => {
+            const item = positions.find((x) => x.id === Number(id));
+            return item ? labelOf(item.position_title) || `#${id}` : `#${id}?`;
+          })
+          .join(" · ")
+      : "—";
+
   const lookupOptions = (list, key) => [
     { value: "", label: "None" },
     ...list.map((x) => ({ value: x.id, label: labelOf(x[key]) || `#${x.id}` })),
+  ];
+
+  const nameOrderOptions = [
+    { value: 1, label: "First name + Last name" },
+    { value: 0, label: "Last name + First name" },
   ];
 
   const openEdit = () => {
@@ -453,6 +494,8 @@ export default function Profile() {
       fd.append("lastName", form.lastName.trim());
       fd.append("firstNameNative", form.firstNameNative.trim());
       fd.append("lastNameNative", form.lastNameNative.trim());
+      fd.append("isFullname", String(Number(form.isFullname)));
+      fd.append("isNfullname", String(Number(form.isNfullname)));
       // fd.append("email", form.email.trim());
       fd.append("phone", form.phone.trim());
       fd.append("genderId", String(form.genderId ?? ""));
@@ -650,41 +693,6 @@ export default function Profile() {
     }
   };
 
-  // const handlePassword = async (e) => {
-  //   e.preventDefault();
-  //   if (pwSaving) return;
-
-  //   const warn = (message) =>
-  //     notify("warning", "Please check the form", message);
-
-  //   if (!pw.current) return warn("Enter your current password.");
-  //   if (pw.next.length < 8)
-  //     return warn("The new password must be at least 8 characters.");
-  //   if (pw.next !== pw.confirm)
-  //     return warn("The new password and the confirmation do not match.");
-  //   if (pw.next === pw.current)
-  //     return warn("The new password must be different from the current one.");
-
-  //   setPwSaving(true);
-  //   try {
-  //     await profileService.changePassword(pw.current, pw.next);
-  //     setPw(emptyPw);
-  //     notify(
-  //       "success",
-  //       "Password updated",
-  //       "Your password was changed successfully.",
-  //     );
-  //   } catch (err) {
-  //     notify(
-  //       "error",
-  //       "Failed to update the password",
-  //       err.message || "Something went wrong. Please try again.",
-  //     );
-  //   } finally {
-  //     setPwSaving(false);
-  //   }
-  // };
-
   const handlePassword = async (e) => {
     e.preventDefault();
 
@@ -773,7 +781,6 @@ export default function Profile() {
     setForgotPasswordBusy(true);
 
     try {
-      // await profileService.requestForgotPasswordChangeCode();
       await profileService.requestForgotPasswordChangeCode(profile.email);
 
       setForgotPasswordCodeRequested(true);
@@ -1077,6 +1084,12 @@ export default function Profile() {
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Native name">{nativeName(profile) || "—"}</Field>
                 <Field label="Phone">{profile.phone || "—"}</Field>
+                <Field label="Name order (Latin)">
+                  {profile.isFullname === 0 ? "Last + First" : "First + Last"}
+                </Field>
+                <Field label="Name order (native)">
+                  {profile.isNfullname === 0 ? "Last + First" : "First + Last"}
+                </Field>
                 <Field label="Gender">
                   {nameIn(genders, profile.genderId, "gender")}
                 </Field>
@@ -1104,8 +1117,8 @@ export default function Profile() {
             <Card icon={ShieldCheck} title="Account">
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Role">{roleLabel(profile.role)}</Field>
-                <Field label="Position">
-                  {nameIn(positions, profile.positionId, "position_title")}
+                <Field label="Positions">
+                  {positionsLabel(profile.positionIds)}
                 </Field>
                 <Field label="Extra permission">
                   {nameIn(permissions, profile.permissionId, "name")}
@@ -1626,6 +1639,29 @@ export default function Profile() {
                       onChange={(e) => setField("lastName", e.target.value)}
                     />
                   </label>
+                  <label className={`${labelCls} sm:col-span-2`}>
+                    Name order (Latin name)
+                    <div className="relative mt-1 w-full">
+                      <CustomSelect
+                        value={form.isFullname}
+                        onChange={(value) =>
+                          setField("isFullname", Number(value))
+                        }
+                        options={nameOrderOptions}
+                      />
+                    </div>
+                    <span className="block mt-1 text-xs text-slate-500">
+                      Shown as:{" "}
+                      <strong className="text-slate-700 dark:text-slate-200">
+                        {fullName({
+                          firstName: form.firstName.trim(),
+                          lastName: form.lastName.trim(),
+                          isFullname: Number(form.isFullname),
+                        }) || "—"}
+                      </strong>
+                    </span>
+                  </label>
+
                   <label className={labelCls}>
                     First name (native)
                     <input
@@ -1646,6 +1682,28 @@ export default function Profile() {
                         setField("lastNameNative", e.target.value)
                       }
                     />
+                  </label>
+                  <label className={`${labelCls} sm:col-span-2`}>
+                    Name order (native name)
+                    <div className="relative mt-1 w-full">
+                      <CustomSelect
+                        value={form.isNfullname}
+                        onChange={(value) =>
+                          setField("isNfullname", Number(value))
+                        }
+                        options={nameOrderOptions}
+                      />
+                    </div>
+                    <span className="block mt-1 text-xs text-slate-500">
+                      Shown as:{" "}
+                      <strong className="text-slate-700 dark:text-slate-200">
+                        {nativeName({
+                          firstNameNative: form.firstNameNative.trim(),
+                          lastNameNative: form.lastNameNative.trim(),
+                          isNfullname: Number(form.isNfullname),
+                        }) || "—"}
+                      </strong>
+                    </span>
                   </label>
                 </div>
               </section>
