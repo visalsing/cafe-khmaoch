@@ -17,6 +17,9 @@ export const BACKGROUND_STYLES = [
   { value: "halloween", label: "Halloween" },
   { value: "cats", label: "Cats" },
   { value: "moons", label: "Moons" },
+  { value: "snow", label: "Snow" },
+  { value: "cafe-khmaoch", label: "Café ខ្មោច"},
+  { value: "cafe-khmaoch-2", label: "Café ខ្មោច​ II"}
 ];
 
 const read = () => {

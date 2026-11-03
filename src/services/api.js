@@ -22,3 +22,5 @@ export * from "./api/profile.js";
 export * from "./api/impersonation.js";
 export * from "./api/qr.js";
 export * from "./api/dashboard.js";
+export * from "./api/about.js";
+export * from "./api/themes.js";

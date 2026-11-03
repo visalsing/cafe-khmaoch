@@ -26,6 +26,31 @@ const en = {
   dashboard: "Dashboard",
   settings: "Settings",
 
+  // IndexPage/About.jsx | About Us
+
+  // IndexPage/Shop.jsx | Shop
+  // IndexPage/ShopAll.jsx | Shop (Full Menu)
+  shop_subtitle: "Coffee, Relaxed, Thrilled, Ghost & Spooky",
+  shop_all_subtitle: "Coffee, Relaxed, Thrilled, Ghost & Spooky",
+  search_drinks_pastries: "Search Drinks & Pastries",
+  big: "Big",
+  small: "Small",
+  all: "All",
+  add_to_order: "Add to card",
+  cafe_khmaoch_menu: "Café Khmaoch Menu",
+  show_more_options: "Show more options",
+  see_full_menu: "See full menu",
+  sugar_levels: "Sugar Levels",
+  ice_levels: "Ice Levels",
+  coffee_levels: "Coffee Levels",
+  required: "Required",
+  complete_required_levels: "Choose all required options first ",
+
+  // IndexPage/Gallery.jsx | Gallery
+  gallery_title: "Gallery",
+  gallery_subtitle:
+    "Step into the shadows of Café ខ្មោច. Explore our hauntingly good brews, artisanal bites, and the cozy aesthetic that makes our space a unique sanctuary for every spirit.",
+
   // ---- Header ----
   searchAnything: "Search Anything",
   welcomeBack: "Welcome back",
@@ -42,13 +67,6 @@ const en = {
   systemDescription: "Match your device's appearance setting.",
   language: "Language",
   languageDescription: "Choose the language used throughout the dashboard.",
-
-  // IndexPage/Shop.jsx
-  all: "All",
-  add_to_order: "Add to card",
-  cafe_khmaoch_menu: "Café Khmaoch Menu",
-  show_more_options: "Show more options",
-  see_full_menu: "See full menu",
 
   // IndexPage/About.jsx | About Us, Our Story
   about_us: "About Us",

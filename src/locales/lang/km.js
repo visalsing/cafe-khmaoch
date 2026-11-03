@@ -27,6 +27,31 @@ const km = {
   dashboard: "ផ្ទាំងគ្រប់គ្រង",
   settings: "ការកំណត់",
 
+  // IndexPage/About.jsx | About Us
+
+  // IndexPage/Shop.jsx | Shop, Menu
+  // IndexPage/ShopAll.jsx | Shop (Full Menu)
+  shop_subtitle: "Coffee, Relaxed, Thrilled, Ghost & Spooky",
+  shop_all_subtitle: "Coffee, Relaxed, Thrilled, Ghost & Spooky",
+  search_drinks_pastries: "ស្វែងរកភេសជ្ជៈនិងអាហារសម្រន់",
+  big: "កែវធំ",
+  small: "កែវតូច",
+  all: "ទាំងអស់",
+  add_to_order: "បន្ថែមចូលការកម្មង់",
+  cafe_khmaoch_menu: "ម៉ឺនុយកាហ្វេខ្មោច",
+  show_more_options: "បង្ហាញជម្រើសបន្ថែម",
+  see_full_menu: "មើលម៉ឺនុយពេញ",
+  sugar_levels: "កម្រិតស្ករ",
+  ice_levels: "កម្រិតទឹកកក",
+  coffee_levels: "កម្រិតកាហ្វេ",
+  required: "ជាចាំបាច់",
+  complete_required_levels: "ជ្រើសរើសជម្រើសចាំបាច់ជាមុនសិន ",
+
+  // IndexPage/Gallery.jsx | Gallery
+  gallery_title: "Gallery",
+  gallery_subtitle:
+    "ឈានជើងចូលទៅក្នុងបរិយាកាសដ៏ប្លែកនៃ Café ខ្មោច។ មកទស្សនារូបភាពភេសជ្ជៈដ៏ឈ្ងុយឆ្ងាញ់ នំឆ្ងាញ់ៗ និងបរិយាកាសដ៏ទាក់ទាញ ដែលធ្វើឱ្យហាងយើងក្លាយជាកន្លែងសម្រាកលំហែកាយដ៏ពិសេសសម្រាប់អ្នករាល់គ្នា។",
+
   // ---- Header ----
   searchAnything: "ស្វែងរកអ្វីក៏បាន",
   welcomeBack: "សូមស្វាគមន៍មកវិញ",
@@ -43,13 +68,6 @@ const km = {
   systemDescription: "ផ្គូផ្គងជាមួយការកំណត់រូបរាងឧបករណ៍របស់អ្នក។",
   language: "ភាសា",
   languageDescription: "ជ្រើសរើសភាសាដែលប្រើនៅទូទាំងផ្ទាំងគ្រប់គ្រង។",
-
-  // IndexPage/Shop.jsx | Shop, Menu
-  all: "ទាំងអស់",
-  add_to_order: "បន្ថែមចូលការកម្មង់",
-  cafe_khmaoch_menu: "ម៉ឺនុយកាហ្វេខ្មោច",
-  show_more_options: "បង្ហាញជម្រើសបន្ថែម",
-  see_full_menu: "មើលម៉ឺនុយពេញ",
 
   // IndexPage/About.jsx | About Us, Our Story
   about_us: "អំពីយើងខ្ញុំ",

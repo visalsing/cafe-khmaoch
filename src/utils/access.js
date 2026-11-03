@@ -24,7 +24,15 @@ export const DEFAULT_ACCESS = {
   staff: ["dashboard", "pos", "orders"],
 };
 
-export const fullName = (u) => `${u?.firstName || ""} ${u?.lastName || ""}`.trim();
+// export const fullName = (u) => `${u?.firstName || ""} ${u?.lastName || ""}`.trim();
+export const fullName = (u) => {
+  const firstName = u?.firstName || "";
+  const lastName = u?.lastName || "";
+
+  return Number(u?.is_fullname) === 1
+    ? `${firstName} ${lastName}`.trim()
+    : `${lastName} ${firstName}`.trim();
+};
 
 // Resize and center-crop an uploaded photo into a small square (keeps localStorage small)
 export const readAvatar = (file, size = 160) =>

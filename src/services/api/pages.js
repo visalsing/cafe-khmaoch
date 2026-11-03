@@ -23,3 +23,9 @@ export const mapService = {
   setStatus: (id, status) => http(`/maps/${id}/status`, { method: "PATCH", body: { status } }),
   remove: (id) => http(`/maps/${id}`, { method: "DELETE" }),
 };
+
+// how names are written everywhere (First + Last / Last + First). Anyone can read it, only admins can save it.
+export const nameOrderService = {
+  get: () => http("/name-order"),
+  save: (order) => http("/name-order", { method: "PUT", body: order }), // { latin?, native? }
+};
