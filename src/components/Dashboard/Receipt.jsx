@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { Printer, X } from "lucide-react";
 import logoImg from "../../assets/logo/cafe-khmaoch-rmbg.png";
 import html2canvas from "html2canvas";
@@ -32,7 +32,8 @@ const DualPrice = ({ rielVal, align = "right" }) => {
   );
 };
 
-const PRINT_WIDTH = 576; // 72mm x 8 dots/mm, from your self-test
+// YOUDING YD218: printable width 72mm x 8 dots/mm = 576 dots
+const PRINT_WIDTH = 576;
 
 // canvas -> ESC/POS raster bytes, sent in 255-row chunks (safer for printers)
 const canvasToEscPos = (src) => {
@@ -66,7 +67,7 @@ const canvasToEscPos = (src) => {
           const i = (y * w + xb * 8 + bit) * 4;
           const lum =
             0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-          if (lum < 160) byte |= 0x80 >> bit;
+          if (lum < 170) byte |= 0x80 >> bit;
         }
         buf[p++] = byte;
       }
@@ -95,141 +96,109 @@ const toBase64 = (bytes) => {
 
 export default function ReceiptModal({ order, onClose }) {
   const ref = useRef(null);
+  const [printing, setPrinting] = useState(false);
 
   // Extract raw ticket/order number without leading zeros (e.g., "001" -> "1", "016" -> "16")
   const rawNum =
     order?.ticketNumber || order?.dailyNumber || order?.number || "1";
   const displayTicketNo = parseInt(String(rawNum).replace(/\D/g, ""), 10) || 1;
 
-  // const print = () => {
-  //   const printWindow = window.open("", "_blank", "width=380,height=750");
-  //   if (!printWindow)
-  //     return alert("Please allow pop-ups to print the receipt.");
+  // PC / desktop: normal browser print dialog (uses the Windows printer driver)
+  const printViaBrowser = () => {
+    const w = window.open("", "_blank", "width=380,height=750");
+    if (!w) {
+      alert("Please allow pop-ups to print the receipt.");
+      return;
+    }
+    w.document.write(`<!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <base href="${window.location.origin}/" />
+          <title>Receipt ${order?.number || ""}</title>
+          <style>
+            @page { size: 80mm auto; margin: 0; }
+            body {
+              margin: 0; padding: 4mm; background: #fff; color: #000;
+              font-family: 'Courier New', Courier, monospace, 'Noto Sans Khmer', 'Khmer OS';
+              font-size: 11px; line-height: 1.3; width: 72mm;
+              -webkit-print-color-adjust: exact;
+            }
+            img { display: block; margin: 0 auto 4px auto; width: 48px; height: 48px; object-fit: contain; }
+          </style>
+        </head>
+        <body>${ref.current.innerHTML}</body>
+      </html>`);
+    w.document.close();
 
-  //   const printHtml = `
-  //     <!DOCTYPE html>
-  //     <html>
-  //       <head>
-  //         <title>Receipt ${order?.number || ""}</title>
-  //         <style>
-  //           @page {
-  //             size: 80mm auto;
-  //             margin: 0mm;
-  //           }
-  //           body {
-  //             margin: 0;
-  //             padding: 4mm;
-  //             background: #fff;
-  //             color: #000;
-  //             font-family: 'Courier New', Courier, monospace;
-  //             font-size: 11px;
-  //             line-height: 1.3;
-  //             width: 72mm;
-  //             -webkit-print-color-adjust: exact;
-  //           }
-  //           img {
-  //             display: block;
-  //             margin: 0 auto 4px auto;
-  //             width: 48px;
-  //             height: 48px;
-  //             object-fit: contain;
-  //           }
-  //           hr {
-  //             border: none;
-  //             border-top: 1px dashed #000;
-  //             margin: 6px 0;
-  //           }
-  //         </style>
-  //       </head>
-  //       <body>
-  //         ${ref.current.innerHTML}
-  //       </body>
-  //     </html>
-  //   `;
-
-  //   printWindow.document.write(printHtml);
-  //   printWindow.document.close();
-  //   printWindow.focus();
-
-  //   setTimeout(() => {
-  //     printWindow.print();
-  //     printWindow.close();
-  //   }, 300);
-  // };
-
-  // const print = () => {
-  //   const html = `
-  //   <!DOCTYPE html>
-  //   <html>
-  //     <head>
-  //       <meta charset="utf-8" />
-  //       <title>Receipt ${order?.number || ""}</title>
-  //       <style>
-  //         @page { size: 80mm auto; margin: 0; }
-  //         body {
-  //           margin: 0; padding: 4mm; background: #fff; color: #000;
-  //           font-family: 'Courier New', Courier, monospace, 'Noto Sans Khmer', 'Khmer OS';
-  //           font-size: 11px; line-height: 1.3; width: 72mm;
-  //         }
-  //         img { display: block; margin: 0 auto 4px auto; width: 48px; height: 48px; object-fit: contain; }
-  //       </style>
-  //     </head>
-  //     <body>${ref.current.innerHTML}</body>
-  //   </html>`;
-
-  //   const iframe = document.createElement("iframe");
-  //   Object.assign(iframe.style, {
-  //     position: "fixed",
-  //     right: "0",
-  //     bottom: "0",
-  //     width: "0",
-  //     height: "0",
-  //     border: "0",
-  //   });
-  //   document.body.appendChild(iframe);
-
-  //   const doc = iframe.contentWindow.document;
-  //   doc.open();
-  //   doc.write(html);
-  //   doc.close();
-
-  //   // wait for the logo to load, then print
-  //   const waitImages = Array.from(doc.images).map((img) =>
-  //     img.complete
-  //       ? Promise.resolve()
-  //       : new Promise((r) => {
-  //           img.onload = img.onerror = r;
-  //         }),
-  //   );
-
-  //   Promise.all(waitImages).then(() => {
-  //     iframe.contentWindow.focus();
-  //     iframe.contentWindow.print();
-  //     // remove later, never immediately
-  //     setTimeout(() => document.body.removeChild(iframe), 60000);
-  //   });
-  // };
+    // wait for the logo, then print once
+    const waits = Array.from(w.document.images).map((img) =>
+      img.complete
+        ? Promise.resolve()
+        : new Promise((r) => {
+            img.onload = img.onerror = r;
+          }),
+    );
+    Promise.all(waits).then(() => {
+      setTimeout(() => {
+        w.focus();
+        w.print();
+      }, 200);
+    });
+  };
 
   const print = async () => {
+    if (printing) return;
+    setPrinting(true);
     try {
+      await new Promise((r) => setTimeout(r, 50)); // let the button update first
+
       const el = ref.current;
+      if (!el) return;
+
+      // Not Android (PC): use the browser print dialog
+      const isAndroid = /android/i.test(navigator.userAgent);
+      if (!isAndroid) {
+        printViaBrowser();
+        return;
+      }
+
+      // Android tablet: render receipt as an image and send to RawBT
+      if (document.fonts?.ready) await document.fonts.ready;
+
       const canvas = await html2canvas(el, {
-        scale: PRINT_WIDTH / el.offsetWidth,
+        scale: PRINT_WIDTH / el.offsetWidth, // output is exactly 576px wide
         backgroundColor: "#ffffff",
         useCORS: true,
+        scrollX: 0,
+        scrollY: 0,
         onclone: (doc) => {
           const n = doc.querySelector("[data-receipt]");
           if (n) {
             n.style.boxShadow = "none";
             n.style.borderRadius = "0";
+            // pure black text prints sharper on thermal paper
+            n.querySelectorAll("*").forEach((child) => {
+              child.style.color = "#000";
+            });
           }
         },
       });
+
       const bytes = canvasToEscPos(canvas);
-      window.location.href = "rawbt:base64," + toBase64(bytes);
+      const b64 = toBase64(bytes);
+
+      // open RawBT through an Android intent link
+      const a = document.createElement("a");
+      a.href = `intent:base64,${b64}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } catch (e) {
       console.error(e);
-      alert("Print failed. Is RawBT installed?");
+      alert("Print error: " + (e?.message || e));
+    } finally {
+      setPrinting(false);
     }
   };
 
@@ -270,7 +239,7 @@ export default function ReceiptModal({ order, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm max-h-[92dvh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shrink-0">
           <h3 className="font-bold text-sm text-stone-900 dark:text-white">
@@ -288,6 +257,7 @@ export default function ReceiptModal({ order, onClose }) {
         <div className="overflow-y-auto p-4 bg-slate-100 dark:bg-slate-950 flex justify-center w-full flex-1">
           <div
             ref={ref}
+            data-receipt
             style={{
               background: "#ffffff",
               color: "#000000",
@@ -350,12 +320,6 @@ export default function ReceiptModal({ order, onClose }) {
             />
 
             {/* Order Metadata */}
-            {/* <MetaRow labelKm="សាខា" labelEn="Store" value="Phnom Penh Main" />
-            <MetaRow
-              labelKm="កាលបរិច្ឆេទ"
-              labelEn="Date"
-              value={new Date(order?.createdAt || Date.now()).toISOString().split("T")[0]}
-            /> */}
             <MetaRow
               labelKm="កាលបរិច្ឆេទ"
               labelEn="Date"
@@ -373,7 +337,6 @@ export default function ReceiptModal({ order, onClose }) {
             <MetaRow
               labelKm="អ្នកគិតលុយ"
               labelEn="Cashier"
-              // value={order?.cashierName || "Staff"}
               value={
                 order?.source === "online"
                   ? "Online order"
@@ -409,9 +372,6 @@ export default function ReceiptModal({ order, onClose }) {
                 letterSpacing: 1,
               }}
             >
-              {/* {order?.orderType === "dine-in"
-                ? "DINE-IN"
-                : "WALK-IN / TAKEAWAY"} */}
               {order?.orderType === "dine-in"
                 ? "DINE-IN"
                 : order?.orderType === "delivery"
@@ -485,10 +445,6 @@ export default function ReceiptModal({ order, onClose }) {
               const totalRiel = (Number(item.qty) || 1) * priceRiel;
               const discountPct = Number(item.discountPercent || 0);
 
-              // const originalBaseRiel =
-              //   discountPct > 0
-              //     ? priceRiel / (1 - discountPct / 100)
-              //     : priceRiel;
               const originalBaseRiel = Number(item.basePrice) || priceRiel;
 
               return (
@@ -552,14 +508,6 @@ export default function ReceiptModal({ order, onClose }) {
               valRiel={Number(order?.subtotal || 0)}
             />
 
-            {/* {Number(order?.discount) > 0 && (
-              <SummaryRow
-                labelKm="ការបញ្ចុះតម្លៃ"
-                labelEn="Item Discount"
-                valRiel={Number(order.discount)}
-                negative
-              />
-            )} */}
             {Number(order?.discount) > 0 && (
               <SummaryRow
                 labelKm="ការបញ្ចុះតម្លៃ"
@@ -600,24 +548,6 @@ export default function ReceiptModal({ order, onClose }) {
             />
 
             {/* Payment Received */}
-            {/* <div style={{ marginTop: 4 }}>
-              <SummaryRow
-                labelKm="ប្រាក់ទទួលបាន"
-                labelEn={`Received (${order?.paymentMethod?.toUpperCase() || "CASH"})`}
-                valRiel={
-                  order?.cashReceived
-                    ? Number(order.cashReceived)
-                    : Number(order?.total || 0)
-                }
-              />
-              {order?.change > 0 && (
-                <SummaryRow
-                  labelKm="ប្រាក់អាប់"
-                  labelEn="Change"
-                  valRiel={Number(order.change)}
-                />
-              )}
-            </div> */}
             <div style={{ marginTop: 4 }}>
               {order?.paymentStatus === "unpaid" ? (
                 <div
@@ -653,17 +583,6 @@ export default function ReceiptModal({ order, onClose }) {
               )}
             </div>
 
-            {/* <div
-              style={{
-                fontSize: 8.5,
-                textAlign: "center",
-                color: "#555",
-                marginTop: 8,
-              }}
-            >
-              * តម្លៃរួមបញ្ចូលទាំងអាករ / Incl. VAT 10% *<br />
-              Exchange Rate $1 = KHR {EXCHANGE_RATE}៛
-            </div> */}
             <div
               style={{
                 fontSize: 8.5,
@@ -707,12 +626,16 @@ export default function ReceiptModal({ order, onClose }) {
         {/* Action Buttons */}
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex gap-3 shrink-0">
           <button
+            type="button"
             onClick={print}
-            className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer"
+            disabled={printing}
+            className="relative z-10 flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer"
           >
-            <Printer className="w-4 h-4" /> Print Receipt
+            <Printer className="w-4 h-4" />{" "}
+            {printing ? "Printing..." : "Print Receipt"}
           </button>
           <button
+            type="button"
             onClick={onClose}
             className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 font-semibold text-xs text-stone-700 dark:text-stone-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
