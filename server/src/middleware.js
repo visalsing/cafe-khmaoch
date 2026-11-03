@@ -15,11 +15,9 @@ export const cookieOptions = {
 //   jwt.sign({ sub: userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
 export function signToken(userId) {
-  return jwt.sign(
-    { sub: String(userId) },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
+  return jwt.sign({ sub: String(userId) }, process.env.JWT_SECRET, {
+    expiresIn: "7d",
+  });
 }
 
 // ONE place that loads a user together with its role and email-verification state.
@@ -44,6 +42,8 @@ export const publicUser = (u) => ({
   lastName: u.last_name,
   firstNameNative: u.first_name_native,
   lastNameNative: u.last_name_native,
+  isFullname: u.is_fullname ?? 1,
+  isNfullname: u.is_nfullname ?? 1,
   genderId: u.gender_id,
   nationalityId: u.nationality_id,
   address: u.address,
@@ -113,10 +113,15 @@ export async function optionalAuth(req, res, next) {
 }
 
 // use AFTER requireAuth: only the Admin role (role_id = 1)
+// export const requireAdmin = (req, res, next) =>
+//   req.user?.role_id === 1
+//     ? next()
+//     : res.status(403).json({ error: "Only admins can do that." });
+
 export const requireAdmin = (req, res, next) =>
-  req.user?.role_id === 1
+  (req.user?.role ?? req.user?.role_code) === "admin"
     ? next()
-    : res.status(403).json({ error: "Only admins can do that." });
+    : res.status(403).json({ error: "Only an administrator can do this." });
 
 // use AFTER requireAuth: needs this exact permission
 export const requirePermission = (key) => (req, res, next) =>

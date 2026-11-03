@@ -163,6 +163,18 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_thumbnail TEXT NOT NULL DEFAUL
 ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 ALTER TABLE users ADD COLUMN IF NOT EXISTS removed_at TIMESTAMPTZ;
 
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS is_fullname SMALLINT NOT NULL DEFAULT 1,
+ADD COLUMN IF NOT EXISTS is_nfullname SMALLINT NOT NULL DEFAULT 1;
+
+-- ALTER TABLE users
+-- ADD CONSTRAINT users_is_fullname_check
+-- CHECK (is_fullname IN (0, 1));
+
+-- ALTER TABLE users
+-- ADD CONSTRAINT users_is_nfullname_check
+-- CHECK (is_nfullname IN (0, 1));
+
 DO $$
 BEGIN
   IF EXISTS (
@@ -1242,7 +1254,118 @@ ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS daily_sales_goal  NUMERIC(14
 ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS daily_orders_goal INTEGER       NOT NULL DEFAULT 0 CHECK (daily_orders_goal >= 0);
 -- staff must take the payment before an order can be accepted (set to FALSE to switch the rule off)
 ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS require_payment_before_accept BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS name_order_latin  TEXT NOT NULL DEFAULT 'lastFirst'
+  CHECK (name_order_latin  IN ('firstLast', 'lastFirst'));
+ALTER TABLE store_settings ADD COLUMN IF NOT EXISTS name_order_native TEXT NOT NULL DEFAULT 'lastFirst'
+  CHECK (name_order_native IN ('firstLast', 'lastFirst'));
 
 CREATE INDEX IF NOT EXISTS orders_payment_idx   ON orders   (payment_status, created_at DESC);
 CREATE INDEX IF NOT EXISTS payments_created_idx ON payments (created_at DESC);
 CREATE INDEX IF NOT EXISTS impersonation_logs_open_idx ON impersonation_logs (started_at DESC) WHERE ended_at IS NULL;
+
+
+-- ====================================================================
+-- ======================= About page (one row) =======================
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS about_page (
+  id            SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),          -- ONE row: the About page
+  status        SMALLINT NOT NULL DEFAULT 1 CHECK (status IN (0, 1)),   -- 1 = show this content, 0 = use the built-in texts
+  title         JSONB NOT NULL DEFAULT '{}'::jsonb,                     -- {"en":"About Us","km":"..."}
+  subtitle      JSONB NOT NULL DEFAULT '{}'::jsonb,
+  story_label   JSONB NOT NULL DEFAULT '{}'::jsonb,                     -- "Our story"
+  story_heading JSONB NOT NULL DEFAULT '{}'::jsonb,
+  story_body    JSONB NOT NULL DEFAULT '{}'::jsonb,                     -- the long text: cleaned HTML per language
+  stat_value    JSONB NOT NULL DEFAULT '{}'::jsonb,                     -- "7 AM"
+  stat_caption  JSONB NOT NULL DEFAULT '{}'::jsonb,
+  images        TEXT[] NOT NULL DEFAULT '{}',                           -- gallery pictures
+  thumbnails    TEXT[] NOT NULL DEFAULT '{}',                           -- the small version of each picture, SAME position
+  image_alts    JSONB  NOT NULL DEFAULT '[]'::jsonb,                    -- alt text of each picture, SAME position
+  highlights    JSONB  NOT NULL DEFAULT '[]'::jsonb,                    -- the value cards: [{icon, title, text}]
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT about_page_images_aligned CHECK (
+    jsonb_typeof(image_alts) = 'array'
+    AND cardinality(images) = cardinality(thumbnails)
+    AND cardinality(images) = jsonb_array_length(CASE WHEN jsonb_typeof(image_alts) = 'array' THEN image_alts ELSE '[]'::jsonb END)
+  ),
+  CONSTRAINT about_page_images_max CHECK (cardinality(images) <= 12),
+  CONSTRAINT about_page_highlights_ok CHECK (
+    jsonb_typeof(highlights) = 'array'
+    AND jsonb_array_length(CASE WHEN jsonb_typeof(highlights) = 'array' THEN highlights ELSE '[]'::jsonb END) <= 6
+  )
+);
+
+-- starting content = what the page shows today, so nothing changes until you edit it
+-- (a re-run never overwrites your edits)
+INSERT INTO about_page (id, images, thumbnails, image_alts, highlights) VALUES (
+  1,
+  ARRAY[
+    'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80'
+  ],
+  ARRAY[
+    'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=400&q=70',
+    'https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=400&q=70',
+    'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=400&q=70'
+  ],
+  '[{},{},{}]'::jsonb,
+  $$[
+    {"icon":"coffee","title":{"en":"Ethical Sourcing"},"text":{"en":"Directly traded from sustainable farms to secure premium beans."}},
+    {"icon":"flame","title":{"en":"Artisanal Roasting"},"text":{"en":"Precision-roasted in small batches to highlight unique profiles."}},
+    {"icon":"sprout","title":{"en":"Community First"},"text":{"en":"Creating a cozy neighborhood sanctuary for great conversations."}}
+  ]$$::jsonb
+) ON CONFLICT (id) DO NOTHING;
+
+DROP TRIGGER IF EXISTS about_page_updated_at ON about_page;
+CREATE TRIGGER about_page_updated_at BEFORE UPDATE ON about_page
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+  
+
+
+-- =====================================================================
+-- THEMES  (paste into schema.sql, inside the first BEGIN ... COMMIT block)
+-- Place PART 1 BEFORE the "Existing users table" section (users.theme_id points at it)
+-- and PART 2 right after the other "ALTER TABLE users ADD COLUMN" lines.
+-- Safe to run repeatedly.
+-- =====================================================================
+
+-- ---------- PART 1: the table ----------
+CREATE TABLE IF NOT EXISTS themes (
+  id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  -- what the app code switches on: 'light' | 'dark' | 'system'. Names are translated and editable, a code is not.
+  code        TEXT NOT NULL UNIQUE CHECK (code ~ '^[a-z][a-z0-9_-]{0,39}$'),
+  name        JSONB NOT NULL,                                   -- {"en":"Light","km":"..."}
+  description JSONB NOT NULL DEFAULT '{}'::jsonb,               -- {"en":"...","km":"..."}
+  icon        TEXT NOT NULL DEFAULT '' CHECK (icon ~ '^[A-Za-z0-9]{0,50}$'),  -- the NAME of an icon, e.g. 'Sun' (never code)
+  status      SMALLINT NOT NULL DEFAULT 1 CHECK (status IN (0, 1)),            -- 1 = active, 0 = hidden
+  is_selected SMALLINT NOT NULL DEFAULT 0 CHECK (is_selected IN (0, 1)),       -- the DEFAULT theme (guests + users who chose none)
+  sort_num    INTEGER NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT themes_name_has_en CHECK (name ? 'en' AND length(name->>'en') > 0),
+  CONSTRAINT themes_selected_active CHECK (is_selected = 0 OR status = 1)       -- the default theme cannot be hidden
+);
+
+-- the database itself guarantees at most ONE default theme
+CREATE UNIQUE INDEX IF NOT EXISTS themes_one_selected_idx ON themes (is_selected) WHERE is_selected = 1;
+CREATE INDEX IF NOT EXISTS themes_status_sort_idx ON themes (status, sort_num);
+
+-- the three themes the Settings page offers today (a re-run never overwrites your edits)
+INSERT INTO themes (code, name, description, icon, sort_num, is_selected) VALUES
+  ('light',  '{"en":"Light"}',  '{"en":"Bright colours, best in daylight."}',          'Sun',     1, 0),
+  ('dark',   '{"en":"Dark"}',   '{"en":"Dark colours, easier on the eyes at night."}', 'Moon',    2, 0),
+  ('system', '{"en":"System"}', '{"en":"Follows the setting of your device."}',        'Monitor', 3, 1)
+ON CONFLICT (code) DO NOTHING;
+
+DROP TRIGGER IF EXISTS themes_updated_at ON themes;
+CREATE TRIGGER themes_updated_at BEFORE UPDATE ON themes
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ---------- PART 2: each user's own choice ----------
+-- NULL = the user has not chosen: use the theme where is_selected = 1
+ALTER TABLE users ADD COLUMN IF NOT EXISTS theme_id INTEGER REFERENCES themes(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS users_theme_idx ON users (theme_id);
+
+
+

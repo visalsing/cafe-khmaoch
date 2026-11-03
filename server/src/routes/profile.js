@@ -1,19 +1,10 @@
-
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { query } from "../db.js";
-import {
-  requireAuth,
-  publicUser,
-  USER_SELECT,
-} from "../middleware.js";
+import { requireAuth, publicUser, USER_SELECT } from "../middleware.js";
 import { uploadOne, storeUpload } from "../upload.js";
 import { removeImages } from "../storage.js";
-import {
-  issueOtp,
-  verifyOtp,
-  clientInfo,
-} from "../otp.js";
+import { issueOtp, verifyOtp, clientInfo } from "../otp.js";
 
 const router = Router();
 
@@ -23,11 +14,12 @@ const FOLDER = "avatars";
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
 const EMAIL_CHANGE_PURPOSE = "email_change";
 
-const bad = (res, status, error) =>
-  res.status(status).json({ error });
+const bad = (res, status, error) => res.status(status).json({ error });
 
 const text = (value, fallback = "", max = 255) =>
-  String(value ?? fallback ?? "").trim().slice(0, max);
+  String(value ?? fallback ?? "")
+    .trim()
+    .slice(0, max);
 
 const idOrNull = (value) => {
   if (value === undefined) return undefined;
@@ -35,9 +27,21 @@ const idOrNull = (value) => {
 
   const number = Number(value);
 
-  return Number.isInteger(number) && number > 0
-    ? number
-    : NaN;
+  return Number.isInteger(number) && number > 0 ? number : NaN;
+};
+
+const readPreferenceBit = (value, fallback = 1) => {
+  if (value === undefined) return fallback;
+
+  if (value === true || value === 1 || value === "1" || value === "true") {
+    return 1;
+  }
+
+  if (value === false || value === 0 || value === "0" || value === "false") {
+    return 0;
+  }
+
+  return null;
 };
 
 const isInactive = (user) =>
@@ -53,10 +57,7 @@ async function loadOwnUser(userId) {
 
   if (!Number.isInteger(id) || id <= 0) return null;
 
-  const { rows } = await query(
-    `${USER_SELECT} WHERE u.id = $1`,
-    [id],
-  );
+  const { rows } = await query(`${USER_SELECT} WHERE u.id = $1`, [id]);
 
   return rows[0] || null;
 }
@@ -69,8 +70,7 @@ function dbProblem(error) {
   if (error.code === "23503") {
     const messages = {
       users_gender_id_fkey: "The selected gender does not exist.",
-      users_nationality_id_fkey:
-        "The selected nationality does not exist.",
+      users_nationality_id_fkey: "The selected nationality does not exist.",
     };
 
     return [
@@ -124,6 +124,22 @@ router.put("/", uploadOne, async (req, res, next) => {
       return bad(res, 400, "First name is required.");
     }
 
+    const isFullname = readPreferenceBit(
+      req.body.isFullname,
+      currentUser.is_fullname ?? 1,
+    );
+
+    const isNfullname = readPreferenceBit(
+      req.body.isNfullname,
+      currentUser.is_nfullname ?? 1,
+    );
+
+    if (isFullname === null || isNfullname === null) {
+      return res.status(400).json({
+        message: "Name preferences must be either 0 or 1.",
+      });
+    }
+
     const readOptionalId = (key, currentValue) => {
       const value = idOrNull(body[key]);
 
@@ -159,11 +175,7 @@ router.put("/", uploadOne, async (req, res, next) => {
     const address = text(body.address, target.address, 500);
     const region = text(body.region, target.region, 100);
     const country = text(body.country, target.country, 100);
-    const description = text(
-      body.description,
-      target.description,
-      2000,
-    );
+    const description = text(body.description, target.description, 2000);
 
     // Deliberately do not read or update body.email here.
     let avatar = target.avatar || "";
@@ -196,8 +208,10 @@ router.put("/", uploadOne, async (req, res, next) => {
            description = $10,
            phone = $11,
            avatar = $12,
-           avatar_thumbnail = $13
-       WHERE id = $14`,
+           avatar_thumbnail = $13,
+           is_fullname = $14,
+           is_nfullname = $15
+       WHERE id = $16`,
       [
         firstName,
         lastName,
@@ -212,6 +226,8 @@ router.put("/", uploadOne, async (req, res, next) => {
         phone,
         avatar,
         avatarThumbnail,
+        isFullname,
+        isNfullname,
         userId,
       ],
     );
@@ -222,10 +238,7 @@ router.put("/", uploadOne, async (req, res, next) => {
       avatar !== (target.avatar || "") ||
       avatarThumbnail !== (target.avatar_thumbnail || "")
     ) {
-      await removeImages(
-        target.avatar,
-        target.avatar_thumbnail,
-      );
+      await removeImages(target.avatar, target.avatar_thumbnail);
     }
 
     const updatedUser = await loadOwnUser(userId);
@@ -261,7 +274,9 @@ router.put("/", uploadOne, async (req, res, next) => {
 router.post("/email-change/request", async (req, res, next) => {
   try {
     const userId = Number(req.user.id);
-    const email = String(req.body?.email ?? "").trim().toLowerCase();
+    const email = String(req.body?.email ?? "")
+      .trim()
+      .toLowerCase();
 
     if (email.length > 254 || !EMAIL_RE.test(email)) {
       return bad(res, 400, "Please enter a valid email address.");
@@ -316,10 +331,7 @@ router.post("/email-change/request", async (req, res, next) => {
     return res.json({
       ok: true,
       message: "Verification code sent to the new email address.",
-      retryAfter:
-        result?.retryAfter ??
-        result?.resendAfter ??
-        60,
+      retryAfter: result?.retryAfter ?? result?.resendAfter ?? 60,
     });
   } catch (error) {
     console.error("[email-change/request]", error);
@@ -339,7 +351,9 @@ router.post("/email-change/request", async (req, res, next) => {
 router.post("/email-change/verify", async (req, res, next) => {
   try {
     const userId = Number(req.user.id);
-    const email = String(req.body?.email ?? "").trim().toLowerCase();
+    const email = String(req.body?.email ?? "")
+      .trim()
+      .toLowerCase();
     const code = String(req.body?.code ?? "").trim();
 
     if (email.length > 254 || !EMAIL_RE.test(email)) {
@@ -518,11 +532,7 @@ router.put("/password", async (req, res, next) => {
       typeof newPassword !== "string" ||
       !newPassword
     ) {
-      return bad(
-        res,
-        400,
-        "Current password and new password are required.",
-      );
+      return bad(res, 400, "Current password and new password are required.");
     }
 
     if (newPassword.length < 8 || Buffer.byteLength(newPassword, "utf8") > 72) {
@@ -546,19 +556,13 @@ router.put("/password", async (req, res, next) => {
       return bad(res, 403, "This account is not active.");
     }
 
-    const matches = await bcrypt.compare(
-      currentPassword,
-      user.password_hash,
-    );
+    const matches = await bcrypt.compare(currentPassword, user.password_hash);
 
     if (!matches) {
       return bad(res, 400, "Current password is incorrect.");
     }
 
-    const samePassword = await bcrypt.compare(
-      newPassword,
-      user.password_hash,
-    );
+    const samePassword = await bcrypt.compare(newPassword, user.password_hash);
 
     if (samePassword) {
       return bad(

@@ -1,7 +1,12 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { query } from "../db.js";
-import { requireAuth, requireAdmin, publicUser, USER_SELECT } from "../middleware.js";
+import {
+  requireAuth,
+  requireAdmin,
+  publicUser,
+  USER_SELECT,
+} from "../middleware.js";
 import { uploadOne, storeUpload } from "../upload.js";
 import { removeImages } from "../storage.js";
 import { issueOtp, clientInfo, logEvent } from "../otp.js";
@@ -23,14 +28,24 @@ const FK_MESSAGES = {
   users_role_id_fkey: "The selected role does not exist.",
 };
 function dbProblem(err) {
-  if (err.code === "23505") return [409, "That email is already used by another user."];
-  if (err.code === "23503") return [400, FK_MESSAGES[err.constraint] || "One of the selected options does not exist."];
+  if (err.code === "23505")
+    return [409, "That email is already used by another user."];
+  if (err.code === "23503")
+    return [
+      400,
+      FK_MESSAGES[err.constraint] ||
+        "One of the selected options does not exist.",
+    ];
   return null;
 }
 
 /* ---------- small readers (work for JSON and for multipart text fields) ---------- */
-const text = (v, fallback, max) => String(v ?? fallback ?? "").trim().slice(0, max);
-const idOrNull = (v) => { // blank -> null, valid -> number, invalid -> NaN
+const text = (v, fallback, max) =>
+  String(v ?? fallback ?? "")
+    .trim()
+    .slice(0, max);
+const idOrNull = (v) => {
+  // blank -> null, valid -> number, invalid -> NaN
   if (v === undefined || v === null || String(v).trim() === "") return null;
   const n = Number(v);
   return Number.isInteger(n) && n > 0 ? n : NaN;
@@ -58,10 +73,24 @@ const idList = (v) => {
   }
   return out;
 };
-const bit = (v, fallback) => { // only real 1/0 values count; anything else keeps the fallback
+const bit = (v, fallback) => {
+  // only real 1/0 values count; anything else keeps the fallback
   if (v === true || v === 1 || v === "1" || v === "true") return 1;
   if (v === false || v === 0 || v === "0" || v === "false") return 0;
   return fallback;
+};
+const preferenceBit = (value, current = 1) => {
+  if (value === undefined) return current ?? 1;
+
+  if (value === true || value === 1 || value === "1" || value === "true") {
+    return 1;
+  }
+
+  if (value === false || value === 0 || value === "0" || value === "false") {
+    return 0;
+  }
+
+  return null;
 };
 
 async function loadUser(id) {
@@ -74,18 +103,26 @@ async function loadUser(id) {
 async function findRole(body) {
   if (body.roleId !== undefined && String(body.roleId).trim() !== "") {
     const id = Number(body.roleId);
-    const { rows } = await query("SELECT id, code FROM roles WHERE id = $1", [Number.isInteger(id) ? id : 0]);
+    const { rows } = await query("SELECT id, code FROM roles WHERE id = $1", [
+      Number.isInteger(id) ? id : 0,
+    ]);
     return rows[0] || null;
   }
   if (body.role) {
-    const { rows } = await query("SELECT id, code FROM roles WHERE code = $1", [String(body.role)]);
+    const { rows } = await query("SELECT id, code FROM roles WHERE code = $1", [
+      String(body.role),
+    ]);
     return rows[0] || null;
   }
   return undefined;
 }
 
 /* ---------- "there must always be one active admin" ---------- */
-const isActiveAdmin = (u) => u.role_code === "admin" && u.status === 1 && u.is_blocked === 0 && u.is_removed === 0;
+const isActiveAdmin = (u) =>
+  u.role_code === "admin" &&
+  u.status === 1 &&
+  u.is_blocked === 0 &&
+  u.is_removed === 0;
 async function lastAdminWouldGo(target, next) {
   if (!isActiveAdmin(target) || isActiveAdmin(next)) return false;
   const { rows } = await query(
@@ -98,9 +135,13 @@ async function lastAdminWouldGo(target, next) {
 // the extra permission can never be an admin-only one
 async function checkPermissionChoice(v) {
   if (v.permissionId === null) return null;
-  const { rows } = await query("SELECT admin_only FROM permissions WHERE id = $1", [v.permissionId]);
+  const { rows } = await query(
+    "SELECT admin_only FROM permissions WHERE id = $1",
+    [v.permissionId],
+  );
   if (!rows[0]) return [400, "The selected permission does not exist."];
-  if (rows[0].admin_only) return [400, "That permission can only belong to admins."];
+  if (rows[0].admin_only)
+    return [400, "That permission can only belong to admins."];
   return null;
 }
 
@@ -111,7 +152,8 @@ async function checkPositionChoice(v) {
     "SELECT count(*)::int AS n FROM positions WHERE id = ANY($1::int[])",
     [v.positionIds],
   );
-  if (rows[0].n !== v.positionIds.length) return [400, "One of the selected positions does not exist."];
+  if (rows[0].n !== v.positionIds.length)
+    return [400, "One of the selected positions does not exist."];
   return null;
 }
 
@@ -139,7 +181,11 @@ async function sendVerification(req, userId) {
       WHERE user_id = $1 AND purpose = $2 AND status IN ('pending', 'verified')`,
     [userId, VERIFY_PURPOSE],
   );
-  await issueOtp({ user: rows[0], purpose: VERIFY_PURPOSE, ctx: clientInfo(req) });
+  await issueOtp({
+    user: rows[0],
+    purpose: VERIFY_PURPOSE,
+    ctx: clientInfo(req),
+  });
   return true;
 }
 
@@ -149,7 +195,8 @@ function readFields(body, e = null) {
   if (!firstName) return { error: "First name is required." };
   if (!EMAIL_RE.test(email)) return { error: "Please enter a valid email." };
 
-  const pick = (key, current) => (body[key] === undefined ? (current ?? null) : idOrNull(body[key]));
+  const pick = (key, current) =>
+    body[key] === undefined ? (current ?? null) : idOrNull(body[key]);
   const genderId = pick("genderId", e?.gender_id);
   const nationalityId = pick("nationalityId", e?.nationality_id);
   const permissionId = pick("permissionId", e?.permission_id);
@@ -158,12 +205,25 @@ function readFields(body, e = null) {
 
   // positions: not sent = keep the current ones, sent = replace them with the new list
   const sentPositions = idList(body.positionIds);
-  if (sentPositions === null) return { error: "One of the selected positions is invalid." };
-  const positionIds = sentPositions === undefined ? (e?.position_ids ?? []) : sentPositions;
+  if (sentPositions === null)
+    return { error: "One of the selected positions is invalid." };
+  const positionIds =
+    sentPositions === undefined ? (e?.position_ids ?? []) : sentPositions;
+
+  const isFullname = preferenceBit(body.isFullname, e?.is_fullname ?? 1);
+
+  const isNfullname = preferenceBit(body.isNfullname, e?.is_nfullname ?? 1);
+
+  if (isFullname === null || isNfullname === null) {
+    return {
+      error: "Name display preferences must be either 0 or 1.",
+    };
+  }
 
   return {
     v: {
-      firstName, email,
+      firstName,
+      email,
       lastName: text(body.lastName, e?.last_name, 100),
       firstNameNative: text(body.firstNameNative, e?.first_name_native, 100),
       lastNameNative: text(body.lastNameNative, e?.last_name_native, 100),
@@ -172,9 +232,14 @@ function readFields(body, e = null) {
       region: text(body.region, e?.region, 100),
       country: text(body.country, e?.country, 100),
       description: text(body.description, e?.description, 2000),
-      genderId, nationalityId, positionIds, permissionId,
+      genderId,
+      nationalityId,
+      positionIds,
+      permissionId,
       status: bit(body.status, e?.status ?? 1),
       isBlocked: bit(body.isBlocked, e?.is_blocked ?? 0),
+      isFullname,
+      isNfullname,
     },
   };
 }
@@ -182,7 +247,10 @@ function readFields(body, e = null) {
 /* ================= LIST: ?removed=1 shows the removed users instead ================= */
 router.get("/", async (req, res) => {
   const removed = req.query.removed === "1" ? 1 : 0;
-  const { rows } = await query(`${USER_SELECT} WHERE u.is_removed = $1 ORDER BY u.created_at DESC`, [removed]);
+  const { rows } = await query(
+    `${USER_SELECT} WHERE u.is_removed = $1 ORDER BY u.created_at DESC`,
+    [removed],
+  );
   res.json(rows.map(publicUser));
 });
 
@@ -193,12 +261,14 @@ router.post("/", uploadOne, async (req, res) => {
   if (error) return bad(res, 400, error);
 
   const password = String(b.password || "");
-  if (password.length < 8) return bad(res, 400, "Password must be at least 8 characters.");
+  if (password.length < 8)
+    return bad(res, 400, "Password must be at least 8 characters.");
 
   let role = await findRole(b);
   if (role === null) return bad(res, 400, "That role does not exist.");
   if (role === undefined) role = await findRole({ role: "customer" });
-  if (!role) return bad(res, 500, "The customer role is missing. Run npm run db:setup.");
+  if (!role)
+    return bad(res, 500, "The customer role is missing. Run npm run db:setup.");
 
   const permProblem = await checkPermissionChoice(v);
   if (permProblem) return bad(res, permProblem[0], permProblem[1]);
@@ -215,13 +285,32 @@ router.post("/", uploadOne, async (req, res) => {
       `INSERT INTO users
          (first_name, last_name, first_name_native, last_name_native, gender_id, nationality_id,
           address, region, country, description, email, phone, password_hash,
-          role_id, position_ids, permission_id, status, is_blocked, avatar, avatar_thumbnail)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::int[],$16,$17,$18,$19,$20)
+          role_id, position_ids, permission_id, status, is_blocked, avatar, avatar_thumbnail, is_fullname, is_nfullname)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::int[],$16,$17,$18,$19,$20,$21,$22)
        RETURNING id`,
       [
-        v.firstName, v.lastName, v.firstNameNative, v.lastNameNative, v.genderId, v.nationalityId,
-        v.address, v.region, v.country, v.description, v.email, v.phone, hash,
-        role.id, v.positionIds, v.permissionId, v.status, v.isBlocked, files.img, files.thumbnail,
+        v.firstName,
+        v.lastName,
+        v.firstNameNative,
+        v.lastNameNative,
+        v.genderId,
+        v.nationalityId,
+        v.address,
+        v.region,
+        v.country,
+        v.description,
+        v.email,
+        v.phone,
+        hash,
+        role.id,
+        v.positionIds,
+        v.permissionId,
+        v.status,
+        v.isBlocked,
+        files.img,
+        files.thumbnail,
+        v.isFullname,
+        v.isNfullname,
       ],
     );
     newId = rows[0].id;
@@ -239,7 +328,9 @@ router.post("/", uploadOne, async (req, res) => {
   } catch (e) {
     console.error("[users] verification email failed:", e.message);
   }
-  res.status(201).json({ ...publicUser(await loadUser(newId)), verificationSent });
+  res
+    .status(201)
+    .json({ ...publicUser(await loadUser(newId)), verificationSent });
 });
 
 /* ================= UPDATE ================= */
@@ -247,7 +338,12 @@ router.put("/:id", uploadOne, async (req, res) => {
   const id = Number(req.params.id);
   const target = await loadUser(id);
   if (!target) return bad(res, 404, "User not found.");
-  if (target.is_removed === 1) return bad(res, 409, "This user was removed. Restore the user before editing.");
+  if (target.is_removed === 1)
+    return bad(
+      res,
+      409,
+      "This user was removed. Restore the user before editing.",
+    );
 
   const b = req.body || {};
   const { v, error } = readFields(b, target);
@@ -263,9 +359,19 @@ router.put("/:id", uploadOne, async (req, res) => {
     is_removed: 0,
   };
 
-  if (id === req.user.id && (next.role_id !== target.role_id || next.status !== target.status || next.is_blocked !== target.is_blocked))
-    return bad(res, 400, "You can't change the role or status of your own account.");
-  if (await lastAdminWouldGo(target, next)) return bad(res, 409, "There must be at least one active admin.");
+  if (
+    id === req.user.id &&
+    (next.role_id !== target.role_id ||
+      next.status !== target.status ||
+      next.is_blocked !== target.is_blocked)
+  )
+    return bad(
+      res,
+      400,
+      "You can't change the role or status of your own account.",
+    );
+  if (await lastAdminWouldGo(target, next))
+    return bad(res, 409, "There must be at least one active admin.");
 
   const permProblem = await checkPermissionChoice(v);
   if (permProblem) return bad(res, permProblem[0], permProblem[1]);
@@ -275,7 +381,8 @@ router.put("/:id", uploadOne, async (req, res) => {
 
   let hash = target.password_hash;
   if (b.password) {
-    if (String(b.password).length < 8) return bad(res, 400, "Password must be at least 8 characters.");
+    if (String(b.password).length < 8)
+      return bad(res, 400, "Password must be at least 8 characters.");
     hash = await bcrypt.hash(String(b.password), 12);
   }
 
@@ -301,21 +408,42 @@ router.put("/:id", uploadOne, async (req, res) => {
          first_name = $1, last_name = $2, first_name_native = $3, last_name_native = $4,
          gender_id = $5, nationality_id = $6, address = $7, region = $8, country = $9, description = $10,
          email = $11, phone = $12, password_hash = $13, role_id = $14, position_ids = $15::int[], permission_id = $16,
-         status = $17, is_blocked = $18, avatar = $19, avatar_thumbnail = $20
-       WHERE id = $21`,
+         status = $17, is_blocked = $18, avatar = $19, avatar_thumbnail = $20, is_fullname = $21, is_nfullname = $22
+       WHERE id = $23`,
       [
-        v.firstName, v.lastName, v.firstNameNative, v.lastNameNative,
-        v.genderId, v.nationalityId, v.address, v.region, v.country, v.description,
-        v.email, v.phone, hash, next.role_id, v.positionIds, v.permissionId,
-        v.status, v.isBlocked, avatar, avatarThumb, id,
+        v.firstName,
+        v.lastName,
+        v.firstNameNative,
+        v.lastNameNative,
+        v.genderId,
+        v.nationalityId,
+        v.address,
+        v.region,
+        v.country,
+        v.description,
+        v.email,
+        v.phone,
+        hash,
+        next.role_id,
+        v.positionIds,
+        v.permissionId,
+        v.status,
+        v.isBlocked,
+        avatar,
+        avatarThumb,
+        v.isFullname,
+        v.isNfullname,
+        id,
       ],
     );
     committed = true;
 
     // only after the database update worked: delete the replaced / removed files
-    if (avatar !== target.avatar) await removeImages(target.avatar, target.avatar_thumbnail);
+    if (avatar !== target.avatar)
+      await removeImages(target.avatar, target.avatar_thumbnail);
   } catch (err) {
-    if (!committed && uploaded) await removeImages(uploaded.img, uploaded.thumbnail);
+    if (!committed && uploaded)
+      await removeImages(uploaded.img, uploaded.thumbnail);
     const known = dbProblem(err);
     if (known) return bad(res, known[0], known[1]);
     throw err;
@@ -342,8 +470,10 @@ function flagRoute(column, bodyKey, selfForbiddenValue) {
 
     const target = await loadUser(id);
     if (!target) return bad(res, 404, "User not found.");
-    if (target.is_removed === 1) return bad(res, 409, "This user was removed. Restore the user first.");
-    if (id === req.user.id && value === selfForbiddenValue) return bad(res, 400, "You can't do that to your own account.");
+    if (target.is_removed === 1)
+      return bad(res, 409, "This user was removed. Restore the user first.");
+    if (id === req.user.id && value === selfForbiddenValue)
+      return bad(res, 400, "You can't do that to your own account.");
     if (await lastAdminWouldGo(target, { ...target, [column]: value }))
       return bad(res, 409, "There must be at least one active admin.");
 
@@ -362,21 +492,33 @@ router.post("/:id/send-verification", async (req, res) => {
   const target = await loadUser(id);
   if (!target) return bad(res, 404, "User not found.");
   if (target.is_removed === 1) return bad(res, 409, "Restore the user first.");
-  if (target.is_verified_email) return bad(res, 409, "This email is already verified.");
+  if (target.is_verified_email)
+    return bad(res, 409, "This email is already verified.");
 
   const { rows } = await query(
     `SELECT resend_available_at FROM email_otp
       WHERE user_id = $1 AND purpose = $2 ORDER BY created_at DESC LIMIT 1`,
     [id, VERIFY_PURPOSE],
   );
-  const wait = rows[0]?.resend_available_at ? new Date(rows[0].resend_available_at) - Date.now() : 0;
-  if (wait > 0) return bad(res, 429, `Please wait ${Math.ceil(wait / 1000)} seconds before sending again.`);
+  const wait = rows[0]?.resend_available_at
+    ? new Date(rows[0].resend_available_at) - Date.now()
+    : 0;
+  if (wait > 0)
+    return bad(
+      res,
+      429,
+      `Please wait ${Math.ceil(wait / 1000)} seconds before sending again.`,
+    );
 
   try {
     await sendVerification(req, id);
   } catch (e) {
     console.error("[users] verification email failed:", e.message);
-    return bad(res, 502, "The email could not be sent. Check the email settings.");
+    return bad(
+      res,
+      502,
+      "The email could not be sent. Check the email settings.",
+    );
   }
   res.json(publicUser(await loadUser(id)));
 });
@@ -401,8 +543,11 @@ router.post("/:id/mark-verified", async (req, res) => {
     [id, VERIFY_PURPOSE],
   );
   await logEvent({
-    otpId: null, userId: id, type: "admin_marked_verified",
-    details: { by: req.user.id }, ctx: clientInfo(req),
+    otpId: null,
+    userId: id,
+    type: "admin_marked_verified",
+    details: { by: req.user.id },
+    ctx: clientInfo(req),
   });
   res.json(publicUser(await loadUser(id)));
 });
@@ -412,8 +557,10 @@ router.post("/:id/remove", async (req, res) => {
   const id = Number(req.params.id);
   const target = await loadUser(id);
   if (!target) return bad(res, 404, "User not found.");
-  if (id === req.user.id) return bad(res, 400, "You can't remove your own account.");
-  if (target.is_removed === 1) return bad(res, 409, "This user is already removed.");
+  if (id === req.user.id)
+    return bad(res, 400, "You can't remove your own account.");
+  if (target.is_removed === 1)
+    return bad(res, 409, "This user is already removed.");
   if (await lastAdminWouldGo(target, { ...target, is_removed: 1 }))
     return bad(res, 409, "There must be at least one active admin.");
 
@@ -433,7 +580,8 @@ router.post("/:id/restore", async (req, res) => {
   const id = Number(req.params.id);
   const target = await loadUser(id);
   if (!target) return bad(res, 404, "User not found.");
-  if (target.is_removed !== 1) return bad(res, 409, "This user is not removed.");
+  if (target.is_removed !== 1)
+    return bad(res, 409, "This user is not removed.");
 
   try {
     await query(
@@ -446,7 +594,12 @@ router.post("/:id/restore", async (req, res) => {
     );
     res.json(publicUser(await loadUser(id)));
   } catch (err) {
-    if (err.code === "23505") return bad(res, 409, "Another user already uses that email, so this account can't be restored.");
+    if (err.code === "23505")
+      return bad(
+        res,
+        409,
+        "Another user already uses that email, so this account can't be restored.",
+      );
     throw err;
   }
 });
@@ -456,14 +609,20 @@ router.delete("/:id", async (req, res) => {
   const id = Number(req.params.id);
   const target = await loadUser(id);
   if (!target) return bad(res, 404, "User not found.");
-  if (id === req.user.id) return bad(res, 400, "You can't delete your own account.");
+  if (id === req.user.id)
+    return bad(res, 400, "You can't delete your own account.");
   if (await lastAdminWouldGo(target, { ...target, is_removed: 1 }))
     return bad(res, 409, "There must be at least one active admin.");
 
   try {
     await query("DELETE FROM users WHERE id = $1", [id]);
   } catch (err) {
-    if (err.code === "23503") return bad(res, 409, "This user has related records. Remove the user instead of deleting.");
+    if (err.code === "23503")
+      return bad(
+        res,
+        409,
+        "This user has related records. Remove the user instead of deleting.",
+      );
     throw err;
   }
   await removeImages(target.avatar, target.avatar_thumbnail);
