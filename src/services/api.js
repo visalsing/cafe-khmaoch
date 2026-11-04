@@ -24,3 +24,4 @@ export * from "./api/qr.js";
 export * from "./api/dashboard.js";
 export * from "./api/about.js";
 export * from "./api/themes.js";
+export * from "./api/accents.js";

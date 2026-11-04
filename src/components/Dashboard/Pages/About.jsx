@@ -151,6 +151,108 @@ function LangText({
   );
 }
 
+const pick = (obj = {}, lang) => obj[lang] || obj.en || "";
+
+function AboutPreview({ draft, lang }) {
+  const [slide, setSlide] = useState(0);
+  const images = draft.gallery;
+  const current = images.length ? Math.min(slide, images.length - 1) : 0;
+  const story = pick(draft.storyBody, lang);
+
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-10 dark:border-slate-800 dark:bg-slate-900">
+      {/* title */}
+      <div className="mb-8 text-center">
+        <h2 className="text-3xl font-extrabold text-accent-600 md:text-4xl">
+          {pick(draft.title, lang) || "—"}
+        </h2>
+        <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
+          {pick(draft.subtitle, lang)}
+        </p>
+      </div>
+
+      {/* story + slideshow */}
+      <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2">
+        <div>
+          <p className="text-xs font-bold text-accent-600">
+            {pick(draft.storyLabel, lang)}
+          </p>
+          <h3 className="mt-2 text-2xl font-extrabold text-slate-800 dark:text-white">
+            {pick(draft.storyHeading, lang)}
+          </h3>
+          <div
+            className="prose prose-sm mt-4 max-w-none text-slate-600 dark:prose-invert dark:text-slate-300"
+            dangerouslySetInnerHTML={{ __html: story }}
+          />
+          {(draft.statValue[lang] || draft.statValue.en) && (
+            <div className="mt-6 border-l-4 border-accent-600 pl-4">
+              <div className="text-xl font-bold text-slate-800 dark:text-white">
+                {pick(draft.statValue, lang)}
+              </div>
+              <div className="text-sm text-slate-400">
+                {pick(draft.statCaption, lang)}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="relative aspect-[3/2] overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800">
+          {images.length > 0 ? (
+            <>
+              <img
+                src={uploadUrl(images[current].img)}
+                alt={pick(images[current].alt, lang)}
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+                {images.map((g, i) => (
+                  <button
+                    key={g.key}
+                    type="button"
+                    aria-label={`Show picture ${i + 1}`}
+                    onClick={() => setSlide(i)}
+                    className={`h-2 rounded-full transition-all ${
+                      i === current ? "w-6 bg-white" : "w-2 bg-white/60"
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-slate-400">
+              No pictures yet
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* value cards */}
+      {draft.highlights.length > 0 && (
+        <div className="mt-8 grid grid-cols-1 gap-6 border-t border-slate-100 pt-8 md:grid-cols-3 dark:border-slate-800">
+          {draft.highlights.map((h) => {
+            const Icon = ABOUT_ICONS[h.icon];
+            return (
+              <div key={h.id} className="flex gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-50 text-accent-600 dark:bg-accent-500/15">
+                  {Icon && <Icon className="h-5 w-5" />}
+                </span>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-white">
+                    {pick(h.title, lang)}
+                  </h4>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    {pick(h.text, lang)}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AboutManager() {
   const [saved, setSaved] = useState(null);
   const [draft, setDraft] = useState(null);
@@ -165,6 +267,24 @@ export default function AboutManager() {
   const [notice, setNotice] = useState(null);
   const fileRef = useRef(null);
   const [patternOpen, setPatternOpen] = useState(false); // PaternModal.jsx
+
+  // Prevent the browser window from scrolling separately on the About page.
+  // The Dashboard's main content container remains the only vertical scroller.
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+
+    const previousHtmlOverflow = html.style.overflow;
+    const previousBodyOverflow = body.style.overflow;
+
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+
+    return () => {
+      html.style.overflow = previousHtmlOverflow;
+      body.style.overflow = previousBodyOverflow;
+    };
+  }, []);
 
   const notify = (type, title, message) =>
     setNotice({ id: Date.now(), type, title, message });
@@ -397,7 +517,8 @@ export default function AboutManager() {
   const on = draft.status === 1;
 
   return (
-    <div className="space-y-6 pb-24">
+    // <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-6">
       {/* header */}
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
@@ -802,6 +923,19 @@ export default function AboutManager() {
         ))}
       </Card>
 
+      <Card
+        title="Live preview"
+        description={
+          on
+            ? "How the About section will look in the selected language."
+            : "This content is switched off: the website shows the built-in text."
+        }
+      >
+        <div className={on ? "" : "opacity-50"}>
+          <AboutPreview draft={draft} lang={lang} />
+        </div>
+      </Card>
+
       {/* save bar */}
       <div className="sticky bottom-4 z-30 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
         <p
@@ -844,10 +978,10 @@ export default function AboutManager() {
         />
       )}
 
-        <PatternModal
-          isOpen={patternOpen}
-          onClose={() => setPatternOpen(false)}
-        />
+      <PatternModal
+        isOpen={patternOpen}
+        onClose={() => setPatternOpen(false)}
+      />
     </div>
   );
 }

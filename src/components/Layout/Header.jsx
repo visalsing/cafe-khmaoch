@@ -67,7 +67,8 @@ function Header({
           {/* Theme Toggle */}
           <button
             onClick={cycleTheme}
-            title={`Theme: ${theme}`}
+            // title={`Theme: ${theme}`}
+            title={`Theme: ${theme} (click to change)`}
             className="p-2.5 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-accent-50 hover:text-accent-600 dark:hover:bg-accent-950/30 dark:hover:text-accent-400 transition-colors cursor-pointer"
           >
             <ThemeIcon className="w-5 h-5" />

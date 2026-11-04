@@ -215,6 +215,12 @@ const menuItems = [
         icon: Palette,
         label: "Themes",
       },
+            {
+        id: "color-accents",
+        path: "/dashboard/accent-colors",
+        icon: Palette,
+        label: "Color Accents",
+      },
     ],
   },
   {

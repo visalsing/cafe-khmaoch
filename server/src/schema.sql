@@ -1367,5 +1367,56 @@ CREATE TRIGGER themes_updated_at BEFORE UPDATE ON themes
 ALTER TABLE users ADD COLUMN IF NOT EXISTS theme_id INTEGER REFERENCES themes(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS users_theme_idx ON users (theme_id);
 
+-- =====================================================================
+-- ACCENTS  (paste into schema.sql, inside the first BEGIN ... COMMIT block)
+-- Place PART 1 BEFORE the "Existing users table" section (users.accent_id points at it)
+-- and PART 2 right after the other "ALTER TABLE users ADD COLUMN" lines.
+-- Safe to run repeatedly.
+-- =====================================================================
+-- ---------- ACCENTS ----------
+CREATE TABLE IF NOT EXISTS accents (
+  id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  -- must match the [data-accent="..."] blocks in your CSS
+  code        TEXT NOT NULL UNIQUE CHECK (code ~ '^[a-z][a-z0-9_-]{0,39}$'),
+  name        JSONB NOT NULL,                                          -- {"en":"Amber","km":"..."}
+  swatch      TEXT NOT NULL DEFAULT '#888888' CHECK (swatch ~ '^#[0-9A-Fa-f]{6}$'),  -- preview color, e.g. #e27200
+  status      SMALLINT NOT NULL DEFAULT 1 CHECK (status IN (0, 1)),       -- 1 = active, 0 = hidden
+  is_selected SMALLINT NOT NULL DEFAULT 0 CHECK (is_selected IN (0, 1)),  -- the DEFAULT accent
+  sort_num    INTEGER NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT accents_name_has_en CHECK (name ? 'en' AND length(name->>'en') > 0),
+  CONSTRAINT accents_selected_active CHECK (is_selected = 0 OR status = 1)
+);
 
+-- for databases where accents already exists without swatch
+ALTER TABLE accents ADD COLUMN IF NOT EXISTS swatch TEXT NOT NULL DEFAULT '#888888'
+  CHECK (swatch ~ '^#[0-9A-Fa-f]{6}$');
+
+CREATE UNIQUE INDEX IF NOT EXISTS accents_one_selected_idx ON accents (is_selected) WHERE is_selected = 1;
+CREATE INDEX IF NOT EXISTS accents_status_sort_idx ON accents (status, sort_num);
+
+-- a re-run never overwrites your edits; it only fills swatches that are still the placeholder
+INSERT INTO accents (code, name, swatch, sort_num, is_selected) VALUES
+  ('amber',     '{"en":"Amber"}',     '#e27200', 1,  1),
+  ('yellow',    '{"en":"Yellow"}',    '#d6af08', 2,  0),
+  ('orange',    '{"en":"Orange"}',    '#f05a0a', 3,  0),
+  ('brown',     '{"en":"Brown"}',     '#8c5830', 4,  0),
+  ('caramel',   '{"en":"Caramel"}',   '#c87824', 5,  0),
+  ('honey',     '{"en":"Honey"}',     '#d6960e', 6,  0),
+  ('cinnamon',  '{"en":"Cinnamon"}',  '#be5428', 7,  0),
+  ('cherry',    '{"en":"Cherry"}',    '#d61e46', 8,  0),
+  ('mocha',     '{"en":"Mocha"}',     '#947058', 9,  0),
+  ('chocolate', '{"en":"Chocolate"}', '#6c3626', 10, 0)
+ON CONFLICT (code) DO UPDATE
+  SET swatch = EXCLUDED.swatch
+  WHERE accents.swatch = '#888888';
+
+DROP TRIGGER IF EXISTS accents_updated_at ON accents;
+CREATE TRIGGER accents_updated_at BEFORE UPDATE ON accents
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ---------- each user's own choice (after the other ALTER TABLE users lines) ----------
+ALTER TABLE users ADD COLUMN IF NOT EXISTS accent_id INTEGER REFERENCES accents(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS users_accent_idx ON users (accent_id);
 

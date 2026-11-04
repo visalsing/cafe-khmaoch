@@ -13,13 +13,14 @@ import {
   Sparkles,
   Computer,
 } from "lucide-react";
-import ThemeActions from "./ThemeActions.jsx";
+import PreferenceActions from "./PreferenceActions.jsx";
 import { useThemeOptions } from "../Dashboard/themeOptions.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import LoadingScreen, { Loader } from "../Loading/Loading.jsx";
 import { LOADING_STYLES, useLoadingStyle } from "../../utils/loadingStyle.js";
-import { ACCENTS, useAccent } from "../../utils/accent.js";
+// import { ACCENTS, useAccent } from "../../utils/accent.js";
+import { useAccentOptions } from "../Dashboard/accentOptions.js";
 import BackgroundEffect from "../Dashboard/BackgroundEffect.jsx";
 import {
   BACKGROUND_STYLES,
@@ -83,7 +84,9 @@ export default function Settings() {
   const { choices, select } = themeOpts;
   const { language, setLanguage, t, languages = [] } = useLanguage();
   const [loadingStyle, setLoadingStyle] = useLoadingStyle();
-  const [accent, setAccent] = useAccent();
+  // const [accent, setAccent] = useAccent();
+  const accentOpts = useAccentOptions();
+  const { choices: accentChoices, accent, select: selectAccent } = accentOpts;
   const [backgroundStyle, setBackgroundStyle] = useBackgroundStyle();
 
   // Which full-screen preview is open: "loading" | "background" | null
@@ -184,8 +187,7 @@ export default function Settings() {
             );
           })}
         </div>
-        <ThemeActions {...themeOpts} />
-
+        <PreferenceActions {...themeOpts} label="theme changes" />
       </div>
 
       {/* Accent color section */}
@@ -200,7 +202,7 @@ export default function Settings() {
           Pick the highlight color used across the app.
         </p>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {/* <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {ACCENTS.map(({ value, label, swatch }) => {
             const active = accent === value;
             return (
@@ -218,7 +220,7 @@ export default function Settings() {
                     <Check className="w-3.5 h-3.5 text-white" />
                   </span>
                 )}
-                {/* inline hex on purpose: each swatch shows its own color, not the active accent */}
+                {/* inline hex on purpose: each swatch shows its own color, not the active accent 
                 <span
                   className="block w-7 h-7 rounded-full mb-3"
                   style={{ background: swatch }}
@@ -229,7 +231,38 @@ export default function Settings() {
               </button>
             );
           })}
+        </div> */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {accentChoices.map((choice) => {
+            const active = accent === choice.value;
+            return (
+              <button
+                key={choice.value}
+                type="button"
+                onClick={() => selectAccent(choice)}
+                aria-pressed={active}
+                className={`relative text-left p-4 rounded-xl border transition-all ${focusStyle} ${
+                  active ? activeCard : inactiveCard
+                }`}
+              >
+                {active && (
+                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center">
+                    <Check className="w-3.5 h-3.5 text-white" />
+                  </span>
+                )}
+                {/* swatch comes from the database: each card shows its own color, not the active accent */}
+                <span
+                  className="block w-7 h-7 rounded-full mb-3"
+                  style={{ background: choice.swatch }}
+                />
+                <p className="text-sm font-semibold text-neutral-800 dark:text-white">
+                  {choice.label}
+                </p>
+              </button>
+            );
+          })}
         </div>
+        <PreferenceActions {...accentOpts} label="accent color changes" />
       </div>
 
       {/* Background effect section */}

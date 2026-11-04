@@ -68,6 +68,7 @@ import { BrowserRouter } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import App from "./App.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
+import { AccentProvider } from "./context/AccentContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 import { MenuProvider } from "./context/MenuContext.jsx";
 import { CartProvider } from "./context/CartContext.jsx";
@@ -103,17 +104,23 @@ createRoot(document.getElementById("root")).render(
   <StrictMode>
     <HelmetProvider>
       <BrowserRouter>
-        <AuthProvider>        {/* 1. AuthProvider must be higher up */}
-          <ThemeProvider>     {/* 2. ThemeProvider can now safely use useAuth() */}
-            <LanguageProvider>
-              <MenuProvider>
-                <CartProvider>
-                  <HeroProvider>
-                    <App />
-                  </HeroProvider>
-                </CartProvider>
-              </MenuProvider>
-            </LanguageProvider>
+        <AuthProvider>
+          {" "}
+          {/* 1. AuthProvider must be higher up */}
+          <ThemeProvider>
+            {" "}
+            {/* 2. ThemeProvider can now safely use useAuth() */}
+            <AccentProvider>
+              <LanguageProvider>
+                <MenuProvider>
+                  <CartProvider>
+                    <HeroProvider>
+                      <App />
+                    </HeroProvider>
+                  </CartProvider>
+                </MenuProvider>
+              </LanguageProvider>
+            </AccentProvider>
           </ThemeProvider>
         </AuthProvider>
       </BrowserRouter>

@@ -14,13 +14,14 @@ import {
   ComputerIcon,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import ThemeActions from "./ThemeActions.jsx";
+import PreferenceActions from "./PreferenceActions.jsx";
 import { useThemeOptions } from "../Dashboard/themeOptions.js";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { useLanguage } from "../../context/LanguageContext.jsx";
 import LoadingScreen, { Loader } from "../Loading/Loading.jsx";
 import { LOADING_STYLES, useLoadingStyle } from "../../utils/loadingStyle.js";
-import { ACCENTS, useAccent } from "../../utils/accent.js";
+// import { ACCENTS, useAccent } from "../../utils/accent.js";
+import { useAccentOptions } from "../Dashboard/accentOptions.js";
 import BackgroundEffect from "../Dashboard/BackgroundEffect.jsx";
 import {
   BACKGROUND_STYLES,
@@ -80,7 +81,7 @@ export default function SettingsPage() {
   const { theme } = useTheme();
   // const { choices, choose } = useThemeOptions();
   const themeOpts = useThemeOptions();
-const { choices, select } = themeOpts;
+  const { choices, select } = themeOpts;
   const { language, setLanguage, t, languages = [] } = useLanguage();
   const [backgroundStyle, setBackgroundStyle] = useBackgroundStyle();
 
@@ -91,7 +92,9 @@ const { choices, select } = themeOpts;
   const [previewing, setPreviewing] = useState(null);
 
   // Accent color: the same store Settings.jsx uses
-  const [accent, setAccent] = useAccent();
+  // const [accent, setAccent] = useAccent();
+  const accentOpts = useAccentOptions();
+  const { choices: accentChoices, accent, select: selectAccent } = accentOpts;
 
   // Sync state with localStorage & trigger custom event for live cross-component sync
   const [digitStyle, setDigitStyle] = useState(() => {
@@ -283,7 +286,7 @@ const { choices, select } = themeOpts;
                 );
               })}
             </div>
-            <ThemeActions {...themeOpts} />
+            <PreferenceActions {...themeOpts} label="theme changes" />
 
             {/* <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {choices.map((choice) => {
@@ -334,7 +337,7 @@ const { choices, select } = themeOpts;
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            {/* <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
               {ACCENTS.map(({ value, label, swatch }) => {
                 const active = accent === value;
 
@@ -354,7 +357,7 @@ const { choices, select } = themeOpts;
                       </span>
                     )}
 
-                    {/* inline hex on purpose: each swatch shows its own color, not the active accent */}
+                    {/* inline hex on purpose: each swatch shows its own color, not the active accent 
                     <span
                       className="block w-8 h-8 rounded-full shadow-sm"
                       style={{ background: swatch }}
@@ -366,7 +369,41 @@ const { choices, select } = themeOpts;
                   </button>
                 );
               })}
+            </div> */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+              {accentChoices.map((choice) => {
+                const active = accent === choice.value;
+
+                return (
+                  <button
+                    key={choice.value}
+                    type="button"
+                    onClick={() => selectAccent(choice)}
+                    aria-pressed={active}
+                    className={`relative p-5 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center justify-center space-y-3 ${focusStyle} ${
+                      active ? activeCard : inactiveCard
+                    }`}
+                  >
+                    {active && (
+                      <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-accent-600 dark:bg-accent-500 flex items-center justify-center shadow-md">
+                        <Check className="w-3.5 h-3.5 text-white" />
+                      </span>
+                    )}
+
+                    {/* swatch comes from the database */}
+                    <span
+                      className="block w-8 h-8 rounded-full shadow-sm"
+                      style={{ background: choice.swatch }}
+                    />
+
+                    <p className="text-xs font-bold text-neutral-900 dark:text-white">
+                      {choice.label}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
+            <PreferenceActions {...accentOpts} label="accent color changes" />
           </div>
 
           {/* Background Effect Card */}

@@ -31,6 +31,7 @@ import dashboardRoutes from "./routes/dashboard.js";
 import aboutRoutes from "./routes/about.js";
 import nameOrderRoutes from "./routes/nameOrder.js";
 import themesRoutes from "./routes/themes.js";
+import accentsRouter from "./routes/accents.js";
 import { UPLOADS_ROOT } from "./storage.js";
 
 if (!process.env.DATABASE_URL || !process.env.JWT_SECRET) {
@@ -110,6 +111,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/about", aboutRoutes);
 app.use("/api/name-order", nameOrderRoutes);
 app.use("/api/themes", themesRoutes);
+app.use("/api/accents", accentsRouter);
 
 app.use((req, res) => res.status(404).json({ error: "Not found." }));
 

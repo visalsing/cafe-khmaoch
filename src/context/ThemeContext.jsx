@@ -1,15 +1,23 @@
 // src/context/ThemeContext.jsx
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { themeService } from "../services/api.js";
 import { useAuth } from "./AuthContext.jsx";
 
 const ThemeContext = createContext(null);
 const VALID_CODES = ["light", "dark", "system"];
+const CYCLE = ["light", "dark", "system"];
 
 export function ThemeProvider({ children }) {
   const { currentUser, loading: authLoading } = useAuth();
 
-  // savedTheme = what is persisted. theme = what is currently shown (may be a preview).
+  // savedTheme = persisted. theme = currently shown (may be a preview).
   const [savedTheme, setSavedTheme] = useState(
     () => localStorage.getItem("theme") || "system",
   );
@@ -17,14 +25,16 @@ export function ThemeProvider({ children }) {
     () => localStorage.getItem("theme") || "system",
   );
 
-  // Persist a theme as the saved one (called after a successful Save).
+  // Theme rows from the database (needed to find the id for a code).
+  const [themeRows, setThemeRows] = useState([]);
+
   const commitTheme = useCallback((code) => {
     setSavedTheme(code);
     setTheme(code);
     localStorage.setItem("theme", code);
   }, []);
 
-  // Restore the saved theme once, when the user changes (login/logout/refresh).
+  // Restore the saved theme once, when the user changes.
   useEffect(() => {
     if (authLoading) return;
     let cancelled = false;
@@ -35,10 +45,11 @@ export function ThemeProvider({ children }) {
         if (cancelled || !Array.isArray(data)) return;
 
         const usable = data.filter((r) => VALID_CODES.includes(r.code));
+        setThemeRows(usable);
+
         let selected = null;
 
         if (currentUser) {
-          // Signed-in: database preference first.
           const mine = await themeService.getMine();
           if (cancelled) return;
           const themeId = mine?.themeId ?? mine?.theme_id ?? null;
@@ -46,12 +57,10 @@ export function ThemeProvider({ children }) {
             selected = usable.find((r) => Number(r.id) === Number(themeId));
           }
         } else {
-          // Guest: localStorage first.
           const saved = localStorage.getItem("theme");
           selected = usable.find((r) => r.code === saved);
         }
 
-        // Fallback: Admin default.
         if (!selected) {
           selected = usable.find((r) => Number(r.is_selected) === 1);
         }
@@ -72,8 +81,7 @@ export function ThemeProvider({ children }) {
     };
   }, [currentUser?.id, authLoading]);
 
-  // Apply the theme to <html>. No localStorage write here anymore:
-  // previews must not be persisted, only commitTheme() does that.
+  // Apply the theme to <html>. Previews are never written to localStorage here.
   useEffect(() => {
     const applied =
       theme === "system"
@@ -85,15 +93,44 @@ export function ThemeProvider({ children }) {
     document.documentElement.classList.toggle("dark", applied === "dark");
   }, [theme]);
 
-  const cycleTheme = () => {
-    setTheme((prev) =>
-      prev === "light" ? "dark" : prev === "dark" ? "system" : "light",
-    );
-  };
+  // Save a theme right away: database for logged-in users, localStorage for guests.
+  const saveTheme = useCallback(
+    async (code) => {
+      const row = themeRows.find((r) => r.code === code);
+
+      if (currentUser && row?.id != null) {
+        await themeService.setMine(Number(row.id)); // throws on failure
+      }
+      commitTheme(code);
+    },
+    [themeRows, currentUser, commitTheme],
+  );
+
+  // Header sun/moon button: light -> dark -> system -> light, saved immediately.
+  const busy = useRef(false);
+
+  const cycleTheme = useCallback(async () => {
+    if (busy.current) return; // ignore clicks while a save is running
+    busy.current = true;
+
+    const next = CYCLE[(CYCLE.indexOf(theme) + 1) % CYCLE.length];
+    const previous = savedTheme;
+
+    setTheme(next); // instant feedback
+
+    try {
+      await saveTheme(next);
+    } catch (error) {
+      console.error("Failed to save theme:", error);
+      setTheme(previous); // revert if the save failed
+    } finally {
+      busy.current = false;
+    }
+  }, [theme, savedTheme, saveTheme]);
 
   return (
     <ThemeContext.Provider
-      value={{ theme, setTheme, savedTheme, commitTheme, cycleTheme }}
+      value={{ theme, setTheme, savedTheme, commitTheme, saveTheme, cycleTheme }}
     >
       {children}
     </ThemeContext.Provider>
@@ -108,6 +145,7 @@ export const useTheme = () => {
       setTheme: () => {},
       savedTheme: "system",
       commitTheme: () => {},
+      saveTheme: async () => {},
       cycleTheme: () => {},
     };
   }

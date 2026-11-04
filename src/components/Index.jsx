@@ -19,17 +19,17 @@ import {
 import LoadingScreen from "./Loading/Loading";
 import BackgroundEffect from "../../src/components/Dashboard/BackgroundEffect";
 
-const STATS = [
-  { label: "Cups Served", value: "250,000+", change: "+18%", positive: true },
-  { label: "Coffee Origins", value: "12", change: "+3", positive: true },
-  {
-    label: "Customer Satisfaction",
-    value: "99.2%",
-    change: "+0.5%",
-    positive: true,
-  },
-  { label: "Café Locations", value: "6", change: "Open", positive: true },
-];
+// const STATS = [
+//   { label: "Cups Served", value: "250,000+", change: "+18%", positive: true },
+//   { label: "Coffee Origins", value: "12", change: "+3", positive: true },
+//   {
+//     label: "Customer Satisfaction",
+//     value: "99.2%",
+//     change: "+0.5%",
+//     positive: true,
+//   },
+//   { label: "Café Locations", value: "6", change: "Open", positive: true },
+// ];
 
 function IndexPageContent() {
   const {
@@ -92,7 +92,6 @@ function IndexPageContent() {
 
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16 py-10">
             <Hero />
-            <Stats stats={STATS} />
 
             <Shop
               categories={categories}
@@ -106,6 +105,8 @@ function IndexPageContent() {
 
             <Gallery />
             <About />
+            <Stats />
+            
             <LocationSection />
           </main>
 

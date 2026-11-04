@@ -79,7 +79,8 @@ import RolePermissions from "./components/Dashboard/RolePermissions.jsx";
 import ForgetPassword from "./components/Auth/ForgetPassword.jsx";
 import ProfileUser from "./components/Dashboard/Profile.jsx";
 import QrManagement from "./components/Dashboard/QrManagement.jsx";
-import Theme from "./components/Dashboard/Theme";
+import Theme from "./components/Dashboard/Theme.jsx";
+import ColorAccent from "./components/Dashboard/ColorAccent.jsx";
 
 function DashboardLayout() {
   const [sideBarCollapsed, setSideBarCollapsed] = useState(false);
@@ -90,7 +91,7 @@ function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-neutral-100 to-neutral-50 dark:from-neutral-900 dark:via-neutral-800 dark:to-neutral-900 transition-all duration-500">
-    {/* <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-all duration-500"> */}
+      {/* <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-all duration-500"> */}
       <div className="flex h-screen overflow-hidden">
         {/* <Theme /> */}
         <Sidebar
@@ -147,10 +148,7 @@ function DashboardLayout() {
                 />
                 <Route path="/add-menu" element={<AddMenu />} />
                 <Route path="/levels-options" element={<LevelsOptions />} />
-                <Route
-                  path="/sugar-level"
-                  element={<SugarLevel />}
-                />
+                <Route path="/sugar-level" element={<SugarLevel />} />
                 <Route path="/coffee-level" element={<CoffeeLevelManager />} />
                 <Route path="/ice-level" element={<IceLevelManager />} />
                 <Route path="/country-flags" element={<CountryFlags />} />
@@ -160,7 +158,8 @@ function DashboardLayout() {
                 <Route path="/positions" element={<PositionsManager />} />
                 <Route path="/permissions" element={<PermissionsManager />} />
                 <Route path="/genders" element={<GendersManager />} />
-                <Route path="themes" element={<Theme />} />
+                <Route path="/themes" element={<Theme />} />
+                <Route path="/accent-colors" element={<ColorAccent />} />
                 <Route
                   path="/nationalities"
                   element={<NationalitiesManager />}

@@ -27,6 +27,7 @@ const FK_MESSAGES = {
   users_permission_id_fkey: "The selected permission does not exist.",
   users_role_id_fkey: "The selected role does not exist.",
   users_theme_id_fkey: "The selected theme does not exist.",
+  users_accent_id_fkey: "The selected color accent does not exist.",
 };
 
 function dbProblem(err) {
@@ -162,6 +163,21 @@ async function checkThemeChoice(v) {
   return null;
 }
 
+// color accents
+async function checkAccentChoice(v) {
+  if (v.accentId === null) return null;
+
+  const { rows } = await query(
+    "SELECT 1 FROM accents WHERE id = $1 AND status = 1",
+    [v.accentId],
+  );
+
+  if (!rows[0])
+    return [400, "The selected accent does not exist or is unavailable."];
+
+  return null;
+}
+
 // every selected position must exist (replaces the foreign key an integer[] column cannot have)
 async function checkPositionChoice(v) {
   if (!v.positionIds.length) return null;
@@ -218,9 +234,10 @@ function readFields(body, e = null) {
   const nationalityId = pick("nationalityId", e?.nationality_id);
   const permissionId = pick("permissionId", e?.permission_id);
   const themeId = pick("themeId", e?.theme_id);
+  const accentId = pick("accentId", e?.accent_id);
   // if ([genderId, nationalityId, permissionId].some(Number.isNaN))
   //   return { error: "One of the selected options is invalid." };
-  if ([genderId, nationalityId, permissionId, themeId].some(Number.isNaN))
+  if ([genderId, nationalityId, permissionId, themeId, accentId].some(Number.isNaN))
     return { error: "One of the selected options is invalid." };
 
   // positions: not sent = keep the current ones, sent = replace them with the new list
@@ -257,6 +274,7 @@ function readFields(body, e = null) {
       positionIds,
       permissionId,
       themeId,
+      accentId,
       status: bit(body.status, e?.status ?? 1),
       isBlocked: bit(body.isBlocked, e?.is_blocked ?? 0),
       isFullname,
@@ -297,6 +315,9 @@ router.post("/", uploadOne, async (req, res) => {
   const themeProblem = await checkThemeChoice(v);
   if (themeProblem) return bad(res, themeProblem[0], themeProblem[1]);
 
+  const accentProblem = await checkAccentChoice(v);
+  if (accentProblem) return bad(res, accentProblem[0], accentProblem[1]);
+
   const posProblem = await checkPositionChoice(v);
   if (posProblem) return bad(res, posProblem[0], posProblem[1]);
 
@@ -310,8 +331,8 @@ router.post("/", uploadOne, async (req, res) => {
          (first_name, last_name, first_name_native, last_name_native, gender_id, nationality_id,
           address, region, country, description, email, phone, password_hash,
           role_id, position_ids, permission_id, status, is_blocked, avatar, avatar_thumbnail, is_fullname, is_nfullname
-          , theme_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::int[],$16,$17,$18,$19,$20,$21,$22,$23)
+          , theme_id, accent_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::int[],$16,$17,$18,$19,$20,$21,$22,$23,$24)
        RETURNING id`,
       [
         v.firstName,
@@ -337,6 +358,7 @@ router.post("/", uploadOne, async (req, res) => {
         v.isFullname,
         v.isNfullname,
         v.themeId,
+        v.accentId,
       ],
     );
     newId = rows[0].id;
@@ -405,6 +427,9 @@ router.put("/:id", uploadOne, async (req, res) => {
   const themeProblem = await checkThemeChoice(v);
   if (themeProblem) return bad(res, themeProblem[0], themeProblem[1]);
 
+  const accentProblem = await checkAccentChoice(v);
+  if (accentProblem) return bad(res, accentProblem[0], accentProblem[1]);
+
   const posProblem = await checkPositionChoice(v);
   if (posProblem) return bad(res, posProblem[0], posProblem[1]);
 
@@ -438,8 +463,8 @@ router.put("/:id", uploadOne, async (req, res) => {
          gender_id = $5, nationality_id = $6, address = $7, region = $8, country = $9, description = $10,
          email = $11, phone = $12, password_hash = $13, role_id = $14, position_ids = $15::int[], permission_id = $16,
          status = $17, is_blocked = $18, avatar = $19, avatar_thumbnail = $20, is_fullname = $21, is_nfullname = $22,
-         theme_id = $23
-       WHERE id = $24`,
+         theme_id = $23, accent_id = $24
+       WHERE id = $25`,
       [
         v.firstName,
         v.lastName,
@@ -464,6 +489,7 @@ router.put("/:id", uploadOne, async (req, res) => {
         v.isFullname,
         v.isNfullname,
         v.themeId,
+        v.accentId,
         id,
       ],
     );
