@@ -94,6 +94,8 @@ const toBase64 = (bytes) => {
   return btoa(bin);
 };
 
+const isAndroid = /android/i.test(navigator.userAgent);
+
 export default function ReceiptModal({ order, onClose }) {
   const ref = useRef(null);
   const [printing, setPrinting] = useState(false);
@@ -103,7 +105,7 @@ export default function ReceiptModal({ order, onClose }) {
     order?.ticketNumber || order?.dailyNumber || order?.number || "1";
   const displayTicketNo = parseInt(String(rawNum).replace(/\D/g, ""), 10) || 1;
 
-  // PC / desktop: normal browser print dialog (uses the Windows printer driver)
+  // Browser print dialog (PC driver, or RawBT Print Service on Android)
   const printViaBrowser = () => {
     const w = window.open("", "_blank", "width=380,height=750");
     if (!w) {
@@ -114,6 +116,7 @@ export default function ReceiptModal({ order, onClose }) {
       <html>
         <head>
           <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
           <base href="${window.location.origin}/" />
           <title>Receipt ${order?.number || ""}</title>
           <style>
@@ -131,7 +134,7 @@ export default function ReceiptModal({ order, onClose }) {
       </html>`);
     w.document.close();
 
-    // wait for the logo, then print once
+    // wait for the logo, then print once (window is NOT closed automatically)
     const waits = Array.from(w.document.images).map((img) =>
       img.complete
         ? Promise.resolve()
@@ -143,8 +146,52 @@ export default function ReceiptModal({ order, onClose }) {
       setTimeout(() => {
         w.focus();
         w.print();
-      }, 200);
+      }, 300);
     });
+  };
+
+  // Android tablet: render receipt as an image and send to RawBT app
+  const printViaRawBT = async () => {
+    const el = ref.current;
+    if (!el) return;
+
+    if (document.fonts?.ready) await document.fonts.ready;
+
+    const canvas = await html2canvas(el, {
+      scale: PRINT_WIDTH / el.offsetWidth, // output is exactly 576px wide
+      backgroundColor: "#ffffff",
+      useCORS: true,
+      scrollX: 0,
+      scrollY: 0,
+      onclone: (doc) => {
+        const n = doc.querySelector("[data-receipt]");
+        if (n) {
+          n.style.boxShadow = "none";
+          n.style.borderRadius = "0";
+          // pure black text prints sharper on thermal paper
+          n.querySelectorAll("*").forEach((child) => {
+            child.style.color = "#000";
+          });
+        }
+      },
+    });
+
+    const bytes = canvasToEscPos(canvas);
+    const b64 = toBase64(bytes);
+
+    // very long links can be dropped by Android: warn instead of failing silently
+    if (b64.length > 900000) {
+      alert(
+        "Receipt is too long for the RawBT link. Use the 'Print (Dialog)' button instead.",
+      );
+      return;
+    }
+
+    const a = document.createElement("a");
+    a.href = `intent:base64,${b64}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const print = async () => {
@@ -152,53 +199,29 @@ export default function ReceiptModal({ order, onClose }) {
     setPrinting(true);
     try {
       await new Promise((r) => setTimeout(r, 50)); // let the button update first
+      if (!ref.current) return;
 
-      const el = ref.current;
-      if (!el) return;
-
-      // Not Android (PC): use the browser print dialog
-      const isAndroid = /android/i.test(navigator.userAgent);
       if (!isAndroid) {
-        printViaBrowser();
-        return;
+        printViaBrowser(); // PC
+      } else {
+        await printViaRawBT(); // Android tablet
       }
-
-      // Android tablet: render receipt as an image and send to RawBT
-      if (document.fonts?.ready) await document.fonts.ready;
-
-      const canvas = await html2canvas(el, {
-        scale: PRINT_WIDTH / el.offsetWidth, // output is exactly 576px wide
-        backgroundColor: "#ffffff",
-        useCORS: true,
-        scrollX: 0,
-        scrollY: 0,
-        onclone: (doc) => {
-          const n = doc.querySelector("[data-receipt]");
-          if (n) {
-            n.style.boxShadow = "none";
-            n.style.borderRadius = "0";
-            // pure black text prints sharper on thermal paper
-            n.querySelectorAll("*").forEach((child) => {
-              child.style.color = "#000";
-            });
-          }
-        },
-      });
-
-      const bytes = canvasToEscPos(canvas);
-      const b64 = toBase64(bytes);
-
-      // open RawBT through an Android intent link
-      const a = document.createElement("a");
-      a.href = `intent:base64,${b64}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
     } catch (e) {
       console.error(e);
       alert("Print error: " + (e?.message || e));
     } finally {
       setPrinting(false);
+    }
+  };
+
+  // Always use the browser print dialog (PC or tablet)
+  const printDialog = () => {
+    try {
+      if (!ref.current) return;
+      printViaBrowser();
+    } catch (e) {
+      console.error(e);
+      alert("Print error: " + (e?.message || e));
     }
   };
 
@@ -624,7 +647,7 @@ export default function ReceiptModal({ order, onClose }) {
         </div>
 
         {/* Action Buttons */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex gap-3 shrink-0">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-wrap gap-3 shrink-0">
           <button
             type="button"
             onClick={print}
@@ -641,6 +664,15 @@ export default function ReceiptModal({ order, onClose }) {
           >
             Close
           </button>
+          {isAndroid && (
+            <button
+              type="button"
+              onClick={printDialog}
+              className="w-full py-2.5 rounded-xl border border-amber-600 text-amber-700 dark:text-amber-500 font-semibold text-xs hover:bg-amber-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              Print (Dialog)
+            </button>
+          )}
         </div>
       </div>
     </div>
